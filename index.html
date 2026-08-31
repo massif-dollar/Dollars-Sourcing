@@ -672,6 +672,50 @@
     font-size:15px; padding:4px 6px; flex-shrink:0;
   }
   .chat-msg img{ max-width:100%; border-radius:11px; margin-top:6px; display:block; }
+  /* ===== Catalogue fournisseur : marques & modèles ===== */
+  .brand-block{
+    background:var(--fill); border:0.5px solid var(--hairline); border-radius:16px;
+    padding:13px 14px; margin-bottom:10px;
+    animation:cardIn .35s var(--ease-out) backwards;
+  }
+  .brand-head{ display:flex; align-items:center; gap:9px; }
+  .brand-name{
+    flex:1; min-width:0; font-family:var(--font-display); font-weight:600; font-size:15px;
+    letter-spacing:-0.02em; background:transparent; border:none; color:var(--text);
+    padding:2px 0;
+  }
+  .brand-name:focus{ outline:none; border-bottom:1px solid var(--accent); }
+  .mini-btn{
+    flex-shrink:0; width:30px; height:30px; border-radius:9px; cursor:pointer;
+    border:0.5px solid var(--hairline); background:var(--bg-elevated); color:var(--text-faint);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .3s var(--spring), color .2s ease;
+  }
+  .mini-btn:active{ transform:scale(.9); }
+  .mini-btn.danger{ color:var(--danger); }
+  .mini-btn svg{ width:15px; height:15px; }
+
+  .model-list{ margin-top:10px; display:flex; flex-direction:column; gap:7px; }
+  .model-row{ display:flex; align-items:center; gap:8px; }
+  .model-row input{
+    flex:1; min-width:0; background:var(--bg-elevated); border:0.5px solid var(--hairline);
+    color:var(--text); border-radius:10px; padding:9px 12px;
+    font-family:var(--font-body); font-size:14px; letter-spacing:-0.01em;
+  }
+  .model-row input:focus{ border-color:var(--accent); outline:none; }
+  .add-model{
+    margin-top:9px; width:100%; padding:9px; border-radius:11px;
+    border:1px dashed var(--hairline-strong); background:transparent; color:var(--text-faint);
+    font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer;
+    letter-spacing:-0.01em; transition:transform .3s var(--spring), color .2s ease;
+  }
+  .add-model:active{ transform:scale(.98); }
+  .brand-empty{ font-size:13px; color:var(--text-ghost); padding:14px 4px; text-align:center; letter-spacing:-0.01em; }
+  .brand-chip{
+    display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:100px;
+    background:var(--accent-soft); color:var(--accent); margin:4px 4px 0 0; letter-spacing:-0.005em;
+  }
+
   /* ===== Mode vocal plein écran ===== */
   #voiceMode{
     position:fixed; inset:0; z-index:80; display:none;
@@ -1040,13 +1084,41 @@
     <h2 id="supplierSheetTitle">Fournisseur</h2>
     <form id="supplierForm" novalidate>
       <div class="field">
-        <label data-i18n="fieldName">Nom</label><input type="text" id="s_name">
+        <label data-i18n="fieldName">Nom du fournisseur</label><input type="text" id="s_name">
         <div class="field-error"></div>
       </div>
-      <div class="field"><label data-i18n="fieldSupplierContact">Contact (WeChat, tél...)</label><input type="text" id="s_contact" data-i18n-placeholder="placeholderWeChat" placeholder="WeChat ID, tél..."></div>
-      <div class="field"><label data-i18n="fieldSupplierNote">Note</label><textarea id="s_note" rows="3" data-i18n-placeholder="supplierNotePlaceholder" placeholder="Produits, MOQ, remarques..."></textarea></div>
+      <div class="field">
+        <label data-i18n="fieldWechat">WeChat</label>
+        <input type="text" id="s_wechat" data-i18n-placeholder="placeholderWechatId" placeholder="Identifiant WeChat">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="fieldPhone">Téléphone</label>
+          <input type="text" id="s_phone" data-i18n-placeholder="optional" placeholder="Optionnel">
+        </div>
+        <div class="field">
+          <label data-i18n="fieldWhatsapp">WhatsApp</label>
+          <input type="text" id="s_whatsapp" data-i18n-placeholder="optional" placeholder="Optionnel">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="fieldSupplierAddress">Adresse / marché</label>
+        <input type="text" id="s_address" data-i18n-placeholder="placeholderMarket" placeholder="Ex: Marché Baima, étage 3, stand 217">
+      </div>
+      <div class="field">
+        <label data-i18n="fieldSupplierNote">Note</label>
+        <textarea id="s_note" rows="2" data-i18n-placeholder="supplierNotePlaceholder" placeholder="MOQ, délais, remarques..."></textarea>
+      </div>
       <button type="submit" class="btn-primary" data-i18n="save">Enregistrer</button>
     </form>
+
+    <div id="brandsSection" style="margin-top:22px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+        <h2 class="section-title" data-i18n="brandsTitle">Marques &amp; modèles</h2>
+        <button type="button" class="btn-secondary" id="addBrandBtn" data-i18n="addBrand" style="flex:none; color:var(--accent); border-color:var(--accent);">+ Marque</button>
+      </div>
+      <div id="brandsList"></div>
+    </div>
     <div class="btn-row" style="margin-top:14px;">
       <button type="button" class="btn-secondary" id="deleteSupplierBtn" data-i18n="deleteSupplier">Supprimer</button>
     </div>
@@ -1145,6 +1217,14 @@ const I18N = {
     ordersSectionTitle:'Commandes', addOrderForClient:'+ Commande', deleteClient:'Supprimer ce client', newClientTitle:'Nouveau client',
     statOrders:'Commandes', statRevenueGenerated:'CA généré', statMarginGenerated:'Marge générée',
     supplierTitle:'Fournisseur', fieldSupplierContact:'Contact (WeChat, tél...)', fieldSupplierNote:'Note',
+    fieldWechat:'WeChat', fieldPhone:'Téléphone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Adresse / marché',
+    placeholderWechatId:'Identifiant WeChat', placeholderMarket:'Ex: Marché Baima, étage 3, stand 217',
+    brandsTitle:'Marques & modèles', addBrand:'+ Marque', addModel:'+ Ajouter un modèle',
+    modelSingular:'modèle', modelsPlural:'modèles',
+    brandNamePlaceholder:'Nom de la marque', modelNamePlaceholder:'Nom du modèle',
+    noBrands:'Aucune marque enregistrée.\\nAjoute-en une pour lister ses modèles.',
+    confirmDeleteBrand:'Supprimer cette marque et tous ses modèles ?',
+    saveFirst:'Enregistre d\u2019abord le fournisseur.',
     supplierNotePlaceholder:'Produits, MOQ, remarques...', newSupplierTitle:'Nouveau fournisseur', deleteSupplier:'Supprimer',
     confirmDeleteOrder:'Supprimer définitivement cette commande ?', confirmDeleteClient:'Supprimer ce client ?',
     confirmDeleteSupplier:'Supprimer ce fournisseur ?',
@@ -1214,6 +1294,14 @@ const I18N = {
     ordersSectionTitle:'Orders', addOrderForClient:'+ Order', deleteClient:'Delete this client', newClientTitle:'New client',
     statOrders:'Orders', statRevenueGenerated:'Revenue generated', statMarginGenerated:'Margin generated',
     supplierTitle:'Supplier', fieldSupplierContact:'Contact (WeChat, phone...)', fieldSupplierNote:'Note',
+    fieldWechat:'WeChat', fieldPhone:'Phone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Address / market',
+    placeholderWechatId:'WeChat ID', placeholderMarket:'E.g. Baima Market, floor 3, stall 217',
+    brandsTitle:'Brands & models', addBrand:'+ Brand', addModel:'+ Add a model',
+    modelSingular:'model', modelsPlural:'models',
+    brandNamePlaceholder:'Brand name', modelNamePlaceholder:'Model name',
+    noBrands:'No brand yet.\\nAdd one to list its models.',
+    confirmDeleteBrand:'Delete this brand and all its models?',
+    saveFirst:'Save the supplier first.',
     supplierNotePlaceholder:'Products, MOQ, notes...', newSupplierTitle:'New supplier', deleteSupplier:'Delete',
     confirmDeleteOrder:'Permanently delete this order?', confirmDeleteClient:'Delete this client?',
     confirmDeleteSupplier:'Delete this supplier?',
@@ -1677,12 +1765,21 @@ function renderSuppliers(){
     el.innerHTML = emptyHtml('suppliers', t('emptySuppliers'));
     return;
   }
-  el.innerHTML = list.map((s,i)=>`
+  el.innerHTML = list.map((s,i)=>{
+    const wechat = s.wechat || s.contact || '';
+    const brands = Array.isArray(s.brands) ? s.brands.filter(b=>b.name) : [];
+    const modelCount = brands.reduce((n,b)=>n + (b.models ? b.models.length : 0), 0);
+    return `
     <div class="order-card card-in" style="animation-delay:${Math.min(i,8)*35}ms" data-supplier-id="${s.id}">
-      <div class="card-top"><div class="client">${escapeHtml(s.name)}</div></div>
-      <div class="card-mid">${escapeHtml(s.contact||t('noContact'))}</div>
-      ${s.note?`<div class="card-mid" style="margin-top:4px;">${escapeHtml(s.note)}</div>`:''}
-    </div>`).join('');
+      <div class="card-top">
+        <div class="client">${escapeHtml(s.name)}</div>
+        ${brands.length ? `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${modelCount} ${modelCount>1?t('modelsPlural'):t('modelSingular')}</div>` : ''}
+      </div>
+      <div class="card-mid">${wechat ? 'WeChat · ' + escapeHtml(wechat) : escapeHtml(t('noContact'))}</div>
+      ${s.address ? `<div class="card-mid" style="margin-top:3px;">${escapeHtml(s.address)}</div>` : ''}
+      ${brands.length ? `<div style="margin-top:7px;">${brands.map(b=>`<span class="brand-chip">${escapeHtml(b.name)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function render(){
@@ -2153,25 +2250,121 @@ $('#addOrderForClient').addEventListener('click', ()=>{
   openSheet(null, id);
 });
 
+let editingBrands = [];   // copie de travail des marques du fournisseur ouvert
+
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg>';
+
+function renderBrands(){
+  const el = $('#brandsList');
+  if(!editingBrands.length){
+    el.innerHTML = `<div class="brand-empty">${escapeHtml(t('noBrands')).replace(/\\n/g,'<br>')}</div>`;
+    return;
+  }
+  el.innerHTML = editingBrands.map((b, bi)=>`
+    <div class="brand-block" style="animation-delay:${Math.min(bi,6)*40}ms">
+      <div class="brand-head">
+        <input class="brand-name" type="text" value="${escapeHtml(b.name)}"
+               placeholder="${escapeHtml(t('brandNamePlaceholder'))}" data-brand="${bi}">
+        <button type="button" class="mini-btn danger" data-del-brand="${bi}" aria-label="Supprimer">${ICON_TRASH}</button>
+      </div>
+      <div class="model-list">
+        ${b.models.map((m, mi)=>`
+          <div class="model-row">
+            <input type="text" value="${escapeHtml(m)}"
+                   placeholder="${escapeHtml(t('modelNamePlaceholder'))}"
+                   data-brand-idx="${bi}" data-model-idx="${mi}">
+            <button type="button" class="mini-btn danger" data-del-model="${bi}:${mi}" aria-label="Supprimer">${ICON_TRASH}</button>
+          </div>`).join('')}
+      </div>
+      <button type="button" class="add-model" data-add-model="${bi}">${escapeHtml(t('addModel'))}</button>
+    </div>`).join('');
+}
+
+// saisie en direct
+$('#brandsList').addEventListener('input', (e)=>{
+  const el = e.target;
+  if(el.dataset.brand !== undefined){
+    editingBrands[Number(el.dataset.brand)].name = el.value;
+  } else if(el.dataset.brandIdx !== undefined){
+    editingBrands[Number(el.dataset.brandIdx)].models[Number(el.dataset.modelIdx)] = el.value;
+  }
+});
+
+$('#brandsList').addEventListener('click', async (e)=>{
+  const addBtn = e.target.closest('[data-add-model]');
+  if(addBtn){
+    editingBrands[Number(addBtn.dataset.addModel)].models.push('');
+    renderBrands();
+    const inputs = $('#brandsList').querySelectorAll(`[data-brand-idx="${addBtn.dataset.addModel}"]`);
+    if(inputs.length) inputs[inputs.length-1].focus();
+    return;
+  }
+  const delBrand = e.target.closest('[data-del-brand]');
+  if(delBrand){
+    if(!(await showConfirm(t('confirmDeleteBrand')))) return;
+    editingBrands.splice(Number(delBrand.dataset.delBrand), 1);
+    renderBrands();
+    return;
+  }
+  const delModel = e.target.closest('[data-del-model]');
+  if(delModel){
+    const [bi, mi] = delModel.dataset.delModel.split(':').map(Number);
+    editingBrands[bi].models.splice(mi, 1);
+    renderBrands();
+  }
+});
+
+$('#addBrandBtn').addEventListener('click', ()=>{
+  editingBrands.push({ name:'', models:[''] });
+  renderBrands();
+  const inputs = $('#brandsList').querySelectorAll('.brand-name');
+  if(inputs.length) inputs[inputs.length-1].focus();
+});
+
+function fillSupplierForm(sup){
+  $('#s_name').value     = sup ? (sup.name || '') : '';
+  $('#s_wechat').value   = sup ? (sup.wechat || '') : '';
+  $('#s_phone').value    = sup ? (sup.phone || '') : '';
+  $('#s_whatsapp').value = sup ? (sup.whatsapp || '') : '';
+  $('#s_address').value  = sup ? (sup.address || '') : '';
+  $('#s_note').value     = sup ? (sup.note || '') : '';
+  // reprise des anciens fournisseurs où tout était dans "contact"
+  if(sup && !sup.wechat && sup.contact) $('#s_wechat').value = sup.contact;
+  editingBrands = (sup && Array.isArray(sup.brands))
+    ? sup.brands.map(b => ({ name:b.name || '', models: Array.isArray(b.models) ? b.models.slice() : [] }))
+    : [];
+  renderBrands();
+}
+
 function openSupplierSheet(id){
   editingSupplierId = id;
   clearFormErrors($('#supplierForm'));
-  const s = suppliers.find(x=>x.id===id);
-  if(!s) return;
-  $('#supplierSheetTitle').textContent = s.name;
-  $('#s_name').value = s.name;
-  $('#s_contact').value = s.contact||'';
-  $('#s_note').value = s.note||'';
+  const sup = suppliers.find(x => x.id === id);
+  if(!sup) return;
+  $('#supplierSheetTitle').textContent = sup.name;
+  fillSupplierForm(sup);
+  $('#deleteSupplierBtn').style.display = 'block';
   $('#supplierOverlay').classList.add('open');
 }
 function openNewSupplierSheet(){
   editingSupplierId = null;
   clearFormErrors($('#supplierForm'));
   $('#supplierSheetTitle').textContent = t('newSupplierTitle');
-  $('#s_name').value=''; $('#s_contact').value=''; $('#s_note').value='';
+  fillSupplierForm(null);
+  $('#deleteSupplierBtn').style.display = 'none';
   $('#supplierOverlay').classList.add('open');
 }
-function closeSupplierSheet(){ $('#supplierOverlay').classList.remove('open'); editingSupplierId=null; }
+function closeSupplierSheet(){
+  $('#supplierOverlay').classList.remove('open');
+  editingSupplierId = null;
+  editingBrands = [];
+}
+
+function cleanBrands(){
+  return editingBrands
+    .map(b => ({ name: (b.name || '').trim(), models: b.models.map(m => (m || '').trim()).filter(Boolean) }))
+    .filter(b => b.name || b.models.length);
+}
 
 $('#supplierForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -2179,7 +2372,18 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
   clearFieldError(nameInput);
   const name = nameInput.value.trim();
   if(!name){ setFieldError(nameInput, t('toastIndicateName')); return; }
-  const data = { name, contact:$('#s_contact').value.trim(), note:$('#s_note').value.trim() };
+
+  const data = {
+    name,
+    wechat:   $('#s_wechat').value.trim(),
+    phone:    $('#s_phone').value.trim(),
+    whatsapp: $('#s_whatsapp').value.trim(),
+    address:  $('#s_address').value.trim(),
+    note:     $('#s_note').value.trim(),
+    brands:   cleanBrands(),
+    contact:  $('#s_wechat').value.trim()   // compatibilité avec l'affichage existant
+  };
+
   if(editingSupplierId){
     await updateSupplierDoc(editingSupplierId, data);
   } else {
@@ -2188,8 +2392,9 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
   closeSupplierSheet();
   showToast(t('toastSupplierSaved'));
 });
+
 $('#closeSupplierSheet').addEventListener('click', closeSupplierSheet);
-$('#supplierOverlay').addEventListener('click', (e)=>{ if(e.target===$('#supplierOverlay')) closeSupplierSheet(); });
+$('#supplierOverlay').addEventListener('click', (e)=>{ if(e.target === $('#supplierOverlay')) closeSupplierSheet(); });
 $('#deleteSupplierBtn').addEventListener('click', async ()=>{
   if(!editingSupplierId) return;
   if(!(await showConfirm(t('confirmDeleteSupplier')))) return;
