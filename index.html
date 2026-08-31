@@ -691,7 +691,7 @@
     position:absolute; top:calc(env(safe-area-inset-top) + 18px); right:20px; z-index:2;
   }
 
-  .orb-wrap{ position:relative; width:200px; height:200px; margin-bottom:38px; z-index:1; }
+  .orb-wrap{ position:relative; width:200px; height:200px; margin-bottom:38px; z-index:1; cursor:pointer; -webkit-user-select:none; user-select:none; }
   .orb{
     position:absolute; inset:26px; border-radius:50%;
     background:radial-gradient(circle at 32% 28%, var(--accent-bright), var(--accent) 62%, var(--accent-deep));
@@ -1164,6 +1164,7 @@ const I18N = {
     voiceHint:'Parle naturellement. Je réponds à voix haute et je continue de t\u2019écouter.',
     voiceHintOff:'Appuie sur Parler pour lancer la conversation.',
     voiceNotSupported:'Le micro n\u2019est pas disponible sur ce navigateur.',
+    voiceNoPermission:'Autorise l\u2019accès au micro dans les réglages de ton navigateur, puis réessaie.',
     memoryCleared:'Mémoire de l\u2019assistant effacée.', clearMemory:'Effacer la mémoire',
     assistantGreeting:"Salut ! Je peux gérer tes commandes et clients, répondre sur tes chiffres, écrire à tes fournisseurs chinois ou rédiger tes messages clients. Parle ou écris.",
     micNotSupported:'Micro non supporté sur ce navigateur', assistantError:'Désolé, une erreur est survenue, réessaie.',
@@ -1230,6 +1231,7 @@ const I18N = {
     voiceHint:'Speak naturally. I answer out loud and keep listening.',
     voiceHintOff:'Tap Speak to start the conversation.',
     voiceNotSupported:'The microphone is not available on this browser.',
+    voiceNoPermission:'Allow microphone access in your browser settings, then try again.',
     memoryCleared:'Assistant memory cleared.', clearMemory:'Clear memory',
     assistantGreeting:"Hi! I can manage your orders and clients, answer questions on your numbers, write to your Chinese suppliers or draft client messages. Speak or type.",
     micNotSupported:'Mic not supported on this browser', assistantError:'Sorry, something went wrong, try again.',
@@ -2723,9 +2725,12 @@ function buildAssistantChips(){
 }
 
 // ================= MODE VOCAL MAINS-LIBRES =================
-let voiceActive = false;       // la boucle tourne
+let voiceActive = false;
 let voiceRecognition = null;
 let voiceSpeaking = false;
+let voiceErrors = 0;
+let voiceRestartTimer = null;
+let speechPrimed = false;
 
 function setVoiceState(state){
   const el = document.getElementById('voiceMode');
@@ -2733,30 +2738,54 @@ function setVoiceState(state){
   const labels = { idle:'voiceIdle', listening:'voiceListening', thinking:'voiceThinking', speaking:'voiceSpeaking' };
   $('#voiceStatus').textContent = t(labels[state] || 'voiceIdle');
 }
-function setVoiceTranscript(text){
-  $('#voiceTranscript').textContent = text || '';
-}
+function setVoiceTranscript(text){ $('#voiceTranscript').textContent = text || ''; }
 function updateVoiceButtons(){
   $('#voiceToggle').textContent = voiceActive ? t('voiceStop') : t('voiceStart');
   $('#voiceToChat').textContent = t('voiceToChat');
   $('#voiceHint').textContent = voiceActive ? t('voiceHint') : t('voiceHintOff');
 }
 
+// iOS exige un geste utilisateur pour autoriser la synthèse vocale : on l'amorce au premier appui.
+function primeSpeech(){
+  if(speechPrimed) return;
+  try{
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    speechPrimed = true;
+  }catch(e){}
+}
+
 function speakThen(text, onDone){
   try{ speechSynthesis.cancel(); }catch(e){}
   if(!text){ onDone && onDone(); return; }
+  let finished = false;
+  const done = ()=>{ if(finished) return; finished = true; voiceSpeaking = false; onDone && onDone(); };
   try{
     const u = new SpeechSynthesisUtterance(text);
     u.lang = currentLang === 'fr' ? 'fr-FR' : 'en-US';
     u.rate = 1.02;
     voiceSpeaking = true;
-    u.onend = () => { voiceSpeaking = false; onDone && onDone(); };
-    u.onerror = () => { voiceSpeaking = false; onDone && onDone(); };
+    u.onend = done;
+    u.onerror = done;
     speechSynthesis.speak(u);
-  }catch(e){
-    voiceSpeaking = false;
-    onDone && onDone();
-  }
+    // filet de sécurité : si la voix ne démarre pas (iOS), on n'attend pas indéfiniment
+    setTimeout(done, Math.min(2000 + text.length * 70, 15000));
+  }catch(e){ done(); }
+}
+
+function scheduleListen(delay){
+  clearTimeout(voiceRestartTimer);
+  voiceRestartTimer = setTimeout(()=>{
+    if(!voiceActive || assistantBusy || voiceSpeaking) return;
+    try{
+      voiceRecognition.start();
+      setVoiceState('listening');
+    }catch(e){
+      // start() peut échouer si une session tourne déjà : on réessaie une fois plus tard
+      setVoiceState('idle');
+    }
+  }, delay || 400);
 }
 
 function initVoiceRecognition(){
@@ -2765,6 +2794,10 @@ function initVoiceRecognition(){
   const r = new SR();
   r.continuous = false;
   r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  r.onstart = ()=>{ voiceErrors = 0; };
+
   r.onresult = (e)=>{
     let interim = '', finalText = '';
     for(let i = e.resultIndex; i < e.results.length; i++){
@@ -2774,28 +2807,55 @@ function initVoiceRecognition(){
     setVoiceTranscript(finalText || interim);
     if(finalText.trim()) handleVoiceInput(finalText.trim());
   };
-  r.onerror = ()=>{ if(voiceActive) setVoiceState('idle'); };
+
+  r.onerror = (e)=>{
+    const code = e && e.error;
+    if(code === 'not-allowed' || code === 'service-not-allowed'){
+      stopVoiceLoop();
+      setVoiceTranscript(t('voiceNoPermission'));
+      return;
+    }
+    if(code === 'no-speech' || code === 'aborted'){ return; }   // banal, onend relancera
+    voiceErrors++;
+    if(voiceErrors >= 3){
+      stopVoiceLoop();
+      setVoiceTranscript(t('voiceNotSupported'));
+    }
+  };
+
   r.onend = ()=>{
-    // relance l'écoute si la boucle est active et qu'on ne parle/réfléchit pas
     if(voiceActive && !assistantBusy && !voiceSpeaking){
-      try{ r.start(); setVoiceState('listening'); }catch(e){}
+      scheduleListen(500);   // délai obligatoire : sans lui, boucle infinie qui fige la page
     }
   };
   return r;
 }
 
 function startVoiceLoop(){
+  primeSpeech();
   if(!voiceRecognition) voiceRecognition = initVoiceRecognition();
-  if(!voiceRecognition){ showToast(t('voiceNotSupported')); return; }
+  if(!voiceRecognition){
+    showToast(t('voiceNotSupported'));
+    setVoiceTranscript(t('voiceNotSupported'));
+    return;
+  }
   voiceActive = true;
+  voiceErrors = 0;
   voiceRecognition.lang = currentLang === 'fr' ? 'fr-FR' : 'en-US';
   updateVoiceButtons();
   setVoiceTranscript('');
-  try{ voiceRecognition.start(); setVoiceState('listening'); }catch(e){}
+  try{
+    voiceRecognition.start();
+    setVoiceState('listening');
+  }catch(e){
+    scheduleListen(600);
+  }
 }
+
 function stopVoiceLoop(){
   voiceActive = false;
-  try{ voiceRecognition && voiceRecognition.stop(); }catch(e){}
+  clearTimeout(voiceRestartTimer);
+  try{ voiceRecognition && voiceRecognition.abort(); }catch(e){}
   try{ speechSynthesis.cancel(); }catch(e){}
   voiceSpeaking = false;
   setVoiceState('idle');
@@ -2803,11 +2863,11 @@ function stopVoiceLoop(){
 }
 
 async function handleVoiceInput(text){
-  try{ voiceRecognition.stop(); }catch(e){}
+  clearTimeout(voiceRestartTimer);
+  try{ voiceRecognition.abort(); }catch(e){}
   setVoiceState('thinking');
   setVoiceTranscript(text);
 
-  // on réutilise exactement le même moteur que le chat écrit
   addChatMsg('user', text);
   assistantHistory.push({ role:'user', content:text });
   if(assistantHistory.length > 12) assistantHistory = assistantHistory.slice(-12);
@@ -2835,21 +2895,18 @@ async function handleVoiceInput(text){
   setVoiceTranscript(reply);
   setVoiceState('speaking');
   speakThen(reply, ()=>{
-    if(voiceActive){
-      try{ voiceRecognition.start(); setVoiceState('listening'); }
-      catch(e){ setVoiceState('idle'); }
-    } else {
-      setVoiceState('idle');
-    }
+    if(voiceActive) scheduleListen(350);
+    else setVoiceState('idle');
   });
 }
 
 function openVoiceMode(){
   document.getElementById('voiceMode').classList.add('show');
+  voiceActive = false;
   setVoiceState('idle');
   setVoiceTranscript('');
   updateVoiceButtons();
-  setTimeout(startVoiceLoop, 400);
+  // on ne démarre PAS tout seul : iOS exige un appui direct sur "Parler"
 }
 function closeVoiceMode(){
   stopVoiceLoop();
@@ -2868,6 +2925,10 @@ $('#voiceToChat').addEventListener('click', ()=>{
   closeVoiceMode();
   $('#assistantOverlay').classList.add('open');
   buildAssistantChips();
+});
+// l'orbe est aussi un bouton : on tape dessus pour lancer / arrêter
+document.querySelector('.orb-wrap').addEventListener('click', ()=>{
+  if(voiceActive) stopVoiceLoop(); else startVoiceLoop();
 });
 
 function openAssistant(){
@@ -2915,7 +2976,7 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .view-switch button';
+const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function tapDown(el, cx, cy){
