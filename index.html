@@ -1167,6 +1167,7 @@ const I18N = {
     voiceHintOff:'Appuie sur Parler pour lancer la conversation.',
     voiceNotSupported:'Le micro n\u2019est pas disponible sur ce navigateur.',
     voiceNoPermission:'Autorise l\u2019accès au micro dans les réglages de ton navigateur, puis réessaie.',
+    voiceNothingHeard:'Je n\u2019ai rien entendu. Maintiens la sphère, parle, puis relâche.',
     memoryCleared:'Mémoire de l\u2019assistant effacée.', clearMemory:'Effacer la mémoire',
     assistantGreeting:"Salut ! Je peux gérer tes commandes et clients, répondre sur tes chiffres, écrire à tes fournisseurs chinois ou rédiger tes messages clients. Parle ou écris.",
     micNotSupported:'Micro non supporté sur ce navigateur', assistantError:'Désolé, une erreur est survenue, réessaie.',
@@ -1235,6 +1236,7 @@ const I18N = {
     voiceHintOff:'Tap Speak to start the conversation.',
     voiceNotSupported:'The microphone is not available on this browser.',
     voiceNoPermission:'Allow microphone access in your browser settings, then try again.',
+    voiceNothingHeard:'I did not hear anything. Hold the orb, speak, then release.',
     memoryCleared:'Assistant memory cleared.', clearMemory:'Clear memory',
     assistantGreeting:"Hi! I can manage your orders and clients, answer questions on your numbers, write to your Chinese suppliers or draft client messages. Speak or type.",
     micNotSupported:'Mic not supported on this browser', assistantError:'Sorry, something went wrong, try again.',
@@ -2800,7 +2802,11 @@ function ensureRecognition(){
       const chunk = e.results[i][0].transcript;
       if(e.results[i].isFinal) finalText += chunk; else interim += chunk;
     }
-    if(finalText.trim()) lastTranscript = finalText.trim();
+    if(finalText.trim()){
+      lastTranscript = finalText.trim();
+    } else if(interim.trim()){
+      lastTranscript = interim.trim();   // iOS ne renvoie souvent aucun "final"
+    }
     setVoiceTranscript(finalText || interim || lastTranscript);
   };
 
@@ -2833,6 +2839,7 @@ function ensureRecognition(){
         handleVoiceInput(text);
       } else {
         setVoiceState('idle');
+        setVoiceTranscript(t('voiceNothingHeard'));
       }
       return;
     }
@@ -2868,7 +2875,10 @@ function beginListening(){
 }
 function endListening(){
   if(!voiceListening) return;
-  try{ voiceRecognition.stop(); }catch(e){}   // stop() garde le résultat, abort() le jetterait
+  // petit délai : iOS a besoin d'un instant pour finaliser la transcription
+  setTimeout(()=>{
+    try{ voiceRecognition.stop(); }catch(e){}
+  }, 250);
 }
 
 function scheduleListen(delay){
