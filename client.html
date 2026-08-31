@@ -131,6 +131,20 @@
   .code-key:active{ transform:scale(0.94); }
   .code-key.fn{ font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-muted); background:transparent; border-color:transparent; box-shadow:none; }
   .code-error{ margin-top:16px; font-size:13px; color:var(--danger); min-height:18px; }
+  .client-bio-btn{
+    max-width:290px; width:100%; margin:0 auto 18px; padding:13px; border-radius:13px;
+    border:1px solid var(--teal); background:transparent; color:var(--teal);
+    font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer;
+    display:none; align-items:center; justify-content:center; gap:9px; transition:transform .1s ease;
+  }
+  .client-bio-btn.show{ display:flex; }
+  .client-bio-btn:active{ transform:scale(0.98); }
+  .client-bio-btn svg{ width:19px; height:19px; }
+  .bio-enable-link{
+    display:none; margin:16px auto 0; background:none; border:none; color:var(--text-muted);
+    font-family:var(--font-body); font-size:12.5px; cursor:pointer; text-decoration:underline;
+  }
+  .bio-enable-link.show{ display:block; }
   .shake{ animation:shakeX .38s ease; }
   @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
 
@@ -183,9 +197,14 @@
   <div class="code-icon">🔒</div>
   <h2 id="codeTitle">Code d'accès</h2>
   <p id="codeSubtitle">Saisis le code à 6 chiffres reçu de ton vendeur.</p>
+  <button type="button" class="client-bio-btn" id="clientBioBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg>
+    <span>Déverrouiller avec Face ID</span>
+  </button>
   <div class="code-dots" id="codeDots"></div>
   <div class="code-pad" id="codePad"></div>
   <div class="code-error" id="codeError"></div>
+  <button type="button" class="bio-enable-link" id="clientBioEnable">Activer Face ID sur cet appareil</button>
 </div>
 
 <div id="loadingScreen">Chargement...</div>
@@ -265,6 +284,64 @@ function showError(title, text){
     </div>`;
 }
 
+function bioKey(){ return 'ds_client_bio_' + clientId; }
+function bioAvailable(){
+  return !!(window.PublicKeyCredential && navigator.credentials && location.protocol === 'https:');
+}
+function bioRegistered(){
+  try{ return !!localStorage.getItem(bioKey()); }catch(e){ return false; }
+}
+
+async function registerClientBio(){
+  if(!bioAvailable()){ codeError('Non disponible sur cet appareil.'); return; }
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'DOLLAR$ SOURCING' },
+        user: { id: userId, name: clientData.name || 'client', displayName: clientData.name || 'Client' },
+        pubKeyCredParams: [{type:'public-key', alg:-7},{type:'public-key', alg:-257}],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+    if(!cred){ return; }
+    const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    localStorage.setItem(bioKey(), rawId);
+    codeError('');
+    enterApp();
+  }catch(e){
+    codeError('Activation impossible sur cet appareil.');
+  }
+}
+
+async function verifyClientBio(){
+  const stored = (()=>{ try{ return localStorage.getItem(bioKey()); }catch(e){ return null; } })();
+  if(!stored) return;
+  try{
+    const rawId = Uint8Array.from(atob(stored), c=>c.charCodeAt(0));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ type:'public-key', id: rawId }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    if(assertion){ enterApp(); }
+    else codeError('Utilise ton code.');
+  }catch(e){
+    codeError('Vérification échouée, utilise ton code.');
+  }
+}
+
+document.getElementById('clientBioBtn').addEventListener('click', verifyClientBio);
+document.getElementById('clientBioEnable').addEventListener('click', registerClientBio);
+
 const CODE_LENGTH = 6;
 let codeBuffer = '';
 let codeAttempts = 0;
@@ -319,6 +396,23 @@ document.addEventListener('click', (e)=>{
   if(codeBuffer.length === CODE_LENGTH){
     if(codeBuffer === String(clientData.accessCode)){
       try{ localStorage.setItem(codeMemoryKey(), codeBuffer); }catch(e){}
+      if(bioAvailable() && !bioRegistered()){
+        codeBuffer = '';
+        renderCodeDots();
+        document.getElementById('codeTitle').textContent = 'Code validé';
+        document.getElementById('codeSubtitle').textContent = 'Active Face ID pour ne plus avoir à saisir ton code.';
+        document.getElementById('codePad').style.display = 'none';
+        document.getElementById('codeDots').style.display = 'none';
+        document.getElementById('clientBioEnable').textContent = 'Activer Face ID sur cet appareil';
+        document.getElementById('clientBioEnable').classList.add('show');
+        const skip = document.createElement('button');
+        skip.type = 'button';
+        skip.className = 'bio-enable-link show';
+        skip.textContent = 'Plus tard';
+        skip.addEventListener('click', enterApp);
+        document.getElementById('codeScreen').appendChild(skip);
+        return;
+      }
       enterApp();
     } else {
       codeAttempts++;
@@ -352,7 +446,19 @@ async function init(){
 
     let remembered = null;
     try{ remembered = localStorage.getItem(codeMemoryKey()); }catch(e){}
-    if(remembered && remembered === String(clientData.accessCode)){ enterApp(); return; }
+
+    if(remembered && remembered === String(clientData.accessCode)){
+      if(bioAvailable() && bioRegistered()){
+        askCode();
+        document.getElementById('codeTitle').textContent = 'Déverrouiller';
+        document.getElementById('codeSubtitle').textContent = 'Utilise Face ID, ou saisis ton code.';
+        document.getElementById('clientBioBtn').classList.add('show');
+        setTimeout(verifyClientBio, 350);
+        return;
+      }
+      enterApp();
+      return;
+    }
 
     askCode();
   }catch(e){
