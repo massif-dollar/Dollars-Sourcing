@@ -889,6 +889,9 @@
       <button class="icon-btn" id="exportBtn" data-i18n-title="exportTitle" title="Exporter mes données">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 19h16"/></svg>
       </button>
+      <button class="icon-btn" id="accessBtn" data-i18n-title="accessTitle" title="Accès" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M18 8v6M15 11h6"/></svg>
+      </button>
       <button class="icon-btn" id="themeToggle" data-i18n-title="themeTitle" title="Thème">
         <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>
@@ -1125,6 +1128,26 @@
   </div>
 </div>
 
+<div class="overlay" id="accessOverlay">
+  <div class="sheet">
+    <button class="icon-btn close-x" id="closeAccessSheet">✕</button>
+    <h2 data-i18n="accessTitle">Accès invités</h2>
+    <p style="font-size:13.5px; color:var(--text-faint); margin:0 0 18px; line-height:1.55;" data-i18n="accessHelp">
+      Ajoute l'adresse Gmail d'un ami pour qu'il puisse se connecter. Ses clients et commandes resteront privés ; seuls les fournisseurs sont partagés. Tu peux retirer un accès à tout moment.
+    </p>
+    <div class="field">
+      <label data-i18n="accessEmailLabel">Adresse Gmail</label>
+      <input type="email" id="accessEmailInput" placeholder="ami@gmail.com" autocapitalize="none" autocorrect="off">
+      <div class="field-error"></div>
+    </div>
+    <button type="button" class="btn-primary" id="addAccessBtn" data-i18n="accessAdd">Autoriser cet accès</button>
+    <div style="margin-top:20px;">
+      <h2 class="section-title" style="margin-bottom:10px;" data-i18n="accessListTitle">Comptes autorisés</h2>
+      <div id="accessList"></div>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <p id="confirmMessage"></p>
@@ -1192,6 +1215,12 @@ const I18N = {
   fr: {
     tagline:'Sourcing & revente', langTitle:'Langue', exportTitle:'Exporter mes données', resetTitle:'Réinitialiser', addTitle:'Ajouter',
     logoutTitle:'Se déconnecter', confirmLogout:'Se déconnecter de DOLLAR$ SOURCING ?', themeTitle:'Thème clair / sombre',
+    accessTitle:'Accès invités', accessEmailLabel:'Adresse Gmail', accessAdd:'Autoriser cet accès',
+    accessListTitle:'Comptes autorisés', accessNone:'Aucun invité pour le moment.',
+    accessHelp:"Ajoute l'adresse Gmail d'un ami pour qu'il puisse se connecter. Ses clients et commandes resteront privés ; seuls les fournisseurs sont partagés. Tu peux retirer un accès à tout moment.",
+    accessInvalidEmail:'Adresse invalide.', accessAlready:'Cet accès existe déjà.',
+    accessGranted:'Accès autorisé.', accessRevoked:'Accès retiré.',
+    confirmRevoke:'Retirer l\u2019accès de {email} ? Cette personne ne pourra plus se connecter.',
     loginDenied:"Ce compte Google n'a pas accès à cet espace.", loginFailed:'Connexion impossible. Réessaie.',
     navOrders:'Commandes', navClients:'Clients', navSuppliers:'Fournisseurs', navStats:'Stats', navRequests:'Demandes',
     kpiActive:'En cours', kpiMargin:'Marge totale', kpiPending:'À encaisser', kpiDelivered:'Livrées',
@@ -1269,6 +1298,12 @@ const I18N = {
   en: {
     tagline:'Sourcing & resale', langTitle:'Language', exportTitle:'Export my data', resetTitle:'Reset', addTitle:'Add',
     logoutTitle:'Sign out', confirmLogout:'Sign out of DOLLAR$ SOURCING?', themeTitle:'Light / dark theme',
+    accessTitle:'Guest access', accessEmailLabel:'Gmail address', accessAdd:'Grant access',
+    accessListTitle:'Authorised accounts', accessNone:'No guest yet.',
+    accessHelp:"Add a friend's Gmail address so they can sign in. Their clients and orders stay private; only suppliers are shared. You can revoke access at any time.",
+    accessInvalidEmail:'Invalid address.', accessAlready:'This access already exists.',
+    accessGranted:'Access granted.', accessRevoked:'Access revoked.',
+    confirmRevoke:'Revoke access for {email}? They will no longer be able to sign in.',
     loginDenied:'This Google account does not have access to this space.', loginFailed:'Sign-in failed. Try again.',
     navOrders:'Orders', navClients:'Clients', navSuppliers:'Suppliers', navStats:'Stats', navRequests:'Requests',
     kpiActive:'In progress', kpiMargin:'Total margin', kpiPending:'To collect', kpiDelivered:'Delivered',
@@ -1481,6 +1516,31 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const OWNER_EMAIL = 'dollars.sourcing@gmail.com';
 
+// ===== Multi-utilisateur =====
+// Chaque donnée porte le uid de son créateur. Commandes et clients sont privés,
+// les fournisseurs sont partagés entre tous les comptes autorisés.
+let currentUid = null;
+let currentEmail = '';
+let isOwner = false;
+let allowedEmails = [];      // comptes invités, gérés par le propriétaire
+
+function mine(doc){ return doc.ownerId === currentUid; }
+
+async function loadAllowedEmails(){
+  try{
+    const doc = await db.collection('settings').doc('access').get();
+    allowedEmails = (doc.exists && Array.isArray(doc.data().emails)) ? doc.data().emails : [];
+  }catch(e){ allowedEmails = []; }
+  return allowedEmails;
+}
+async function saveAllowedEmails(){
+  try{
+    await db.collection('settings').doc('access')
+      .set({ emails: allowedEmails, updatedAt: Date.now() }, { merge:true });
+    return true;
+  }catch(e){ showToast(t('toastSaveError')); return false; }
+}
+
 function genToken(){
   if(window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'');
   return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
@@ -1499,22 +1559,24 @@ function startListeners(){
   if(listenersStarted) return;
   listenersStarted = true;
   loadAssistantMemory();
-  db.collection('orders').onSnapshot(snap=>{
+  // Commandes, clients, demandes : uniquement les miens
+  db.collection('orders').where('ownerId','==',currentUid).onSnapshot(snap=>{
     orders = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
     renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
-  db.collection('clients').onSnapshot(snap=>{
+  db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     clients = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
     renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
-  db.collection('suppliers').onSnapshot(snap=>{
-    suppliers = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
-    renderCurrentView();
-  }, ()=>showToast(t('toastSaveError')));
-  db.collection('pendingOrders').onSnapshot(snap=>{
+  db.collection('pendingOrders').where('ownerId','==',currentUid).onSnapshot(snap=>{
     pendingRequests = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderRequestsBadge();
     if(viewState==='requests') renderRequests();
+  }, ()=>showToast(t('toastSaveError')));
+  // Fournisseurs : partagés par toute l'équipe
+  db.collection('suppliers').onSnapshot(snap=>{
+    suppliers = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
 }
 
@@ -1524,7 +1586,7 @@ async function deletePendingOrderDoc(id){
 }
 
 async function createOrder(data){
-  try{ await db.collection('orders').add(Object.assign({createdAt:Date.now()}, data)); return true; }
+  try{ await db.collection('orders').add(Object.assign({createdAt:Date.now(), ownerId:currentUid}, data)); return true; }
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function updateOrderDoc(id, data){
@@ -1537,7 +1599,7 @@ async function deleteOrderDoc(id){
 }
 async function createClientDoc(data){
   try{
-    const ref = await db.collection('clients').add(Object.assign({createdAt:Date.now(), token:genToken()}, data));
+    const ref = await db.collection('clients').add(Object.assign({createdAt:Date.now(), token:genToken(), ownerId:currentUid}, data));
     return ref.id;
   }catch(e){ showToast(t('toastSaveError')); return null; }
 }
@@ -1550,7 +1612,7 @@ async function deleteClientDoc(id){
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function createSupplierDoc(data){
-  try{ await db.collection('suppliers').add(Object.assign({createdAt:Date.now()}, data)); return true; }
+  try{ await db.collection('suppliers').add(Object.assign({createdAt:Date.now(), ownerId:currentUid, ownerEmail:currentEmail}, data)); return true; }
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function updateSupplierDoc(id, data){
@@ -2402,13 +2464,82 @@ $('#deleteSupplierBtn').addEventListener('click', async ()=>{
   closeSupplierSheet();
 });
 
-$('#resetBtn').addEventListener('click', async ()=>{
+// ================= GESTION DES ACCÈS (propriétaire uniquement) =================
+function renderAccessList(){
+  const el = $('#accessList');
+  if(!allowedEmails.length){
+    el.innerHTML = `<div class="empty" style="padding:22px;">${escapeHtml(t('accessNone'))}</div>`;
+    return;
+  }
+  el.innerHTML = allowedEmails.map(email=>`
+    <div class="order-card" style="margin-bottom:8px; cursor:default;">
+      <div class="card-top">
+        <div class="client" style="font-size:14px; word-break:break-all;">${escapeHtml(email)}</div>
+        <button type="button" class="mini-btn danger" data-revoke="${escapeHtml(email)}" aria-label="Retirer">${ICON_TRASH}</button>
+      </div>
+    </div>`).join('');
+}
+
+async function openAccessSheet(){
+  if(!isOwner) return;
+  await loadAllowedEmails();
+  renderAccessList();
+  $('#accessEmailInput').value = '';
+  clearFieldError($('#accessEmailInput'));
+  $('#accessOverlay').classList.add('open');
+}
+function closeAccessSheet(){ $('#accessOverlay').classList.remove('open'); }
+
+$('#accessBtn').addEventListener('click', openAccessSheet);
+$('#closeAccessSheet').addEventListener('click', closeAccessSheet);
+$('#accessOverlay').addEventListener('click', (e)=>{ if(e.target === $('#accessOverlay')) closeAccessSheet(); });
+
+$('#addAccessBtn').addEventListener('click', async ()=>{
+  const input = $('#accessEmailInput');
+  clearFieldError(input);
+  const email = input.value.trim().toLowerCase();
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    setFieldError(input, t('accessInvalidEmail')); return;
+  }
+  if(email === OWNER_EMAIL || allowedEmails.includes(email)){
+    setFieldError(input, t('accessAlready')); return;
+  }
+  allowedEmails.push(email);
+  const ok = await saveAllowedEmails();
+  if(!ok){ allowedEmails = allowedEmails.filter(e => e !== email); return; }
+  input.value = '';
+  renderAccessList();
+  showToast(t('accessGranted'));
+});
+
+$('#accessList').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-revoke]');
+  if(!btn) return;
+  const email = btn.dataset.revoke;
+  if(!(await showConfirm(t('confirmRevoke').replace('{email}', email)))) return;
+  const backup = allowedEmails.slice();
+  allowedEmails = allowedEmails.filter(x => x !== email);
+  const ok = await saveAllowedEmails();
+  if(!ok){ allowedEmails = backup; }
+  renderAccessList();
+  if(ok) showToast(t('accessRevoked'));
+});
+
+$('#resetBtn').addEventListener('click' , async ()=>{
   if(!(await showConfirm(t('confirmReset')))) return;
   try{
-    for(const name of ['orders','clients','suppliers']){
-      const snap = await db.collection(name).get();
+    for(const name of ['orders','clients','pendingOrders']){
+      const snap = await db.collection(name).where('ownerId','==',currentUid).get();
+      if(snap.empty) continue;
       const batch = db.batch();
       snap.forEach(doc=>batch.delete(doc.ref));
+      await batch.commit();
+    }
+    // fournisseurs partagés : je ne supprime que ceux que j'ai créés
+    const sup = await db.collection('suppliers').where('ownerId','==',currentUid).get();
+    if(!sup.empty){
+      const batch = db.batch();
+      sup.forEach(doc=>batch.delete(doc.ref));
       await batch.commit();
     }
   }catch(e){ showToast(t('toastSaveError')); }
@@ -3298,8 +3429,7 @@ function showApp(){
   document.getElementById('loginScreen').classList.remove('show');
   document.getElementById('app').style.display = 'block';
   document.getElementById('fabAdd').style.display = 'flex';
-  const af = document.getElementById('assistantFab');
-  if(af) af.style.display = 'flex';
+  applyRoleUI();
   setTimeout(hideSplash, 1200);
 }
 
@@ -3330,15 +3460,52 @@ document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   location.reload();
 });
 
-auth.onAuthStateChanged(user=>{
+auth.onAuthStateChanged(async (user)=>{
   if(!user){ showLogin(); return; }
-  if((user.email||'').toLowerCase() !== OWNER_EMAIL){
-    auth.signOut();
-    showLogin('loginDenied');
-    return;
+
+  currentUid = user.uid;
+  currentEmail = (user.email || '').toLowerCase();
+  isOwner = currentEmail === OWNER_EMAIL;
+
+  if(!isOwner){
+    // compte invité : autorisé seulement s'il figure dans la liste d'accès
+    await loadAllowedEmails();
+    if(!allowedEmails.includes(currentEmail)){
+      auth.signOut();
+      showLogin('loginDenied');
+      return;
+    }
   }
+
+  applyRoleUI();
+  if(isOwner) migrateLegacyData();
   startLockFlow();
 });
+
+// Les données créées avant le multi-compte n'ont pas de propriétaire : on te les rattache.
+let migrationDone = false;
+async function migrateLegacyData(){
+  if(migrationDone) return;
+  migrationDone = true;
+  try{
+    for(const col of ['orders','clients','suppliers','pendingOrders']){
+      const snap = await db.collection(col).get();
+      const orphans = snap.docs.filter(d => !d.data().ownerId);
+      if(!orphans.length) continue;
+      const batch = db.batch();
+      orphans.forEach(d => batch.update(d.ref, { ownerId: currentUid, ownerEmail: currentEmail }));
+      await batch.commit();
+    }
+  }catch(e){ /* les règles peuvent refuser : sans gravité, on réessaiera */ }
+}
+
+// L'assistant IA et la gestion des accès restent réservés au propriétaire.
+function applyRoleUI(){
+  const af = document.getElementById('assistantFab');
+  if(af) af.style.display = isOwner ? 'flex' : 'none';
+  const ab = document.getElementById('accessBtn');
+  if(ab) ab.style.display = isOwner ? 'flex' : 'none';
+}
 
 // ================= VERROU APPAREIL (code 6 chiffres + biométrie) =================
 const PIN_LENGTH = 6;
