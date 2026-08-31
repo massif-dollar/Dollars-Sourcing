@@ -660,6 +660,11 @@
         <input type="text" id="clientLinkInput" readonly>
         <button type="button" class="link-btn" id="copyClientLinkBtn" data-i18n="copyLink">Copier</button>
       </div>
+      <div class="link-label" style="margin-top:12px;" data-i18n="clientCodeLabel">Code d'accès du client</div>
+      <div class="link-row">
+        <input type="text" id="clientCodeInput" readonly style="font-family:var(--font-display); font-size:17px; letter-spacing:.16em; text-align:center;">
+        <button type="button" class="link-btn" id="regenCodeBtn" data-i18n="newCode">Nouveau</button>
+      </div>
       <button type="button" class="link-btn wa" id="waClientLinkBtn" style="width:100%; margin-top:8px;" data-i18n="sendWhatsapp">Envoyer sur WhatsApp</button>
     </div>
     <div id="clientOrdersSection" style="margin-top:18px;">
@@ -777,7 +782,9 @@ const I18N = {
     supplierCreatedMsg:'Fournisseur "{name}" créé.', clientNotFoundMsg:'Je ne trouve pas de client "{name}".',
     noActiveOrderMsg:'Aucune commande active trouvée pour {name}.', orderUpdatedMsg:'Commande de {name} ({product}) mise à jour : {status}.',
     clientLinkLabel:'Lien personnel du client (à envoyer une seule fois)', copyLink:'Copier', sendWhatsapp:'Envoyer sur WhatsApp',
-    toastLinkCopied:'Lien copié', waLinkMessage:'Bonjour {name} ! Voici votre lien personnel pour passer vos commandes directement : {link}',
+    clientCodeLabel:"Code d'accès du client", newCode:'Nouveau', toastCodeRegenerated:'Nouveau code généré',
+    confirmRegenCode:"Générer un nouveau code ? L'ancien ne fonctionnera plus et le client devra ressaisir le nouveau.",
+    toastLinkCopied:'Lien copié', waLinkMessage:'Bonjour {name} ! Voici votre lien personnel pour passer vos commandes directement : {link}\n\nVotre code d\u2019accès : {code}',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
     requestQty:'Qté', requestNote:'Note client', validateRequest:'Valider', rejectRequest:'Refuser',
     confirmRejectRequest:'Refuser et supprimer cette demande ?', toastRequestRejected:'Demande refusée', toastRequestValidated:'Demande transformée en commande',
@@ -832,7 +839,9 @@ const I18N = {
     supplierCreatedMsg:'Supplier "{name}" created.', clientNotFoundMsg:'No client named "{name}" found.',
     noActiveOrderMsg:'No active order found for {name}.', orderUpdatedMsg:'Order for {name} ({product}) updated: {status}.',
     clientLinkLabel:'Client personal link (send it once)', copyLink:'Copy', sendWhatsapp:'Send on WhatsApp',
-    toastLinkCopied:'Link copied', waLinkMessage:'Hi {name}! Here is your personal link to place your orders directly: {link}',
+    clientCodeLabel:'Client access code', newCode:'New', toastCodeRegenerated:'New code generated',
+    confirmRegenCode:'Generate a new code? The old one will stop working and the client will need to enter the new one.',
+    toastLinkCopied:'Link copied', waLinkMessage:'Hi {name}! Here is your personal link to place your orders directly: {link}\n\nYour access code: {code}',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
     requestQty:'Qty', requestNote:'Client note', validateRequest:'Validate', rejectRequest:'Reject',
     confirmRejectRequest:'Reject and delete this request?', toastRequestRejected:'Request rejected', toastRequestValidated:'Request turned into an order',
@@ -1644,7 +1653,16 @@ function openClientSheet(id){
   $('#clientOrdersSection').style.display = c ? 'block' : 'none';
   $('#deleteClientBtn').style.display = c ? 'block' : 'none';
   $('#clientLinkBox').style.display = (c && c.token) ? 'block' : 'none';
-  if(c && c.token){ $('#clientLinkInput').value = clientLink(c); }
+  if(c && c.token){
+    $('#clientLinkInput').value = clientLink(c);
+    if(c.accessCode){
+      $('#clientCodeInput').value = c.accessCode;
+    } else {
+      const code = genAccessCode();
+      $('#clientCodeInput').value = code;
+      updateClientDoc(c.id, { accessCode: code });
+    }
+  }
   if(c){
     renderClientStatsSummary(id);
     renderClientOrders(id);
@@ -1654,9 +1672,24 @@ function openClientSheet(id){
   $('#clientOverlay').classList.add('open');
 }
 
+function genAccessCode(){
+  const arr = crypto.getRandomValues(new Uint32Array(1));
+  return String(arr[0] % 1000000).padStart(6, '0');
+}
+
 function clientLink(c){
   return `${CLIENT_APP_URL}?id=${c.id}&token=${c.token}`;
 }
+$('#regenCodeBtn').addEventListener('click', async ()=>{
+  if(!editingClientId) return;
+  if(!(await showConfirm(t('confirmRegenCode')))) return;
+  const code = genAccessCode();
+  const ok = await updateClientDoc(editingClientId, { accessCode: code });
+  if(ok){
+    $('#clientCodeInput').value = code;
+    showToast(t('toastCodeRegenerated'));
+  }
+});
 $('#copyClientLinkBtn').addEventListener('click', async ()=>{
   const input = $('#clientLinkInput');
   try{
@@ -1669,7 +1702,11 @@ $('#copyClientLinkBtn').addEventListener('click', async ()=>{
 $('#waClientLinkBtn').addEventListener('click', ()=>{
   const c = editingClientId ? clientById(editingClientId) : null;
   if(!c) return;
-  const msg = t('waLinkMessage').replace('{name}', c.name).replace('{link}', clientLink(c));
+  const code = $('#clientCodeInput').value || c.accessCode || '';
+  const msg = t('waLinkMessage')
+    .replace('{name}', c.name)
+    .replace('{link}', clientLink(c))
+    .replace('{code}', code);
   const waNumber = (c.contact||'').replace(/[^0-9+]/g,'');
   const waUrl = waNumber ? `https://wa.me/${waNumber.replace('+','')}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
