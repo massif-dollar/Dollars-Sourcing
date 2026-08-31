@@ -346,7 +346,6 @@ const CODE_LENGTH = 6;
 let codeBuffer = '';
 let codeAttempts = 0;
 
-function codeMemoryKey(){ return 'ds_client_code_' + clientId; }
 function renderCodeDots(){
   document.getElementById('codeDots').innerHTML =
     Array.from({length:CODE_LENGTH}, (_,i)=>
@@ -395,7 +394,6 @@ document.addEventListener('click', (e)=>{
   renderCodeDots();
   if(codeBuffer.length === CODE_LENGTH){
     if(codeBuffer === String(clientData.accessCode)){
-      try{ localStorage.setItem(codeMemoryKey(), codeBuffer); }catch(e){}
       if(bioAvailable() && !bioRegistered()){
         codeBuffer = '';
         renderCodeDots();
@@ -444,23 +442,13 @@ async function init(){
 
     if(!clientData.accessCode){ enterApp(); return; }
 
-    let remembered = null;
-    try{ remembered = localStorage.getItem(codeMemoryKey()); }catch(e){}
-
-    if(remembered && remembered === String(clientData.accessCode)){
-      if(bioAvailable() && bioRegistered()){
-        askCode();
-        document.getElementById('codeTitle').textContent = 'Déverrouiller';
-        document.getElementById('codeSubtitle').textContent = 'Utilise Face ID, ou saisis ton code.';
-        document.getElementById('clientBioBtn').classList.add('show');
-        setTimeout(verifyClientBio, 350);
-        return;
-      }
-      enterApp();
-      return;
-    }
-
     askCode();
+    if(bioAvailable() && bioRegistered()){
+      document.getElementById('codeTitle').textContent = 'Déverrouiller';
+      document.getElementById('codeSubtitle').textContent = 'Utilise Face ID, ou saisis ton code.';
+      document.getElementById('clientBioBtn').classList.add('show');
+      setTimeout(verifyClientBio, 350);
+    }
   }catch(e){
     showError('Connexion impossible', 'Vérifie ta connexion internet et réessaie.');
   }
