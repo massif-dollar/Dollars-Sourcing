@@ -783,6 +783,7 @@ $('#orderForm').addEventListener('submit', async (e)=>{
       clientId: clientId,
       clientName: clientData.name,
       token: clientToken,
+      ownerId: clientData.ownerId || null,   // la demande revient au vendeur de ce client
       product,
       qty: qtyVal,
       note: $('#f_note').value.trim(),
