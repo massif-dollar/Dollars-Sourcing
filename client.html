@@ -107,6 +107,33 @@
 
   #loadingScreen{ text-align:center; padding:100px 24px; color:var(--text-faint); font-size:14px; }
 
+  #codeScreen{ display:none; padding:60px 8px; text-align:center; }
+  #codeScreen.show{ display:block; }
+  #codeScreen .code-icon{
+    width:56px; height:56px; margin:0 auto 16px; border-radius:18px;
+    background:var(--glass); box-shadow:var(--glass-shadow), var(--glass-highlight);
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+  }
+  #codeScreen h2{ font-family:var(--font-display); font-size:19px; margin:0 0 6px; }
+  #codeScreen p{ font-size:13.5px; color:var(--text-muted); margin:0 0 22px; line-height:1.55; }
+  .code-dots{ display:flex; gap:11px; justify-content:center; margin-bottom:24px; }
+  .code-dot{
+    width:13px; height:13px; border-radius:50%; border:1.6px solid var(--glass-border);
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .code-dot.filled{ background:var(--teal); border-color:var(--teal); transform:scale(1.12); }
+  .code-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px; max-width:290px; margin:0 auto; }
+  .code-key{
+    padding:15px 0; border-radius:15px; border:1px solid var(--glass-border); background:var(--glass);
+    font-family:var(--font-display); font-size:21px; font-weight:600; color:var(--text); cursor:pointer;
+    transition:transform .1s ease; box-shadow:var(--glass-highlight);
+  }
+  .code-key:active{ transform:scale(0.94); }
+  .code-key.fn{ font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-muted); background:transparent; border-color:transparent; box-shadow:none; }
+  .code-error{ margin-top:16px; font-size:13px; color:var(--danger); min-height:18px; }
+  .shake{ animation:shakeX .38s ease; }
+  @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
+
   @media (min-width:700px){ #app{ max-width:600px; } }
 </style>
 </head>
@@ -150,6 +177,15 @@
   <div id="historyPanel" style="display:none;">
     <div class="list" id="historyList"></div>
   </div>
+</div>
+
+<div id="codeScreen">
+  <div class="code-icon">🔒</div>
+  <h2 id="codeTitle">Code d'accès</h2>
+  <p id="codeSubtitle">Saisis le code à 6 chiffres reçu de ton vendeur.</p>
+  <div class="code-dots" id="codeDots"></div>
+  <div class="code-pad" id="codePad"></div>
+  <div class="code-error" id="codeError"></div>
 </div>
 
 <div id="loadingScreen">Chargement...</div>
@@ -229,6 +265,76 @@ function showError(title, text){
     </div>`;
 }
 
+const CODE_LENGTH = 6;
+let codeBuffer = '';
+let codeAttempts = 0;
+
+function codeMemoryKey(){ return 'ds_client_code_' + clientId; }
+function renderCodeDots(){
+  document.getElementById('codeDots').innerHTML =
+    Array.from({length:CODE_LENGTH}, (_,i)=>
+      `<div class="code-dot ${i < codeBuffer.length ? 'filled' : ''}"></div>`).join('');
+}
+function buildCodePad(){
+  const keys = ['1','2','3','4','5','6','7','8','9','clear','0','back'];
+  document.getElementById('codePad').innerHTML = keys.map(k=>{
+    if(k==='clear') return `<button type="button" class="code-key fn" data-key="clear">Effacer</button>`;
+    if(k==='back')  return `<button type="button" class="code-key fn" data-key="back">⌫</button>`;
+    return `<button type="button" class="code-key" data-key="${k}">${k}</button>`;
+  }).join('');
+}
+function codeError(msg){
+  const el = document.getElementById('codeError');
+  el.textContent = msg || '';
+  if(msg){
+    const s = document.getElementById('codeScreen');
+    s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake');
+  }
+}
+function enterApp(){
+  document.getElementById('codeScreen').classList.remove('show');
+  $('#greeting').textContent = 'Bonjour ' + clientData.name;
+  $('#loadingScreen').style.display = 'none';
+  $('#app').style.display = 'block';
+  listenOrders();
+}
+function askCode(){
+  $('#loadingScreen').style.display = 'none';
+  buildCodePad();
+  codeBuffer = '';
+  renderCodeDots();
+  document.getElementById('codeScreen').classList.add('show');
+}
+
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('#codePad button[data-key]');
+  if(!btn) return;
+  const k = btn.dataset.key;
+  if(k==='clear'){ codeBuffer=''; renderCodeDots(); codeError(''); return; }
+  if(k==='back'){ codeBuffer = codeBuffer.slice(0,-1); renderCodeDots(); codeError(''); return; }
+  if(codeBuffer.length >= CODE_LENGTH) return;
+  codeBuffer += k;
+  codeError('');
+  renderCodeDots();
+  if(codeBuffer.length === CODE_LENGTH){
+    if(codeBuffer === String(clientData.accessCode)){
+      try{ localStorage.setItem(codeMemoryKey(), codeBuffer); }catch(e){}
+      enterApp();
+    } else {
+      codeAttempts++;
+      codeBuffer = '';
+      renderCodeDots();
+      codeError(codeAttempts >= 5
+        ? 'Trop de tentatives. Contacte ton vendeur.'
+        : 'Code incorrect. Réessaie.');
+      if(codeAttempts >= 5){
+        document.getElementById('codePad').style.pointerEvents = 'none';
+        document.getElementById('codePad').style.opacity = '0.4';
+      }
+    }
+  }
+});
+
 async function init(){
   if(!clientId || !clientToken){
     showError('Lien invalide', "Ce lien n'est pas complet. Demande un nouveau lien à ton vendeur.");
@@ -241,10 +347,14 @@ async function init(){
       return;
     }
     clientData = Object.assign({id:doc.id}, doc.data());
-    $('#greeting').textContent = 'Bonjour ' + clientData.name;
-    $('#loadingScreen').style.display = 'none';
-    $('#app').style.display = 'block';
-    listenOrders();
+
+    if(!clientData.accessCode){ enterApp(); return; }
+
+    let remembered = null;
+    try{ remembered = localStorage.getItem(codeMemoryKey()); }catch(e){}
+    if(remembered && remembered === String(clientData.accessCode)){ enterApp(); return; }
+
+    askCode();
   }catch(e){
     showError('Connexion impossible', 'Vérifie ta connexion internet et réessaie.');
   }
