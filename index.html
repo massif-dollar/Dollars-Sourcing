@@ -2394,7 +2394,12 @@ async function callAssistantAPI(){
     })
   });
   const data = await response.json();
+  if(!response.ok || data.error){
+    const detail = (data.error && (data.error.message || data.error.type)) || ('HTTP ' + response.status);
+    throw new Error(detail);
+  }
   const textBlock = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  if(!textBlock) throw new Error('Réponse vide du modèle');
   return extractJson(textBlock);
 }
 
@@ -2447,7 +2452,7 @@ async function sendToAssistant(userText){
     }
   }catch(e){
     thinkingEl.remove();
-    addChatMsg('assistant', t('assistantError'));
+    addChatMsg('assistant', t('assistantError') + (e && e.message ? '\n(' + e.message + ')' : ''));
   }
   assistantBusy = false;
 }
