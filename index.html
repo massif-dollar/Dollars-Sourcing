@@ -691,7 +691,8 @@
     position:absolute; top:calc(env(safe-area-inset-top) + 18px); right:20px; z-index:2;
   }
 
-  .orb-wrap{ position:relative; width:200px; height:200px; margin-bottom:38px; z-index:1; cursor:pointer; -webkit-user-select:none; user-select:none; }
+  .orb-wrap{ position:relative; width:200px; height:200px; margin-bottom:38px; z-index:1; cursor:pointer;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:none; }
   .orb{
     position:absolute; inset:26px; border-radius:50%;
     background:radial-gradient(circle at 32% 28%, var(--accent-bright), var(--accent) 62%, var(--accent-deep));
@@ -712,7 +713,7 @@
   #voiceMode[data-state="idle"] .orb-wrap{ animation:breathe 4.2s var(--ease-io) infinite; }
   @keyframes breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
   /* état : écoute */
-  #voiceMode[data-state="listening"] .orb{ transform:scale(1); }
+  #voiceMode[data-state="listening"] .orb{ transform:scale(1.06); box-shadow:0 0 70px var(--accent-soft), inset 0 -10px 30px rgba(0,0,0,0.22); }
   #voiceMode[data-state="listening"] .ring{ animation:pulseRing 2s var(--ease-out) infinite; }
   #voiceMode[data-state="listening"] .ring:nth-child(2){ animation-delay:.66s; }
   #voiceMode[data-state="listening"] .ring:nth-child(3){ animation-delay:1.33s; }
@@ -1160,8 +1161,9 @@ const I18N = {
     today:"aujourd'hui", yesterday:'hier', daysAgo:'il y a {n}j',
     assistantTitle:'Assistant', assistantFabTitle:'Assistant IA', assistantPlaceholder:'Écris ou parle...', photoTitle:'Envoyer une photo', photoAttached:'Photo jointe', imageTooLarge:'Image trop lourde, réessaie avec une photo plus légère.',
     voiceModeTitle:'Mode vocal', voiceIdle:'Prêt', voiceListening:'Je t\u2019écoute...', voiceThinking:'Je réfléchis...', voiceSpeaking:'Je réponds...',
-    voiceStart:'Parler', voiceStop:'Arrêter', voiceToChat:'Voir le chat',
-    voiceHint:'Parle naturellement. Je réponds à voix haute et je continue de t\u2019écouter.',
+    voiceStart:'Parler', voiceStop:'Arrêter', voiceToChat:'Voir le chat', voiceHandsFree:'Mains libres',
+    voiceHint:'Mains libres actif. Je réponds à voix haute et je continue de t\u2019écouter.',
+    voiceHintHold:'Maintiens la sphère pendant que tu parles, puis relâche.',
     voiceHintOff:'Appuie sur Parler pour lancer la conversation.',
     voiceNotSupported:'Le micro n\u2019est pas disponible sur ce navigateur.',
     voiceNoPermission:'Autorise l\u2019accès au micro dans les réglages de ton navigateur, puis réessaie.',
@@ -1227,8 +1229,9 @@ const I18N = {
     today:'today', yesterday:'yesterday', daysAgo:'{n}d ago',
     assistantTitle:'Assistant', assistantFabTitle:'AI Assistant', assistantPlaceholder:'Type or speak...', photoTitle:'Send a photo', photoAttached:'Photo attached', imageTooLarge:'Image too large, try a lighter photo.',
     voiceModeTitle:'Voice mode', voiceIdle:'Ready', voiceListening:'Listening...', voiceThinking:'Thinking...', voiceSpeaking:'Answering...',
-    voiceStart:'Speak', voiceStop:'Stop', voiceToChat:'Open chat',
-    voiceHint:'Speak naturally. I answer out loud and keep listening.',
+    voiceStart:'Speak', voiceStop:'Stop', voiceToChat:'Open chat', voiceHandsFree:'Hands-free',
+    voiceHint:'Hands-free on. I answer out loud and keep listening.',
+    voiceHintHold:'Hold the orb while you speak, then release.',
     voiceHintOff:'Tap Speak to start the conversation.',
     voiceNotSupported:'The microphone is not available on this browser.',
     voiceNoPermission:'Allow microphone access in your browser settings, then try again.',
@@ -2724,13 +2727,21 @@ function buildAssistantChips(){
   });
 }
 
-// ================= MODE VOCAL MAINS-LIBRES =================
-let voiceActive = false;
+// ================= MODE VOCAL =================
+// Deux modes :
+//  - "appui maintenu" (par défaut sur iPhone/iPad) : fiable, chaque prise de parole est un geste utilisateur
+//  - "mains libres" (Android / ordinateur) : écoute en continu
 let voiceRecognition = null;
+let voiceListening = false;      // une session d'écoute est en cours
 let voiceSpeaking = false;
-let voiceErrors = 0;
+let handsFree = false;           // boucle continue active
 let voiceRestartTimer = null;
+let voiceErrors = 0;
 let speechPrimed = false;
+let lastTranscript = '';
+
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 function setVoiceState(state){
   const el = document.getElementById('voiceMode');
@@ -2740,12 +2751,11 @@ function setVoiceState(state){
 }
 function setVoiceTranscript(text){ $('#voiceTranscript').textContent = text || ''; }
 function updateVoiceButtons(){
-  $('#voiceToggle').textContent = voiceActive ? t('voiceStop') : t('voiceStart');
+  $('#voiceToggle').textContent = handsFree ? t('voiceStop') : t('voiceHandsFree');
   $('#voiceToChat').textContent = t('voiceToChat');
-  $('#voiceHint').textContent = voiceActive ? t('voiceHint') : t('voiceHintOff');
+  $('#voiceHint').textContent = handsFree ? t('voiceHint') : t('voiceHintHold');
 }
 
-// iOS exige un geste utilisateur pour autoriser la synthèse vocale : on l'amorce au premier appui.
 function primeSpeech(){
   if(speechPrimed) return;
   try{
@@ -2769,26 +2779,12 @@ function speakThen(text, onDone){
     u.onend = done;
     u.onerror = done;
     speechSynthesis.speak(u);
-    // filet de sécurité : si la voix ne démarre pas (iOS), on n'attend pas indéfiniment
-    setTimeout(done, Math.min(2000 + text.length * 70, 15000));
+    setTimeout(done, Math.min(2500 + text.length * 75, 20000));
   }catch(e){ done(); }
 }
 
-function scheduleListen(delay){
-  clearTimeout(voiceRestartTimer);
-  voiceRestartTimer = setTimeout(()=>{
-    if(!voiceActive || assistantBusy || voiceSpeaking) return;
-    try{
-      voiceRecognition.start();
-      setVoiceState('listening');
-    }catch(e){
-      // start() peut échouer si une session tourne déjà : on réessaie une fois plus tard
-      setVoiceState('idle');
-    }
-  }, delay || 400);
-}
-
-function initVoiceRecognition(){
+function ensureRecognition(){
+  if(voiceRecognition) return voiceRecognition;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR) return null;
   const r = new SR();
@@ -2796,7 +2792,7 @@ function initVoiceRecognition(){
   r.interimResults = true;
   r.maxAlternatives = 1;
 
-  r.onstart = ()=>{ voiceErrors = 0; };
+  r.onstart = ()=>{ voiceListening = true; voiceErrors = 0; setVoiceState('listening'); };
 
   r.onresult = (e)=>{
     let interim = '', finalText = '';
@@ -2804,59 +2800,91 @@ function initVoiceRecognition(){
       const chunk = e.results[i][0].transcript;
       if(e.results[i].isFinal) finalText += chunk; else interim += chunk;
     }
-    setVoiceTranscript(finalText || interim);
-    if(finalText.trim()) handleVoiceInput(finalText.trim());
+    if(finalText.trim()) lastTranscript = finalText.trim();
+    setVoiceTranscript(finalText || interim || lastTranscript);
   };
 
   r.onerror = (e)=>{
     const code = e && e.error;
     if(code === 'not-allowed' || code === 'service-not-allowed'){
-      stopVoiceLoop();
+      handsFree = false;
+      updateVoiceButtons();
+      setVoiceState('idle');
       setVoiceTranscript(t('voiceNoPermission'));
       return;
     }
-    if(code === 'no-speech' || code === 'aborted'){ return; }   // banal, onend relancera
+    if(code === 'no-speech' || code === 'aborted') return;
     voiceErrors++;
     if(voiceErrors >= 3){
-      stopVoiceLoop();
+      handsFree = false;
+      updateVoiceButtons();
+      setVoiceState('idle');
       setVoiceTranscript(t('voiceNotSupported'));
     }
   };
 
   r.onend = ()=>{
-    if(voiceActive && !assistantBusy && !voiceSpeaking){
-      scheduleListen(500);   // délai obligatoire : sans lui, boucle infinie qui fige la page
+    voiceListening = false;
+    // en appui maintenu : on envoie ce qui a été capté
+    if(!handsFree){
+      if(lastTranscript){
+        const text = lastTranscript;
+        lastTranscript = '';
+        handleVoiceInput(text);
+      } else {
+        setVoiceState('idle');
+      }
+      return;
     }
+    // en mains libres : on relance après un délai (jamais immédiatement)
+    if(lastTranscript){
+      const text = lastTranscript;
+      lastTranscript = '';
+      handleVoiceInput(text);
+      return;
+    }
+    if(handsFree && !assistantBusy && !voiceSpeaking) scheduleListen(600);
   };
+
+  voiceRecognition = r;
   return r;
 }
 
-function startVoiceLoop(){
+function beginListening(){
   primeSpeech();
-  if(!voiceRecognition) voiceRecognition = initVoiceRecognition();
-  if(!voiceRecognition){
-    showToast(t('voiceNotSupported'));
+  const r = ensureRecognition();
+  if(!r){
     setVoiceTranscript(t('voiceNotSupported'));
+    showToast(t('voiceNotSupported'));
     return;
   }
-  voiceActive = true;
-  voiceErrors = 0;
-  voiceRecognition.lang = currentLang === 'fr' ? 'fr-FR' : 'en-US';
-  updateVoiceButtons();
+  if(voiceListening || assistantBusy) return;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  voiceSpeaking = false;
+  lastTranscript = '';
   setVoiceTranscript('');
-  try{
-    voiceRecognition.start();
-    setVoiceState('listening');
-  }catch(e){
-    scheduleListen(600);
-  }
+  r.lang = currentLang === 'fr' ? 'fr-FR' : 'en-US';
+  try{ r.start(); }catch(e){ /* déjà démarré */ }
+}
+function endListening(){
+  if(!voiceListening) return;
+  try{ voiceRecognition.stop(); }catch(e){}   // stop() garde le résultat, abort() le jetterait
 }
 
-function stopVoiceLoop(){
-  voiceActive = false;
+function scheduleListen(delay){
+  clearTimeout(voiceRestartTimer);
+  voiceRestartTimer = setTimeout(()=>{
+    if(!handsFree || assistantBusy || voiceSpeaking || voiceListening) return;
+    beginListening();
+  }, delay || 500);
+}
+
+function stopEverything(){
+  handsFree = false;
   clearTimeout(voiceRestartTimer);
   try{ voiceRecognition && voiceRecognition.abort(); }catch(e){}
   try{ speechSynthesis.cancel(); }catch(e){}
+  voiceListening = false;
   voiceSpeaking = false;
   setVoiceState('idle');
   updateVoiceButtons();
@@ -2864,7 +2892,6 @@ function stopVoiceLoop(){
 
 async function handleVoiceInput(text){
   clearTimeout(voiceRestartTimer);
-  try{ voiceRecognition.abort(); }catch(e){}
   setVoiceState('thinking');
   setVoiceTranscript(text);
 
@@ -2895,21 +2922,31 @@ async function handleVoiceInput(text){
   setVoiceTranscript(reply);
   setVoiceState('speaking');
   speakThen(reply, ()=>{
-    if(voiceActive) scheduleListen(350);
+    if(handsFree) scheduleListen(400);
     else setVoiceState('idle');
   });
 }
 
+// ---- Appui maintenu sur la sphère ----
+const orbWrap = document.querySelector('.orb-wrap');
+orbWrap.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  if(handsFree) return;          // en mains libres, l'orbe ne sert pas
+  beginListening();
+}, { passive:false });
+['pointerup','pointercancel','pointerleave'].forEach(evt=>{
+  orbWrap.addEventListener(evt, ()=>{ if(!handsFree) endListening(); });
+});
+
 function openVoiceMode(){
   document.getElementById('voiceMode').classList.add('show');
-  voiceActive = false;
+  handsFree = false;
   setVoiceState('idle');
   setVoiceTranscript('');
   updateVoiceButtons();
-  // on ne démarre PAS tout seul : iOS exige un appui direct sur "Parler"
 }
 function closeVoiceMode(){
-  stopVoiceLoop();
+  stopEverything();
   document.getElementById('voiceMode').classList.remove('show');
 }
 
@@ -2919,16 +2956,17 @@ $('#voiceModeBtn').addEventListener('click', ()=>{
 });
 $('#voiceClose').addEventListener('click', closeVoiceMode);
 $('#voiceToggle').addEventListener('click', ()=>{
-  if(voiceActive) stopVoiceLoop(); else startVoiceLoop();
+  if(handsFree){ stopEverything(); return; }
+  primeSpeech();
+  handsFree = true;
+  voiceErrors = 0;
+  updateVoiceButtons();
+  beginListening();
 });
 $('#voiceToChat').addEventListener('click', ()=>{
   closeVoiceMode();
   $('#assistantOverlay').classList.add('open');
   buildAssistantChips();
-});
-// l'orbe est aussi un bouton : on tape dessus pour lancer / arrêter
-document.querySelector('.orb-wrap').addEventListener('click', ()=>{
-  if(voiceActive) stopVoiceLoop(); else startVoiceLoop();
 });
 
 function openAssistant(){
