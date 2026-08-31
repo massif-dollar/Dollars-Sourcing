@@ -3575,15 +3575,21 @@ function lockError(msg){
 
 async function loadPinHash(){
   try{
-    const doc = await db.collection('settings').doc('security').get();
+    const doc = await db.collection('userSettings').doc(currentUid).get();
     storedPinHash = doc.exists ? (doc.data().pinHash || null) : null;
   }catch(e){ storedPinHash = null; }
 }
+let lastPinError = '';
 async function savePinHash(hash){
   try{
-    await db.collection('settings').doc('security').set({ pinHash: hash, updatedAt: Date.now() }, { merge: true });
+    if(!currentUid) throw new Error('uid manquant');
+    await db.collection('userSettings').doc(currentUid).set({ pinHash: hash, updatedAt: Date.now() }, { merge: true });
+    lastPinError = '';
     return true;
-  }catch(e){ return false; }
+  }catch(e){
+    lastPinError = (e && (e.code || e.message)) ? String(e.code || e.message) : 'inconnue';
+    return false;
+  }
 }
 
 async function handlePinComplete(){
@@ -3604,7 +3610,7 @@ async function handlePinComplete(){
     }
     const hash = await sha256(pinBuffer);
     const ok = await savePinHash(hash);
-    if(!ok){ pinBuffer=''; renderPinDots(); lockError('Enregistrement impossible, réessaie.'); return; }
+    if(!ok){ pinBuffer=''; renderPinDots(); lockError('Enregistrement impossible : ' + lastPinError); return; }
     storedPinHash = hash;
     unlockAndEnter();
     return;
