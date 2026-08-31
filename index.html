@@ -2513,6 +2513,24 @@ Ne devine JAMAIS un prix à partir d'une photo : demande le prix d'achat et le p
 extrais-en le client, le produit, la quantité et les prix éventuels, puis propose la commande correspondante.
 Ce qui manque, tu le demandes ; ce qui est écrit, tu ne le redemandes pas.
 
+EXTRACTION DEPUIS UN TEXTE BRUT (très important) :
+Massif te parle souvent à l'oral ou colle un pavé mal ponctué, avec des fautes, des hésitations,
+ou des mots mal retranscrits par la reconnaissance vocale. Tu dois retrouver les informations utiles
+même quand la phrase est bancale. Repères à utiliser :
+- Un prénom ou un nom isolé = le client. Un "@" ou le mot pseudo/insta/snap/tiktok = son contact réseau.
+- Une suite de 8 à 12 chiffres = un numéro de téléphone (reforme-le proprement, ex : 0614622811).
+- Une phrase contenant rue, chemin, avenue, boulevard, impasse, allée, place, ou un code postal = l'adresse.
+- "je les prends à", "prix usine", "ça me coûte", "à l'achat" = unitCost (prix d'achat par pièce).
+- "je revends", "je vends", "prix client", "je lui fais à" = unitPrice (prix de vente par pièce).
+- Un nombre suivi de paires/pièces/unités/exemplaires, ou "il veut X" = la quantité.
+- Le reste de la phrase décrit le produit. Garde le mot tel qu'il est, même s'il te semble étrange
+  (un nom de modèle mal retranscrit reste utilisable : Massif corrigera s'il le faut).
+Si un mot semble déformé par la reconnaissance vocale mais que le sens est clair, corrige-le silencieusement.
+Ne redemande JAMAIS une information déjà présente dans le message, même mal écrite.
+Quand une demande contient à la fois un nouveau client ET une commande, traite les deux :
+crée d'abord le client via create_order (le clientName suffit, le client est créé automatiquement),
+puis, si tu as son contact ou son adresse, propose ensuite un update_client pour les enregistrer.
+
 RÈGLES DE CONVERSATION :
 - Si l'utilisateur donne toutes les infos d'un coup, n'invente pas de questions : extrais tout et passe à la confirmation.
 - Ne pose une question que si un champ indispensable manque vraiment (le contact et l'adresse sont optionnels).
@@ -2530,6 +2548,9 @@ FORMAT DE RÉPONSE — un seul objet JSON valide, sans texte autour, sans balise
 {"type":"brief","text":"..."}                           → point du jour / priorités
 
 EXEMPLES :
+"nouveau client malik pseudo malik 13 téléphone 06 14 62 28 11 adresse 51 chemin de saint antoine à saint joseph il veut 50 paires de sukhoi prix usine 7 euros et moi je lui revends 45"
+→ {"type":"confirm","text":"Nouveau client Malik (@malik13, 0614622811, 51 chemin de Saint-Antoine, Saint-Joseph) avec une commande de 50 paires de Sukhoi : 7€ l'achat, 45€ la vente. Coût 350€, vente 2250€, marge 1900€, soit ×6,4. Je valide ?","action":{"type":"create_order","clientName":"Malik","product":"Sukhoi","qty":50,"unitCost":7,"unitPrice":45,"status":"nouveau"}}
+
 "crée une commande pour Karim, 10 paires de chaussures, 15 euros pièce à l'achat, je les vends 40"
 → {"type":"confirm","text":"Commande pour Karim : 10 paires de chaussures, 15€ l'achat, 40€ la vente. Marge 250€, soit ×2,7. Je valide ?","action":{"type":"create_order","clientName":"Karim","product":"chaussures","qty":10,"unitCost":15,"unitPrice":40,"status":"nouveau"}}
 
@@ -2693,23 +2714,10 @@ function sendChat(){
 $('#sendChatBtn').addEventListener('click', sendChat);
 $('#chatInput').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendChat(); });
 
-// ---------- Voix ----------
-const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-if(SpeechRec){
-  recognition = new SpeechRec();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.onresult = (e)=>{ sendToAssistant(e.results[0][0].transcript); };
-  recognition.onerror = ()=>{ $('#micBtn').classList.remove('listening'); };
-  recognition.onend = ()=>{ $('#micBtn').classList.remove('listening'); };
-}
+// ---------- Micro : ouvre le mode vocal (un seul moteur vocal dans l'app) ----------
 $('#micBtn').addEventListener('click', ()=>{
-  if(!recognition){ showToast(t('micNotSupported')); return; }
-  try{ speechSynthesis.cancel(); }catch(e){}
-  recognition.lang = currentLang === 'fr' ? 'fr-FR' : 'en-US';
-  $('#micBtn').classList.add('listening');
-  try{ recognition.start(); }catch(e){ $('#micBtn').classList.remove('listening'); }
+  $('#assistantOverlay').classList.remove('open');
+  openVoiceMode();
 });
 
 // ---------- Raccourcis ----------
