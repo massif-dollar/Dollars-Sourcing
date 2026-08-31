@@ -370,6 +370,52 @@
   .login-error.show{ display:block; }
   .logout-btn{ margin-left:0; }
 
+  #lockScreen{
+    position:fixed; inset:0; z-index:95; display:none;
+    align-items:center; justify-content:center; padding:26px;
+    background:var(--bg);
+  }
+  #lockScreen.show{ display:flex; }
+  #lockScreen::before{
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(20,20,22,0.06), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(211,40,58,0.14), transparent 45%);
+  }
+  .lock-box{ position:relative; text-align:center; max-width:320px; width:100%; animation:splashIn .5s ease; }
+  .lock-box h2{ font-family:var(--font-display); font-size:19px; margin:0 0 6px; }
+  .lock-box p{ font-size:13.5px; color:var(--text-muted); margin:0 0 20px; line-height:1.55; }
+  .pin-dots{ display:flex; gap:12px; justify-content:center; margin-bottom:22px; }
+  .pin-dot{
+    width:13px; height:13px; border-radius:50%; border:1.6px solid var(--glass-border);
+    background:transparent; transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .pin-dot.filled{ background:var(--teal); border-color:var(--teal); transform:scale(1.12); }
+  .pin-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px; }
+  .pin-key{
+    padding:15px 0; border-radius:15px; border:1px solid var(--glass-border); background:var(--glass);
+    font-family:var(--font-display); font-size:21px; font-weight:600; color:var(--text); cursor:pointer;
+    transition:transform .1s ease, background .15s ease; box-shadow:var(--glass-highlight);
+  }
+  .pin-key:active{ transform:scale(0.94); background:var(--glass-strong); }
+  .pin-key.fn{ font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-muted); background:transparent; border-color:transparent; box-shadow:none; }
+  .pin-key.fn:disabled{ opacity:0; pointer-events:none; }
+  .bio-btn{
+    width:100%; margin-bottom:16px; padding:13px; border-radius:13px; border:1px solid var(--teal);
+    background:transparent; color:var(--teal); font-family:var(--font-body); font-weight:600; font-size:14px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:transform .1s ease;
+  }
+  .bio-btn:active{ transform:scale(0.98); }
+  .bio-btn svg{ width:19px; height:19px; }
+  .lock-error{ margin-top:15px; font-size:13px; color:var(--danger); min-height:18px; }
+  .lock-links{ margin-top:18px; display:flex; flex-direction:column; gap:9px; }
+  .lock-link{
+    background:none; border:none; color:var(--text-muted); font-family:var(--font-body);
+    font-size:12.5px; cursor:pointer; text-decoration:underline; padding:2px;
+  }
+  .shake{ animation:shakeX .38s ease; }
+  @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
+
   .view-fade-in{ animation:viewFadeIn 0.28s ease; }
   @keyframes viewFadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
 
@@ -404,6 +450,24 @@
       Se connecter avec Google
     </button>
     <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="splash-icon">$</div>
+    <h2 id="lockTitle">Déverrouiller</h2>
+    <p id="lockSubtitle">Entre ton code à 6 chiffres.</p>
+    <button type="button" class="bio-btn" id="bioBtn" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg>
+      <span id="bioBtnLabel">Face ID / Touch ID</span>
+    </button>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="pin-pad" id="pinPad"></div>
+    <div class="lock-error" id="lockError"></div>
+    <div class="lock-links">
+      <button type="button" class="lock-link" id="enableBioLink" style="display:none;">Activer Face ID / Touch ID sur cet appareil</button>
+      <button type="button" class="lock-link" id="lockLogoutLink">Se déconnecter</button>
+    </div>
   </div>
 </div>
 <div id="splash">
@@ -2013,6 +2077,7 @@ auth.getRedirectResult().catch(()=>{});
 
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   if(!(await showConfirm(t('confirmLogout')))) return;
+  try{ sessionStorage.removeItem('ds_unlocked'); }catch(e){}
   await auth.signOut();
   location.reload();
 });
@@ -2024,9 +2089,221 @@ auth.onAuthStateChanged(user=>{
     showLogin('loginDenied');
     return;
   }
+  startLockFlow();
+});
+
+// ================= VERROU APPAREIL (code 6 chiffres + biométrie) =================
+const PIN_LENGTH = 6;
+const MAX_ATTEMPTS = 5;
+let pinBuffer = '';
+let pinMode = 'verify';      // 'verify' | 'create' | 'confirm'
+let pinFirstEntry = '';
+let storedPinHash = null;
+let failedAttempts = 0;
+
+async function sha256(text){
+  const buf = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function bioCredKey(){ return 'ds_bio_cred'; }
+function bioAvailable(){
+  return !!(window.PublicKeyCredential && navigator.credentials && location.protocol === 'https:');
+}
+function bioRegisteredHere(){
+  try{ return !!localStorage.getItem(bioCredKey()); }catch(e){ return false; }
+}
+
+function showLock(){
+  hideSplash();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('fabAdd').style.display = 'none';
+  const af = document.getElementById('assistantFab');
+  if(af) af.style.display = 'none';
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('lockScreen').classList.add('show');
+}
+function unlockAndEnter(){
+  try{ sessionStorage.setItem('ds_unlocked','1'); }catch(e){}
+  document.getElementById('lockScreen').classList.remove('show');
   showApp();
   startListeners();
+}
+
+function renderPinDots(){
+  const el = document.getElementById('pinDots');
+  el.innerHTML = Array.from({length:PIN_LENGTH}, (_,i)=>
+    `<div class="pin-dot ${i < pinBuffer.length ? 'filled' : ''}"></div>`).join('');
+}
+function buildPinPad(){
+  const pad = document.getElementById('pinPad');
+  const keys = ['1','2','3','4','5','6','7','8','9','clear','0','back'];
+  pad.innerHTML = keys.map(k=>{
+    if(k==='clear') return `<button type="button" class="pin-key fn" data-key="clear">Effacer</button>`;
+    if(k==='back')  return `<button type="button" class="pin-key fn" data-key="back">⌫</button>`;
+    return `<button type="button" class="pin-key" data-key="${k}">${k}</button>`;
+  }).join('');
+}
+function setLockText(title, subtitle){
+  document.getElementById('lockTitle').textContent = title;
+  document.getElementById('lockSubtitle').textContent = subtitle;
+}
+function lockError(msg){
+  const el = document.getElementById('lockError');
+  el.textContent = msg || '';
+  if(msg){
+    const box = document.querySelector('.lock-box');
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  }
+}
+
+async function loadPinHash(){
+  try{
+    const doc = await db.collection('settings').doc('security').get();
+    storedPinHash = doc.exists ? (doc.data().pinHash || null) : null;
+  }catch(e){ storedPinHash = null; }
+}
+async function savePinHash(hash){
+  try{
+    await db.collection('settings').doc('security').set({ pinHash: hash, updatedAt: Date.now() }, { merge: true });
+    return true;
+  }catch(e){ return false; }
+}
+
+async function handlePinComplete(){
+  if(pinMode === 'create'){
+    pinFirstEntry = pinBuffer;
+    pinBuffer = ''; renderPinDots();
+    pinMode = 'confirm';
+    setLockText('Confirme ton code', 'Saisis-le une seconde fois.');
+    return;
+  }
+  if(pinMode === 'confirm'){
+    if(pinBuffer !== pinFirstEntry){
+      pinBuffer = ''; pinFirstEntry = ''; pinMode = 'create';
+      renderPinDots();
+      setLockText('Crée ton code', 'Choisis un code à 6 chiffres.');
+      lockError('Les codes ne correspondent pas.');
+      return;
+    }
+    const hash = await sha256(pinBuffer);
+    const ok = await savePinHash(hash);
+    if(!ok){ pinBuffer=''; renderPinDots(); lockError('Enregistrement impossible, réessaie.'); return; }
+    storedPinHash = hash;
+    unlockAndEnter();
+    return;
+  }
+  // verify
+  const hash = await sha256(pinBuffer);
+  if(hash === storedPinHash){
+    failedAttempts = 0;
+    unlockAndEnter();
+  } else {
+    failedAttempts++;
+    pinBuffer = ''; renderPinDots();
+    if(failedAttempts >= MAX_ATTEMPTS){
+      lockError('Trop de tentatives. Reconnexion requise.');
+      setTimeout(async ()=>{ await auth.signOut(); location.reload(); }, 1600);
+    } else {
+      lockError(`Code incorrect (${failedAttempts}/${MAX_ATTEMPTS}).`);
+    }
+  }
+}
+
+document.getElementById('pinPad').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-key]');
+  if(!btn) return;
+  const k = btn.dataset.key;
+  if(k === 'clear'){ pinBuffer = ''; renderPinDots(); lockError(''); return; }
+  if(k === 'back'){ pinBuffer = pinBuffer.slice(0,-1); renderPinDots(); lockError(''); return; }
+  if(pinBuffer.length >= PIN_LENGTH) return;
+  pinBuffer += k;
+  lockError('');
+  renderPinDots();
+  if(pinBuffer.length === PIN_LENGTH) handlePinComplete();
 });
+
+async function registerBiometric(){
+  if(!bioAvailable()){ lockError("Biométrie non disponible sur cet appareil."); return; }
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'DOLLAR$ SOURCING' },
+        user: { id: userId, name: OWNER_EMAIL, displayName: 'DOLLAR$ SOURCING' },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+    if(!cred){ lockError("Activation annulée."); return; }
+    const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    localStorage.setItem(bioCredKey(), rawId);
+    document.getElementById('enableBioLink').style.display = 'none';
+    document.getElementById('bioBtn').style.display = 'flex';
+    lockError('');
+    setLockText('Déverrouiller', 'Face ID / Touch ID activé sur cet appareil.');
+  }catch(e){
+    lockError("Activation impossible sur cet appareil.");
+  }
+}
+
+async function verifyBiometric(){
+  const stored = localStorage.getItem(bioCredKey());
+  if(!stored){ lockError("Aucune biométrie enregistrée ici."); return; }
+  try{
+    const rawId = Uint8Array.from(atob(stored), c=>c.charCodeAt(0));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ type:'public-key', id: rawId }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    if(assertion){ failedAttempts = 0; unlockAndEnter(); }
+    else lockError('Vérification annulée.');
+  }catch(e){
+    lockError('Vérification échouée, utilise ton code.');
+  }
+}
+
+document.getElementById('bioBtn').addEventListener('click', verifyBiometric);
+document.getElementById('enableBioLink').addEventListener('click', registerBiometric);
+document.getElementById('lockLogoutLink').addEventListener('click', async ()=>{
+  await auth.signOut();
+  location.reload();
+});
+
+async function startLockFlow(){
+  let alreadyUnlocked = false;
+  try{ alreadyUnlocked = sessionStorage.getItem('ds_unlocked') === '1'; }catch(e){}
+  if(alreadyUnlocked){ showApp(); startListeners(); return; }
+
+  buildPinPad();
+  pinBuffer = ''; renderPinDots(); lockError('');
+  await loadPinHash();
+
+  if(!storedPinHash){
+    pinMode = 'create';
+    setLockText('Crée ton code', 'Choisis un code à 6 chiffres pour protéger cet espace.');
+    document.getElementById('bioBtn').style.display = 'none';
+    document.getElementById('enableBioLink').style.display = 'none';
+  } else {
+    pinMode = 'verify';
+    setLockText('Déverrouiller', 'Entre ton code à 6 chiffres.');
+    const canBio = bioAvailable();
+    document.getElementById('bioBtn').style.display = (canBio && bioRegisteredHere()) ? 'flex' : 'none';
+    document.getElementById('enableBioLink').style.display = (canBio && !bioRegisteredHere()) ? 'block' : 'none';
+    if(canBio && bioRegisteredHere()) setTimeout(verifyBiometric, 350);
+  }
+  showLock();
+}
 </script>
 </body>
 </html>
