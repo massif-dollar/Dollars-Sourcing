@@ -2091,7 +2091,7 @@ $('#resetBtn').addEventListener('click', async ()=>{
 const AI_ENDPOINT = (location.hostname.includes('netlify.app') || location.hostname.includes('dollars-sourcing'))
   ? "/.netlify/functions/ai"
   : "https://api.anthropic.com/v1/messages";
-const AI_MODEL = "claude-sonnet-4-6";
+const AI_MODEL = "claude-sonnet-5";
 
 let assistantHistory = [];
 let assistantBusy = false;
