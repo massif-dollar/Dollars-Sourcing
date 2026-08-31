@@ -1991,27 +1991,25 @@ function showApp(){
   setTimeout(hideSplash, 1200);
 }
 
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
 document.getElementById('googleLoginBtn').addEventListener('click', async ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
-                        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
-  if(isAppleMobile || isSafari){
-    try{ await auth.signInWithRedirect(provider); }
-    catch(e){ showLogin('loginFailed'); }
-    return;
-  }
+  provider.setCustomParameters({ prompt: 'select_account' });
   try{
     await auth.signInWithPopup(provider);
   }catch(e){
-    if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')){
+    if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')){
       try{ await auth.signInWithRedirect(provider); return; }catch(e2){}
+    }
+    if(e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')){
+      return;
     }
     showLogin('loginFailed');
   }
 });
 
-auth.getRedirectResult().catch(()=>{ showLogin('loginFailed'); });
+auth.getRedirectResult().catch(()=>{});
 
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   if(!(await showConfirm(t('confirmLogout')))) return;
