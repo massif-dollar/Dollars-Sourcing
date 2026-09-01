@@ -944,7 +944,7 @@
         <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>
       <button class="icon-btn" id="resetBtn" data-i18n-title="resetTitle" title="Réinitialiser">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8.1 8.1 0 1 0 18.7 6.3"/><path d="M20 4v5h-5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v5h-5"/></svg>
       </button>
       <button class="icon-btn" id="logoutBtn" data-i18n-title="logoutTitle" title="Se déconnecter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5"/><path d="M20 12H9"/><path d="M12 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h6"/></svg>
@@ -975,6 +975,10 @@
   </div>
 
   <div id="clientsView" style="display:none;">
+    <button type="button" class="btn-secondary" id="waFormBtn" data-i18n="sendFormWhatsapp"
+            style="width:100%; margin-bottom:14px; color:var(--accent); border-color:var(--accent);">
+      Envoyer un formulaire à remplir
+    </button>
     <div id="clientsTop3" style="display:none;"></div>
     <div class="search"><input type="text" id="clientSearchInput" data-i18n-placeholder="searchClients" placeholder="Rechercher un client..."></div>
     <div class="list" id="clientList"></div>
@@ -1131,10 +1135,7 @@
       <button type="submit" class="btn-primary" data-i18n="save">Enregistrer</button>
     </form>
 
-    <button type="button" class="btn-secondary" id="waFormBtn" data-i18n="sendFormWhatsapp"
-            style="width:100%; margin-top:11px; color:var(--accent); border-color:var(--accent);">
-      Envoyer un formulaire à remplir
-    </button>
+
     <div class="client-link-box" id="clientLinkBox" style="display:none;">
       <div class="link-label" data-i18n="clientLinkLabel">Lien personnel du client (à envoyer une seule fois)</div>
       <div class="link-row">
