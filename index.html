@@ -519,8 +519,14 @@
     box-shadow:var(--raise-lg);
     backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
     opacity:0; transition:opacity .3s var(--ease-io), transform .35s var(--spring); pointer-events:none;
+    display:flex; align-items:center; gap:14px;
   }
-  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  .toast-undo{
+    background:none; border:none; color:var(--accent); font-family:var(--font-body);
+    font-weight:700; font-size:14px; cursor:pointer; padding:2px 4px; letter-spacing:-0.01em;
+    flex-shrink:0;
+  }
 
   /* --- Écrans de démarrage / connexion / verrou --- */
   #splash{
@@ -904,6 +910,9 @@
       <button class="icon-btn" id="exportBtn" data-i18n-title="exportTitle" title="Exporter mes données">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 19h16"/></svg>
       </button>
+      <button class="icon-btn" id="trashBtn" data-i18n-title="trashTitle" title="Corbeille">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg>
+      </button>
       <button class="icon-btn" id="accessBtn" data-i18n-title="accessTitle" title="Accès" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M18 8v6M15 11h6"/></svg>
       </button>
@@ -1143,6 +1152,17 @@
   </div>
 </div>
 
+<div class="overlay" id="trashOverlay">
+  <div class="sheet">
+    <button class="icon-btn close-x" id="closeTrashSheet">✕</button>
+    <h2 data-i18n="trashTitle">Corbeille</h2>
+    <p style="font-size:13.5px; color:var(--text-faint); margin:0 0 18px; line-height:1.55;" data-i18n="trashHelp">
+      Les éléments supprimés restent ici 30 jours, puis disparaissent définitivement.
+    </p>
+    <div id="trashContent"></div>
+  </div>
+</div>
+
 <div class="overlay" id="accessOverlay">
   <div class="sheet">
     <button class="icon-btn close-x" id="closeAccessSheet">✕</button>
@@ -1230,6 +1250,13 @@ const I18N = {
   fr: {
     tagline:'Sourcing & revente', langTitle:'Langue', exportTitle:'Exporter mes données', resetTitle:'Réinitialiser', addTitle:'Ajouter',
     logoutTitle:'Se déconnecter', confirmLogout:'Se déconnecter de DOLLAR$ SOURCING ?', themeTitle:'Thème clair / sombre',
+    undo:'Annuler', restored:'Restauré',
+    orderDeleted:'Commande supprimée', clientDeleted:'Client supprimé', supplierDeleted:'Fournisseur supprimé',
+    trashTitle:'Corbeille', trashHelp:'Les éléments supprimés restent ici 30 jours, puis disparaissent définitivement.',
+    trashEmpty:'La corbeille est vide.', trashRestore:'Restaurer', trashDeleteNow:'Supprimer définitivement',
+    trashOrders:'Commandes', trashClients:'Clients', trashSuppliers:'Fournisseurs',
+    confirmHardDelete:'Supprimer définitivement ? Cette action est irréversible.',
+    deletedAgo:'Supprimé {when}',
     netOffline:'Hors ligne — tes modifications seront synchronisées au retour du réseau',
     netBackOnline:'Connexion rétablie — synchronisation...',
     netSynced:'Tout est synchronisé',
@@ -1316,6 +1343,13 @@ const I18N = {
   en: {
     tagline:'Sourcing & resale', langTitle:'Language', exportTitle:'Export my data', resetTitle:'Reset', addTitle:'Add',
     logoutTitle:'Sign out', confirmLogout:'Sign out of DOLLAR$ SOURCING?', themeTitle:'Light / dark theme',
+    undo:'Undo', restored:'Restored',
+    orderDeleted:'Order deleted', clientDeleted:'Client deleted', supplierDeleted:'Supplier deleted',
+    trashTitle:'Trash', trashHelp:'Deleted items stay here for 30 days, then disappear for good.',
+    trashEmpty:'Trash is empty.', trashRestore:'Restore', trashDeleteNow:'Delete permanently',
+    trashOrders:'Orders', trashClients:'Clients', trashSuppliers:'Suppliers',
+    confirmHardDelete:'Delete permanently? This cannot be undone.',
+    deletedAgo:'Deleted {when}',
     netOffline:'Offline — your changes will sync when the network is back',
     netBackOnline:'Back online — syncing...',
     netSynced:'Everything is synced',
@@ -1470,11 +1504,36 @@ function fmtDate(ts){
   const loc = currentLang==='fr' ? 'fr-FR' : 'en-GB';
   return new Date(ts).toLocaleDateString(loc, {day:'2-digit', month:'2-digit'});
 }
+let toastTimer = null;
 function showToast(msg){
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2400);
+  const el = $('#toast');
+  el.innerHTML = '';
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+// Toast avec action « Annuler » (rattrapage immédiat d'une suppression)
+function showUndoToast(msg, onUndo){
+  const el = $('#toast');
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  const btn = document.createElement('button');
+  btn.className = 'toast-undo';
+  btn.textContent = t('undo');
+  btn.addEventListener('click', async ()=>{
+    clearTimeout(toastTimer);
+    el.classList.remove('show');
+    await onUndo();
+    showToast(t('restored'));
+  });
+  el.appendChild(span);
+  el.appendChild(btn);
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 6000);
 }
 function newId(prefix){ return prefix+Date.now()+Math.random().toString(36).slice(2,6); }
 
@@ -1546,6 +1605,7 @@ const OWNER_EMAIL = 'dollars.sourcing@gmail.com';
 // Chaque donnée porte le uid de son créateur. Commandes et clients sont privés,
 // les fournisseurs sont partagés entre tous les comptes autorisés.
 let currentUid = null;
+let trashedOrders = [], trashedClients = [], trashedSuppliers = [];
 let currentEmail = '';
 let isOwner = false;
 let allowedEmails = [];      // comptes invités, gérés par le propriétaire
@@ -1585,13 +1645,19 @@ function startListeners(){
   if(listenersStarted) return;
   listenersStarted = true;
   loadAssistantMemory();
+  setTimeout(watchConnectionViaFirestore, 800);
+  setTimeout(purgeOldTrash, 4000);
   // Commandes, clients, demandes : uniquement les miens
   db.collection('orders').where('ownerId','==',currentUid).onSnapshot(snap=>{
-    orders = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    orders = all.filter(o=>!o.deletedAt);
+    trashedOrders = all.filter(o=>o.deletedAt);
     renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
-    clients = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    clients = all.filter(c=>!c.deletedAt);
+    trashedClients = all.filter(c=>c.deletedAt);
     renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
   db.collection('pendingOrders').where('ownerId','==',currentUid).onSnapshot(snap=>{
@@ -1601,7 +1667,9 @@ function startListeners(){
   }, ()=>showToast(t('toastSaveError')));
   // Fournisseurs : partagés par toute l'équipe
   db.collection('suppliers').onSnapshot(snap=>{
-    suppliers = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    suppliers = all.filter(x=>!x.deletedAt);
+    trashedSuppliers = all.filter(x=>x.deletedAt && x.ownerId === currentUid);
     renderCurrentView();
   }, ()=>showToast(t('toastSaveError')));
 }
@@ -1620,8 +1688,7 @@ async function updateOrderDoc(id, data){
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function deleteOrderDoc(id){
-  try{ await db.collection('orders').doc(id).delete(); return true; }
-  catch(e){ showToast(t('toastSaveError')); return false; }
+  return softDelete('orders', id);
 }
 async function createClientDoc(data){
   try{
@@ -1634,8 +1701,7 @@ async function updateClientDoc(id, data){
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function deleteClientDoc(id){
-  try{ await db.collection('clients').doc(id).delete(); return true; }
-  catch(e){ showToast(t('toastSaveError')); return false; }
+  return softDelete('clients', id);
 }
 async function createSupplierDoc(data){
   try{ await db.collection('suppliers').add(Object.assign({createdAt:Date.now(), ownerId:currentUid, ownerEmail:currentEmail}, data)); return true; }
@@ -1646,8 +1712,49 @@ async function updateSupplierDoc(id, data){
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function deleteSupplierDoc(id){
-  try{ await db.collection('suppliers').doc(id).delete(); return true; }
+  return softDelete('suppliers', id);
+}
+
+// ===== Corbeille =====
+// Rien n'est effacé tout de suite : on marque l'élément supprimé.
+// Il reste 30 jours dans la corbeille, restaurable à tout moment.
+const TRASH_DAYS = 30;
+
+async function softDelete(collection, id){
+  try{
+    await db.collection(collection).doc(id).update({
+      deletedAt: Date.now(),
+      deletedBy: currentUid
+    });
+    return true;
+  }catch(e){ showToast(t('toastSaveError')); return false; }
+}
+async function restoreDoc(collection, id){
+  try{
+    await db.collection(collection).doc(id).update({
+      deletedAt: firebase.firestore.FieldValue.delete(),
+      deletedBy: firebase.firestore.FieldValue.delete()
+    });
+    return true;
+  }catch(e){ showToast(t('toastSaveError')); return false; }
+}
+async function hardDelete(collection, id){
+  try{ await db.collection(collection).doc(id).delete(); return true; }
   catch(e){ showToast(t('toastSaveError')); return false; }
+}
+// Purge automatique des éléments supprimés depuis plus de 30 jours
+async function purgeOldTrash(){
+  const cutoff = Date.now() - TRASH_DAYS * 86400000;
+  for(const col of ['orders','clients','suppliers']){
+    try{
+      const snap = await db.collection(col).where('ownerId','==',currentUid).get();
+      const old = snap.docs.filter(d => d.data().deletedAt && d.data().deletedAt < cutoff);
+      if(!old.length) continue;
+      const batch = db.batch();
+      old.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }catch(e){}
+  }
 }
 
 function saveLang(){ try{ localStorage.setItem('lang', currentLang); }catch(e){} }
@@ -2191,8 +2298,10 @@ $('#cancelOrderBtn').addEventListener('click', async ()=>{
 $('#deleteBtn').addEventListener('click', async ()=>{
   if(!editingId) return;
   if(!(await showConfirm(t('confirmDeleteOrder')))) return;
-  await deleteOrderDoc(editingId);
+  const id = editingId;
+  await deleteOrderDoc(id);
   closeSheet();
+  showUndoToast(t('orderDeleted'), ()=>restoreDoc('orders', id));
 });
 
 function renderClientOrders(clientId){
@@ -2329,8 +2438,10 @@ $('#deleteClientBtn').addEventListener('click', async ()=>{
   const has = orders.some(o=>o.clientId===editingClientId);
   if(has){ showToast(t('toastReassignFirst')); return; }
   if(!(await showConfirm(t('confirmDeleteClient')))) return;
-  await deleteClientDoc(editingClientId);
+  const id = editingClientId;
+  await deleteClientDoc(id);
   closeClientSheet();
+  showUndoToast(t('clientDeleted'), ()=>restoreDoc('clients', id));
 });
 $('#addOrderForClient').addEventListener('click', ()=>{
   const id = editingClientId;
@@ -2486,9 +2597,80 @@ $('#supplierOverlay').addEventListener('click', (e)=>{ if(e.target === $('#suppl
 $('#deleteSupplierBtn').addEventListener('click', async ()=>{
   if(!editingSupplierId) return;
   if(!(await showConfirm(t('confirmDeleteSupplier')))) return;
-  await deleteSupplierDoc(editingSupplierId);
+  const id = editingSupplierId;
+  await deleteSupplierDoc(id);
   closeSupplierSheet();
+  showUndoToast(t('supplierDeleted'), ()=>restoreDoc('suppliers', id));
 });
+
+// ================= CORBEILLE =================
+function trashGroups(){
+  return [
+    { key:'orders',    label:t('trashOrders'),    items:trashedOrders,
+      title:o => `${escapeHtml(o.product || '')} × ${o.qty || 1}`,
+      sub:  o => escapeHtml(clientNameById(o.clientId)) },
+    { key:'clients',   label:t('trashClients'),   items:trashedClients,
+      title:c => escapeHtml(c.name || ''),
+      sub:  c => escapeHtml(c.contact || '') },
+    { key:'suppliers', label:t('trashSuppliers'), items:trashedSuppliers,
+      title:x => escapeHtml(x.name || ''),
+      sub:  x => escapeHtml(x.wechat || x.contact || '') }
+  ].filter(g => g.items.length);
+}
+
+function clientNameById(id){
+  const c = clients.find(x=>x.id===id) || trashedClients.find(x=>x.id===id);
+  return c ? c.name : '';
+}
+
+function renderTrash(){
+  const el = $('#trashContent');
+  const groups = trashGroups();
+  if(!groups.length){
+    el.innerHTML = `<div class="empty" style="padding:34px 20px;">${escapeHtml(t('trashEmpty'))}</div>`;
+    return;
+  }
+  el.innerHTML = groups.map(g => `
+    <p class="group-label" style="margin:18px 0 9px;">${g.label}</p>
+    ${g.items.sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0)).map(item => `
+      <div class="order-card" style="margin-bottom:9px; cursor:default;">
+        <div class="card-top"><div class="client" style="font-size:14px;">${g.title(item)}</div></div>
+        ${g.sub(item) ? `<div class="card-mid">${g.sub(item)}</div>` : ''}
+        <div class="card-mid" style="margin-top:4px; color:var(--text-ghost);">
+          ${t('deletedAgo').replace('{when}', fmtDate(item.deletedAt))}
+        </div>
+        <div class="request-actions">
+          <button type="button" class="req-reject" data-hard="${g.key}:${item.id}">${escapeHtml(t('trashDeleteNow'))}</button>
+          <button type="button" class="req-validate" data-restore="${g.key}:${item.id}">${escapeHtml(t('trashRestore'))}</button>
+        </div>
+      </div>`).join('')}
+  `).join('');
+}
+
+$('#trashContent').addEventListener('click', async (e)=>{
+  const restoreBtn = e.target.closest('[data-restore]');
+  if(restoreBtn){
+    const [col, id] = restoreBtn.dataset.restore.split(':');
+    await restoreDoc(col, id);
+    showToast(t('restored'));
+    setTimeout(renderTrash, 400);
+    return;
+  }
+  const hardBtn = e.target.closest('[data-hard]');
+  if(hardBtn){
+    if(!(await showConfirm(t('confirmHardDelete')))) return;
+    const [col, id] = hardBtn.dataset.hard.split(':');
+    await hardDelete(col, id);
+    setTimeout(renderTrash, 400);
+  }
+});
+
+$('#trashBtn').addEventListener('click', ()=>{
+  renderTrash();
+  $('#trashOverlay').classList.add('open');
+});
+$('#closeTrashSheet').addEventListener('click', ()=>$('#trashOverlay').classList.remove('open'));
+$('#trashOverlay').addEventListener('click', (e)=>{ if(e.target === $('#trashOverlay')) $('#trashOverlay').classList.remove('open'); });
 
 // ================= ÉTAT DE LA CONNEXION =================
 let wasOffline = false;
@@ -2523,6 +2705,21 @@ function handleOnline(){
 window.addEventListener('offline', handleOffline);
 window.addEventListener('online', handleOnline);
 if(!navigator.onLine) handleOffline();
+
+// Détection fiable (iOS ne signale pas toujours la perte de réseau) :
+// Firestore nous dit si la réponse vient du serveur ou de la copie locale.
+let cacheWatchStarted = false;
+function watchConnectionViaFirestore(){
+  if(cacheWatchStarted || !currentUid) return;
+  cacheWatchStarted = true;
+  db.collection('clients')
+    .where('ownerId','==',currentUid)
+    .onSnapshot({ includeMetadataChanges: true }, (snap)=>{
+      const fromCache = snap.metadata.fromCache;
+      if(fromCache && !wasOffline) handleOffline();
+      else if(!fromCache && wasOffline) handleOnline();
+    }, ()=>{});
+}
 
 // ================= GESTION DES ACCÈS (propriétaire uniquement) =================
 function renderAccessList(){
