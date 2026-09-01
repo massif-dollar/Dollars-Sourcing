@@ -859,6 +859,33 @@
   .chip:active{ transform:scale(.95); background:var(--fill-2); color:var(--text); }
   .mic-btn.listening{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); animation:pulseAccent 1.1s var(--ease-io) infinite; }
 
+  /* ===== Adaptation téléphone (n'affecte pas tablette ni ordinateur) ===== */
+  @media (max-width:640px){
+    #app{ padding-left:15px; padding-right:15px; }
+    header{
+      flex-direction:column; align-items:stretch; gap:15px; margin-bottom:20px;
+    }
+    header h1{ font-size:23px; }
+    .header-actions{
+      display:grid; grid-template-columns:repeat(7, 1fr); gap:7px; width:100%;
+    }
+    .header-actions .icon-btn{ width:100%; height:42px; }
+    .lang-wrap{ width:100%; }
+    .lang-wrap .icon-btn{ width:100%; }
+    .lang-menu{ right:auto; left:0; }
+
+    .kpi .value{ font-size:21px; }
+    .view-switch button{ padding:9px 13px 9px 11px; font-size:13px; }
+    .sheet{ padding-left:16px; padding-right:16px; }
+    .fab{ width:56px; height:56px; }
+    .fab-assistant{ right:86px; }
+  }
+  /* Écrans très étroits : les actions passent sur deux rangées */
+  @media (max-width:380px){
+    .header-actions{ grid-template-columns:repeat(4, 1fr); }
+    .row2{ grid-template-columns:1fr; }
+  }
+
   @media (min-width:700px){
     #app{ max-width:700px; }
     .kpis{ grid-template-columns:repeat(4,1fr); }
