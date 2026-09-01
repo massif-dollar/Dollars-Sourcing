@@ -1582,7 +1582,11 @@ const ICONS = {
 // ==== LIEN CLIENT ====
 // Remplace cette URL par celle de ton client.html une fois déployé (GitHub Pages / Netlify).
 // Exemple: "https://tonpseudo.github.io/dollar-sourcing/client.html"
-const CLIENT_APP_URL = "https://ddollars-sourcing.netlify.app/client.html";
+// L'adresse du portail client est déduite de l'endroit où tourne l'app :
+// plus rien à modifier si tu changes d'hébergeur.
+const CLIENT_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
+  ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'client.html'
+  : "https://ddollars-sourcing.netlify.app/client.html";
 function emptyHtml(icon, text){ return `<div class="empty"><div class="empty-icon">${ICONS[icon]}</div>${text}</div>`; }
 
 let orders = [];
@@ -3035,7 +3039,8 @@ $('#resetBtn').addEventListener('click' , async ()=>{
 // pour que la clé API reste sur le serveur et jamais dans cette page.
 // Détection automatique : en ligne (Netlify) on passe par la fonction serveur
 // qui garde la clé API cachée ; dans l'aperçu Claude on appelle directement.
-const AI_ENDPOINT = (location.hostname.includes('netlify.app') || location.hostname.includes('dollars-sourcing'))
+// En ligne (n'importe quel hébergeur), on passe par la fonction serveur qui garde la clé cachée.
+const AI_ENDPOINT = (location.protocol === 'https:')
   ? "/.netlify/functions/ai"
   : "https://api.anthropic.com/v1/messages";
 const AI_MODEL = "claude-sonnet-5";
