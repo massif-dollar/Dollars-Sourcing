@@ -336,6 +336,12 @@
   .theme-toggle.is-pressed{ transform:scale(.93); box-shadow:var(--press); }
   .theme-toggle svg{ width:17px; height:17px; position:relative; z-index:1; }
 
+  @media (max-width:640px){
+    #app{ padding-left:15px; padding-right:15px; }
+    header h1{ font-size:23px; }
+    .row2{ grid-template-columns:1fr; }
+    .code-pad{ max-width:270px; }
+  }
   @media (min-width:700px){ #app{ max-width:600px; } }
   @media (prefers-reduced-motion:reduce){
     *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
