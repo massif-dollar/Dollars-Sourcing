@@ -3040,10 +3040,16 @@ async function executeAssistantAction(rawAction){
   switch(action.type){
 
     case 'create_client': {
+      const social = action.social || action.contact || '';
       const id = await createClientDoc({
-        name: action.name || 'Client',
-        contact: action.contact || '',
-        address: action.address || ''
+        name: action.name || [action.firstname, action.lastname].filter(Boolean).join(' ') || 'Client',
+        firstname: action.firstname || '',
+        lastname: action.lastname || '',
+        social,
+        phone: action.phone || '',
+        whatsapp: action.whatsapp || '',
+        address: action.address || '',
+        contact: social || action.phone || action.whatsapp || ''
       });
       if(!id) return t('assistantError');
       return t('clientCreatedMsg').replace('{name}', action.name || 'Client');
@@ -3054,6 +3060,11 @@ async function executeAssistantAction(rawAction){
       if(!c) return t('clientNotFoundMsg').replace('{name}', action.clientName || action.name || '');
       const patch = {};
       if(action.newName) patch.name = action.newName;
+      if(action.firstname !== undefined) patch.firstname = action.firstname;
+      if(action.lastname !== undefined) patch.lastname = action.lastname;
+      if(action.social !== undefined){ patch.social = action.social; patch.contact = action.social; }
+      if(action.phone !== undefined) patch.phone = action.phone;
+      if(action.whatsapp !== undefined) patch.whatsapp = action.whatsapp;
       if(action.contact !== undefined) patch.contact = action.contact;
       if(action.address !== undefined) patch.address = action.address;
       if(!Object.keys(patch).length) return t('actionNotRecognized');
@@ -3227,8 +3238,8 @@ ceux-là sont déjà dans les DONNÉES.
 TU SAIS FAIRE 4 CHOSES :
 
 1) AGIR sur l'application. Actions disponibles (le champ "type" est OBLIGATOIRE) :
-- {"type":"create_client","name":"...","contact":"...","address":"..."}
-- {"type":"update_client","clientName":"...","newName":"...","contact":"...","address":"..."}
+- {"type":"create_client","name":"Prénom Nom","firstname":"...","lastname":"...","social":"@pseudo","phone":"...","whatsapp":"...","address":"..."}
+- {"type":"update_client","clientName":"...","newName":"...","firstname":"...","lastname":"...","social":"...","phone":"...","whatsapp":"...","address":"..."}
 - {"type":"create_order","clientName":"...","product":"...","qty":N,"unitCost":N,"unitPrice":N,"status":"nouveau","note":"..."}
 - {"type":"update_order","clientName":"...","product":"...","newProduct":"...","qty":N,"unitCost":N,"unitPrice":N,"note":"..."}
 - {"type":"update_status","clientName":"...","product":"...","status":"..."}
@@ -3272,6 +3283,12 @@ même quand la phrase est bancale. Repères à utiliser :
   (un nom de modèle mal retranscrit reste utilisable : Massif corrigera s'il le faut).
 Si un mot semble déformé par la reconnaissance vocale mais que le sens est clair, corrige-le silencieusement.
 Ne redemande JAMAIS une information déjà présente dans le message, même mal écrite.
+
+FORMULAIRE CLIENT REMPLI : si le message ressemble à une fiche remplie ligne par ligne
+(Prénom : ... / Nom : ... / Pseudo : ... / Téléphone : ... / WhatsApp : ... / Adresse : ...),
+lis chaque ligne et crée directement le client avec tous ces champs.
+Le champ "name" doit contenir "Prénom Nom". Les lignes laissées vides sont simplement ignorées.
+Ne pose aucune question si la fiche est complète : résume et demande juste confirmation.
 Quand une demande contient à la fois un nouveau client ET une commande, traite les deux :
 crée d'abord le client via create_order (le clientName suffit, le client est créé automatiquement),
 puis, si tu as son contact ou son adresse, propose ensuite un update_client pour les enregistrer.
