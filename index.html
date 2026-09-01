@@ -672,6 +672,20 @@
     font-size:15px; padding:4px 6px; flex-shrink:0;
   }
   .chat-msg img{ max-width:100%; border-radius:11px; margin-top:6px; display:block; }
+  /* ===== Bandeau de connexion ===== */
+  #netBanner{
+    position:fixed; top:0; left:0; right:0; z-index:75;
+    padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;
+    text-align:center; font-size:12.5px; font-weight:600; letter-spacing:-0.01em;
+    background:var(--fill-2); color:var(--text-muted);
+    border-bottom:0.5px solid var(--hairline);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+    transform:translateY(-100%); transition:transform .35s var(--spring);
+    pointer-events:none;
+  }
+  #netBanner.show{ transform:translateY(0); }
+  #netBanner.syncing{ color:var(--accent); }
+
   /* ===== Catalogue fournisseur : marques & modèles ===== */
   .brand-block{
     background:var(--fill); border:0.5px solid var(--hairline); border-radius:16px;
@@ -835,6 +849,7 @@
 </head>
 <body style="background:#fbfcfa;">
 <div id="bgfill"></div>
+<div id="netBanner"><span id="netBannerText"></span></div>
 <div id="loginScreen">
   <div class="login-box">
     <div class="splash-icon">$</div>
@@ -1215,6 +1230,9 @@ const I18N = {
   fr: {
     tagline:'Sourcing & revente', langTitle:'Langue', exportTitle:'Exporter mes données', resetTitle:'Réinitialiser', addTitle:'Ajouter',
     logoutTitle:'Se déconnecter', confirmLogout:'Se déconnecter de DOLLAR$ SOURCING ?', themeTitle:'Thème clair / sombre',
+    netOffline:'Hors ligne — tes modifications seront synchronisées au retour du réseau',
+    netBackOnline:'Connexion rétablie — synchronisation...',
+    netSynced:'Tout est synchronisé',
     accessTitle:'Accès invités', accessEmailLabel:'Adresse Gmail', accessAdd:'Autoriser cet accès',
     accessListTitle:'Comptes autorisés', accessNone:'Aucun invité pour le moment.',
     accessHelp:"Ajoute l'adresse Gmail d'un ami pour qu'il puisse se connecter. Ses clients et commandes resteront privés ; seuls les fournisseurs sont partagés. Tu peux retirer un accès à tout moment.",
@@ -1298,6 +1316,9 @@ const I18N = {
   en: {
     tagline:'Sourcing & resale', langTitle:'Language', exportTitle:'Export my data', resetTitle:'Reset', addTitle:'Add',
     logoutTitle:'Sign out', confirmLogout:'Sign out of DOLLAR$ SOURCING?', themeTitle:'Light / dark theme',
+    netOffline:'Offline — your changes will sync when the network is back',
+    netBackOnline:'Back online — syncing...',
+    netSynced:'Everything is synced',
     accessTitle:'Guest access', accessEmailLabel:'Gmail address', accessAdd:'Grant access',
     accessListTitle:'Authorised accounts', accessNone:'No guest yet.',
     accessHelp:"Add a friend's Gmail address so they can sign in. Their clients and orders stay private; only suppliers are shared. You can revoke access at any time.",
@@ -1513,6 +1534,11 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// ===== Mode hors ligne =====
+// Les données sont copiées sur l'appareil : l'app fonctionne sans réseau
+// (utile en Chine, où les services Google sont bloqués). Tout se resynchronise au retour.
+db.enablePersistence({ synchronizeTabs: true }).catch(()=>{ /* déjà actif ou navigateur non compatible */ });
 const auth = firebase.auth();
 const OWNER_EMAIL = 'dollars.sourcing@gmail.com';
 
@@ -2463,6 +2489,40 @@ $('#deleteSupplierBtn').addEventListener('click', async ()=>{
   await deleteSupplierDoc(editingSupplierId);
   closeSupplierSheet();
 });
+
+// ================= ÉTAT DE LA CONNEXION =================
+let wasOffline = false;
+let netBannerTimer = null;
+
+function showNetBanner(messageKey, kind, autoHide){
+  const b = document.getElementById('netBanner');
+  document.getElementById('netBannerText').textContent = t(messageKey);
+  b.classList.toggle('syncing', kind === 'syncing');
+  b.classList.add('show');
+  clearTimeout(netBannerTimer);
+  if(autoHide){
+    netBannerTimer = setTimeout(()=>b.classList.remove('show'), 3200);
+  }
+}
+function hideNetBanner(){
+  clearTimeout(netBannerTimer);
+  document.getElementById('netBanner').classList.remove('show');
+}
+
+function handleOffline(){
+  wasOffline = true;
+  showNetBanner('netOffline', 'offline', false);
+}
+function handleOnline(){
+  if(!wasOffline){ hideNetBanner(); return; }
+  wasOffline = false;
+  showNetBanner('netBackOnline', 'syncing', false);
+  setTimeout(()=>showNetBanner('netSynced', 'syncing', true), 1800);
+}
+
+window.addEventListener('offline', handleOffline);
+window.addEventListener('online', handleOnline);
+if(!navigator.onLine) handleOffline();
 
 // ================= GESTION DES ACCÈS (propriétaire uniquement) =================
 function renderAccessList(){
