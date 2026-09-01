@@ -464,6 +464,8 @@
     animation:rippleOut .6s var(--ease-out) forwards;
   }
   .btn-row{ display:flex; gap:10px; margin-top:11px; }
+  .btn-row .btn-primary{ width:auto; flex:1; margin-top:0; }
+  .btn-row .btn-secondary{ flex:1; }
   .btn-secondary{
     flex:1; min-height:46px; padding:12px; border-radius:14px;
     border:0.5px solid var(--hairline-strong); background:transparent;
@@ -678,6 +680,24 @@
     font-size:15px; padding:4px 6px; flex-shrink:0;
   }
   .chat-msg img{ max-width:100%; border-radius:11px; margin-top:6px; display:block; }
+  .addr-field{ position:relative; }
+  .addr-suggestions{
+    position:absolute; left:0; right:0; top:100%; margin-top:5px; z-index:35;
+    background:var(--mat-thick); border:0.5px solid var(--hairline); border-radius:13px;
+    box-shadow:var(--raise-lg); overflow:hidden; display:none;
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    max-height:250px; overflow-y:auto;
+  }
+  .addr-suggestions.open{ display:block; animation:popIn .18s var(--ease-out); }
+  .addr-item{
+    padding:11px 14px; cursor:pointer; font-size:14px; color:var(--text);
+    letter-spacing:-0.01em; border-bottom:0.5px solid var(--hairline);
+  }
+  .addr-item:last-child{ border-bottom:none; }
+  .addr-item:hover, .addr-item.active{ background:var(--fill); }
+  .addr-item .addr-main{ font-weight:600; }
+  .addr-item .addr-sub{ font-size:12.5px; color:var(--text-faint); margin-top:1px; }
+
   .group-label{
     font-size:12.5px; color:var(--text-faint); letter-spacing:-0.005em; font-weight:600;
   }
@@ -1075,14 +1095,46 @@
     <h2 id="clientSheetTitle">Profil client</h2>
     <div id="clientStatsSummary" style="display:none;"></div>
     <form id="clientForm" novalidate>
-      <div class="field">
-        <label data-i18n="fieldName">Nom</label><input type="text" id="c_name">
-        <div class="field-error"></div>
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="fieldFirstName">Prénom</label><input type="text" id="c_firstname" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label data-i18n="fieldLastName">Nom</label><input type="text" id="c_lastname" autocomplete="family-name">
+          <div class="field-error"></div>
+        </div>
       </div>
-      <div class="field"><label data-i18n="fieldContact">Contact</label><input type="text" id="c_contact" data-i18n-placeholder="placeholderContactShort" placeholder="@pseudo, tél..."></div>
-      <div class="field"><label data-i18n="fieldAddress">Adresse de livraison</label><input type="text" id="c_address"></div>
+
+      <p class="group-label" style="margin:18px 0 10px;" data-i18n="sectionContact">Réseaux &amp; contact</p>
+      <div class="field">
+        <label data-i18n="fieldSnap">Snapchat / Instagram / TikTok</label>
+        <input type="text" id="c_social" data-i18n-placeholder="placeholderSocial" placeholder="@pseudo" autocapitalize="none">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="fieldPhone">Téléphone</label>
+          <input type="tel" id="c_phone" data-i18n-placeholder="placeholderPhone" placeholder="06 12 34 56 78" autocomplete="tel">
+        </div>
+        <div class="field">
+          <label data-i18n="fieldWhatsapp">WhatsApp</label>
+          <input type="tel" id="c_whatsapp" data-i18n-placeholder="optional" placeholder="Optionnel">
+        </div>
+      </div>
+
+      <p class="group-label" style="margin:18px 0 10px;" data-i18n="sectionDelivery">Livraison</p>
+      <div class="field addr-field">
+        <label data-i18n="fieldAddress">Adresse de livraison</label>
+        <input type="text" id="c_address" data-i18n-placeholder="placeholderAddress" placeholder="Commence à taper, les suggestions arrivent" autocomplete="off">
+        <div class="addr-suggestions" id="addrSuggestions"></div>
+      </div>
+
       <button type="submit" class="btn-primary" data-i18n="save">Enregistrer</button>
     </form>
+
+    <button type="button" class="btn-secondary" id="waFormBtn" data-i18n="sendFormWhatsapp"
+            style="width:100%; margin-top:11px; color:var(--accent); border-color:var(--accent);">
+      Envoyer un formulaire à remplir
+    </button>
     <div class="client-link-box" id="clientLinkBox" style="display:none;">
       <div class="link-label" data-i18n="clientLinkLabel">Lien personnel du client (à envoyer une seule fois)</div>
       <div class="link-row">
@@ -1254,6 +1306,14 @@ const I18N = {
   fr: {
     tagline:'Sourcing & revente', langTitle:'Langue', exportTitle:'Exporter mes données', resetTitle:'Réinitialiser', addTitle:'Ajouter',
     logoutTitle:'Se déconnecter', confirmLogout:'Se déconnecter de DOLLAR$ SOURCING ?', themeTitle:'Thème clair / sombre',
+    fieldFirstName:'Prénom', fieldLastName:'Nom',
+    sectionContact:'Réseaux & contact', sectionDelivery:'Livraison',
+    fieldSnap:'Snapchat / Instagram / TikTok',
+    placeholderSocial:'@pseudo', placeholderPhone:'06 12 34 56 78',
+    placeholderAddress:'Commence à taper, les suggestions arrivent',
+    sendFormWhatsapp:'Envoyer un formulaire à remplir',
+    formCopied:'Formulaire copié — colle-le dans WhatsApp',
+    clientFormTemplate:'Salut ! Pour enregistrer ta commande, réponds simplement à ce message en remplissant :\n\nPrénom :\nNom :\nPseudo (Snap / Insta / TikTok) :\nTéléphone :\nWhatsApp :\nAdresse de livraison complète :\n\nMerci !',
     undo:'Annuler', restored:'Restauré',
     orderDeleted:'Commande supprimée', clientDeleted:'Client supprimé', supplierDeleted:'Fournisseur supprimé',
     trashTitle:'Corbeille', trashHelp:'Les éléments supprimés restent ici 30 jours, puis disparaissent définitivement.',
@@ -1347,6 +1407,14 @@ const I18N = {
   en: {
     tagline:'Sourcing & resale', langTitle:'Language', exportTitle:'Export my data', resetTitle:'Reset', addTitle:'Add',
     logoutTitle:'Sign out', confirmLogout:'Sign out of DOLLAR$ SOURCING?', themeTitle:'Light / dark theme',
+    fieldFirstName:'First name', fieldLastName:'Last name',
+    sectionContact:'Social & contact', sectionDelivery:'Delivery',
+    fieldSnap:'Snapchat / Instagram / TikTok',
+    placeholderSocial:'@handle', placeholderPhone:'06 12 34 56 78',
+    placeholderAddress:'Start typing, suggestions will appear',
+    sendFormWhatsapp:'Send a form to fill in',
+    formCopied:'Form copied — paste it into WhatsApp',
+    clientFormTemplate:'Hi! To register your order, just reply to this message filling in:\n\nFirst name:\nLast name:\nHandle (Snap / Insta / TikTok):\nPhone:\nWhatsApp:\nFull delivery address:\n\nThanks!',
     undo:'Undo', restored:'Restored',
     orderDeleted:'Order deleted', clientDeleted:'Client deleted', supplierDeleted:'Supplier deleted',
     trashTitle:'Trash', trashHelp:'Deleted items stay here for 30 days, then disappear for good.',
@@ -2349,13 +2417,82 @@ function renderClientStatsSummary(clientId){
   `;
 }
 
+// ================= ADRESSES FRANÇAISES =================
+// Base d'adresses officielle du gouvernement : gratuite, sans clé, très complète.
+let addrTimer = null;
+let addrResults = [];
+
+function hideAddrSuggestions(){
+  $('#addrSuggestions').classList.remove('open');
+}
+function renderAddrSuggestions(){
+  const box = $('#addrSuggestions');
+  if(!addrResults.length){ hideAddrSuggestions(); return; }
+  box.innerHTML = addrResults.map((f, i)=>{
+    const p = f.properties;
+    return `<div class="addr-item" data-addr="${i}">
+      <div class="addr-main">${escapeHtml(p.name || '')}</div>
+      <div class="addr-sub">${escapeHtml((p.postcode || '') + ' ' + (p.city || ''))}</div>
+    </div>`;
+  }).join('');
+  box.classList.add('open');
+}
+
+async function searchAddress(query){
+  if(query.trim().length < 4){ addrResults = []; hideAddrSuggestions(); return; }
+  try{
+    const url = 'https://api-adresse.data.gouv.fr/search/?limit=5&q=' + encodeURIComponent(query);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('adresse');
+    const data = await res.json();
+    addrResults = data.features || [];
+    renderAddrSuggestions();
+  }catch(e){
+    addrResults = [];
+    hideAddrSuggestions();   // hors ligne ou service indisponible : saisie libre, sans blocage
+  }
+}
+
+$('#c_address').addEventListener('input', (e)=>{
+  clearTimeout(addrTimer);
+  const q = e.target.value;
+  addrTimer = setTimeout(()=>searchAddress(q), 320);
+});
+$('#c_address').addEventListener('blur', ()=>setTimeout(hideAddrSuggestions, 180));
+
+$('#addrSuggestions').addEventListener('click', (e)=>{
+  const item = e.target.closest('[data-addr]');
+  if(!item) return;
+  const f = addrResults[Number(item.dataset.addr)];
+  if(!f) return;
+  $('#c_address').value = f.properties.label || '';
+  hideAddrSuggestions();
+});
+
+// ================= FORMULAIRE À ENVOYER AU CLIENT =================
+$('#waFormBtn').addEventListener('click', async ()=>{
+  const msg = t('clientFormTemplate');
+  try{
+    await navigator.clipboard.writeText(msg);
+    showToast(t('formCopied'));
+  }catch(e){
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    return;
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+});
+
 function openClientSheet(id){
   editingClientId = id;
   clearFormErrors($('#clientForm'));
   const c = id ? clientById(id) : null;
   $('#clientSheetTitle').textContent = c ? c.name : t('newClientTitle');
-  $('#c_name').value = c ? c.name : '';
-  $('#c_contact').value = c ? (c.contact||'') : '';
+  $('#c_firstname').value = c ? (c.firstname || '') : '';
+  $('#c_lastname').value  = c ? (c.lastname  || (c.firstname ? '' : (c.name || ''))) : '';
+  $('#c_social').value    = c ? (c.social   || c.contact || '') : '';
+  $('#c_phone').value     = c ? (c.phone    || '') : '';
+  $('#c_whatsapp').value  = c ? (c.whatsapp || '') : '';
+  hideAddrSuggestions();
   $('#c_address').value = c ? (c.address||'') : '';
   $('#clientOrdersSection').style.display = c ? 'block' : 'none';
   $('#deleteClientBtn').style.display = c ? 'block' : 'none';
@@ -2424,11 +2561,22 @@ $('#clientOverlay').addEventListener('click', (e)=>{ if(e.target===$('#clientOve
 
 $('#clientForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const nameInput = $('#c_name');
+  const nameInput = $('#c_lastname');
   clearFieldError(nameInput);
   const name = nameInput.value.trim();
   if(!name){ setFieldError(nameInput, t('toastIndicateName')); return; }
-  const data = { name, contact:$('#c_contact').value.trim(), address:$('#c_address').value.trim() };
+  const firstname = $('#c_firstname').value.trim();
+  const social    = $('#c_social').value.trim();
+  const phone     = $('#c_phone').value.trim();
+  const whatsapp  = $('#c_whatsapp').value.trim();
+  const fullName  = (firstname ? firstname + ' ' : '') + name;
+  const data = {
+    name: fullName,
+    firstname, lastname: name,
+    social, phone, whatsapp,
+    address: $('#c_address').value.trim(),
+    contact: social || phone || whatsapp   // conservé pour l'affichage et WhatsApp
+  };
   if(editingClientId){
     await updateClientDoc(editingClientId, data);
   } else {
