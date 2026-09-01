@@ -13,6 +13,8 @@
   :root{
     --danger:#e0293c;
     --danger-bright:#f25060;
+    --warn:#c98217;
+    --warn-soft:rgba(201,130,23,0.14);
     --font-display:'Space Grotesk',sans-serif;
     --font-body:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
     --spring:cubic-bezier(.34,1.4,.64,1);
@@ -698,6 +700,16 @@
   .addr-item .addr-main{ font-weight:600; }
   .addr-item .addr-sub{ font-size:12.5px; color:var(--text-faint); margin-top:1px; }
 
+  .badge-due{
+    background:var(--warn-soft); color:var(--warn);
+    font-size:10.5px; font-weight:700; padding:3.5px 9px; border-radius:100px;
+    white-space:nowrap; flex-shrink:0; letter-spacing:-0.005em;
+  }
+  .due-line{
+    margin-top:7px; font-size:12.5px; font-weight:600; color:var(--warn);
+    letter-spacing:-0.01em;
+  }
+
   .group-label{
     font-size:12.5px; color:var(--text-faint); letter-spacing:-0.005em; font-weight:600;
   }
@@ -1097,6 +1109,10 @@
           <div class="field-error"></div>
         </div>
       </div>
+      <div class="field">
+        <label data-i18n="fieldPaid">Déjà reçu (€)</label>
+        <input type="number" id="f_paid" min="0" step="0.01" data-i18n-placeholder="paidPlaceholder" placeholder="0 = rien encaissé">
+      </div>
       <div class="margin-preview" id="marginPreview">Marge : 0€</div>
       <div class="field">
         <label data-i18n="fieldNote">Note (n° de suivi, précisions...)</label>
@@ -1334,6 +1350,9 @@ const I18N = {
   fr: {
     tagline:'Sourcing & revente', langTitle:'Langue', exportTitle:'Exporter mes données', resetTitle:'Réinitialiser', addTitle:'Ajouter',
     logoutTitle:'Se déconnecter', confirmLogout:'Se déconnecter de DOLLAR$ SOURCING ?', themeTitle:'Thème clair / sombre',
+    fieldPaid:'Déjà reçu (€)', paidPlaceholder:'0 = rien encaissé',
+    remainingLabel:'Reste à payer', fullyPaid:'Intégralement payé',
+    owesLabel:'Doit', statDue:'Reste à payer',
     fieldFirstName:'Prénom', fieldLastName:'Nom',
     sectionContact:'Réseaux & contact', sectionDelivery:'Livraison',
     fieldSnap:'Snapchat / Instagram / TikTok',
@@ -1435,6 +1454,9 @@ const I18N = {
   en: {
     tagline:'Sourcing & resale', langTitle:'Language', exportTitle:'Export my data', resetTitle:'Reset', addTitle:'Add',
     logoutTitle:'Sign out', confirmLogout:'Sign out of DOLLAR$ SOURCING?', themeTitle:'Light / dark theme',
+    fieldPaid:'Already received (€)', paidPlaceholder:'0 = nothing collected',
+    remainingLabel:'Left to pay', fullyPaid:'Fully paid',
+    owesLabel:'Owes', statDue:'Left to pay',
     fieldFirstName:'First name', fieldLastName:'Last name',
     sectionContact:'Social & contact', sectionDelivery:'Delivery',
     fieldSnap:'Snapchat / Instagram / TikTok',
@@ -1674,6 +1696,16 @@ function orderTotalCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1);
 function orderTotalPrice(o){ return (Number(o.unitPrice)||0) * (Number(o.qty)||1); }
 function orderMargin(o){ return orderTotalPrice(o) - orderTotalCost(o); }
 function orderMultiplier(o){ const c = orderTotalCost(o); return c>0 ? orderTotalPrice(o)/c : null; }
+function orderPaid(o){ return Number(o.paidAmount) || 0; }
+function orderRemaining(o){
+  if(o.status === 'annule') return 0;
+  const r = orderTotalPrice(o) - orderPaid(o);
+  return r > 0.009 ? r : 0;
+}
+function clientRemaining(clientId){
+  return orders.filter(o => o.clientId === clientId && o.status !== 'annule')
+               .reduce((sum, o) => sum + orderRemaining(o), 0);
+}
 function clientById(id){ return clients.find(c=>c.id===id); }
 function clientName(o){ const c = clientById(o.clientId); return c ? c.name : 'Client supprimé'; }
 function computeClientStats(clientId){
@@ -1914,7 +1946,7 @@ function buildStatusSelect(selectEl, selected){
 function renderKPIs(){
   const active = orders.filter(o=>o.status!=='livre' && o.status!=='annule').length;
   const margin = orders.filter(o=>o.status!=='annule').reduce((s,o)=>s+orderMargin(o),0);
-  const pending = orders.filter(o=>o.status==='nouveau'||o.status==='devis').reduce((s,o)=>s+orderTotalPrice(o),0);
+  const pending = orders.filter(o=>o.status!=='annule' && o.status!=='livre').reduce((s,o)=>s+orderRemaining(o),0);
   const delivered = orders.filter(o=>o.status==='livre').length;
   $('#kpiActive').textContent = active;
   $('#kpiMargin').textContent = fmtMoney(margin);
@@ -1946,6 +1978,8 @@ function renderList(){
           <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
         </div>
         <div class="card-mid">${escapeHtml(o.product)} × ${o.qty}</div>
+        ${orderRemaining(o) > 0 && orderPaid(o) > 0
+          ? `<div class="due-line">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
           <div class="date">${fmtDate(o.createdAt)}</div>
           <div class="margin ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
@@ -1984,12 +2018,15 @@ function renderClients(){
   }
   el.innerHTML = list.map((c,i)=>{
     const s = computeClientStats(c.id);
+    const due = clientRemaining(c.id);
     const delay = Math.min(i,8)*35;
     return `
       <div class="order-card card-in" style="animation-delay:${delay}ms" data-client-id="${c.id}">
         <div class="card-top">
           <div class="client">${escapeHtml(c.name)}</div>
-          <div class="badge" style="background:color-mix(in srgb, var(--teal) 18%, white); color:var(--teal);">${s.count} cmd${s.count>1?'s':''}</div>
+          ${due > 0
+            ? `<div class="badge-due">${t('owesLabel')} ${fmtMoney(due)}</div>`
+            : `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`}
         </div>
         <div class="card-mid">${escapeHtml(c.contact||t('noContact'))}</div>
         <div class="card-bottom">
@@ -2218,10 +2255,15 @@ function updateMarginPreview(){
   const up = parseFloat($('#f_unitPrice').value)||0;
   const totalCost = uc*qty, totalPrice = up*qty, margin = totalPrice-totalCost;
   const mult = totalCost>0 ? (totalPrice/totalCost) : 0;
+  const paid = parseFloat($('#f_paid').value) || 0;
+  const remaining = Math.max(totalPrice - paid, 0);
   $('#marginPreview').innerHTML =
     `${t('totalCostLabel')} : ${fmtMoney(totalCost)} &nbsp;·&nbsp; ${t('totalSaleLabel')} : ${fmtMoney(totalPrice)}<br>` +
     `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
-    `${totalCost>0?` (×${mult.toFixed(1)})`:''}`;
+    `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
+    (paid > 0
+      ? `<br><span style="color:${remaining>0?'var(--warn)':'var(--accent)'}">${remaining>0 ? t('remainingLabel')+' : '+fmtMoney(remaining) : t('fullyPaid')}</span>`
+      : '');
 }
 
 function buildClientSelect(selectedId){
@@ -2317,6 +2359,7 @@ $('#exportBtn').addEventListener('click', exportData);
 $('#f_qty').addEventListener('input', updateMarginPreview);
 $('#f_unitCost').addEventListener('input', updateMarginPreview);
 $('#f_unitPrice').addEventListener('input', updateMarginPreview);
+$('#f_paid').addEventListener('input', updateMarginPreview);
 
 $('#searchInput').addEventListener('input', (e)=>{ searchTerm = e.target.value; renderList(); });
 $('#clientSearchInput').addEventListener('input', renderClients);
@@ -2372,7 +2415,9 @@ form.addEventListener('submit', async (e)=>{
     if(!newClientId) return;
     clientId = newClientId;
   }
-  const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal, note:$('#f_note').value.trim() };
+  const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal,
+                 paidAmount: parseFloat($('#f_paid').value) || 0,
+                 note:$('#f_note').value.trim() };
   if(editingId){
     await updateOrderDoc(editingId, Object.assign({status: stepperStatus}, data));
   } else {
@@ -2438,10 +2483,12 @@ function renderClientStatsSummary(clientId){
   el.style.display = 'grid';
   el.className = 'kpis kpis-3';
   el.style.marginBottom = '16px';
+  const due = clientRemaining(clientId);
   el.innerHTML = `
     <div class="kpi"><div class="label">${t('statOrders')}</div><div class="value">${s.count}</div></div>
     <div class="kpi money"><div class="label">${t('statRevenueGenerated')}</div><div class="value">${fmtMoney(s.revenue)}</div></div>
-    <div class="kpi money"><div class="label">${t('statMarginGenerated')}</div><div class="value">${fmtMoney(s.margin)}</div></div>
+    <div class="kpi"><div class="label">${due > 0 ? t('statDue') : t('statMarginGenerated')}</div>
+      <div class="value" style="color:${due > 0 ? 'var(--warn)' : 'var(--accent)'}">${fmtMoney(due > 0 ? due : s.margin)}</div></div>
   `;
 }
 
