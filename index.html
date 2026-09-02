@@ -53,6 +53,7 @@
     --press:inset 0 3px 8px rgba(70,74,68,0.15), inset 0 1px 2px rgba(70,74,68,0.10);
     --specular:linear-gradient(163deg, rgba(255,255,255,0.96), rgba(255,255,255,0.18) 40%, transparent 68%);
     --ripple:rgba(46,179,92,0.26);
+    --sheen:rgba(255,255,255,0.92);
     --on-accent:#ffffff;
     --scrim:rgba(46,50,46,0.32);
 
@@ -95,6 +96,7 @@
     --press:inset 0 3px 9px rgba(0,0,0,0.62), inset 0 1px 2px rgba(0,0,0,0.5);
     --specular:linear-gradient(163deg, rgba(255,255,255,0.15), rgba(255,255,255,0.03) 40%, transparent 68%);
     --ripple:rgba(255,122,26,0.30);
+    --sheen:rgba(255,255,255,0.26);
     --on-accent:#1c0d00;
     --scrim:rgba(0,0,0,0.6);
 
@@ -126,6 +128,13 @@
       radial-gradient(95% 50% at 8% -12%, var(--tint-1), transparent 60%),
       radial-gradient(85% 46% at 96% 108%, var(--tint-2), transparent 62%);
     transition:background .45s var(--ease-io);
+    transform-origin:50% 40%;
+    animation:bgBreathe 28s var(--ease-io) infinite alternate;
+  }
+  /* Respiration très lente du fond : on ne la remarque pas, on la ressent. */
+  @keyframes bgBreathe{
+    from{ transform:scale(1); opacity:.82; }
+    to{ transform:scale(1.14) translateY(-1.5%); opacity:1; }
   }
   .tnum{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
   :focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
@@ -254,6 +263,63 @@
   .kpi.money .value{ color:var(--accent); }
   .kpi.pending.active .value{ animation:pulseAccent 2.4s var(--ease-io) infinite; }
   @keyframes pulseAccent{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+
+  /* --- Révélation au défilement (tableau de bord uniquement) --- */
+  .reveal{
+    opacity:0; transform:translateY(15px);
+    transition:opacity .5s var(--ease-out), transform .58s var(--ease-out);
+  }
+  .reveal.revealed{ opacity:1; transform:none; }
+
+  /* --- Passage d'un onglet à l'autre : ça glisse --- */
+  .view-in{ animation:viewIn .3s var(--ease-out) both; }
+  @keyframes viewIn{
+    from{ opacity:0; transform:translateX(var(--view-dir, 18px)); }
+    to{ opacity:1; transform:none; }
+  }
+
+  /* --- Accueil des comptes invités --- */
+  .welcome{ position:relative; margin-bottom:22px; }
+  .welcome-card{
+    position:relative; overflow:hidden;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:22px;
+    padding:26px 20px 22px; box-shadow:var(--raise-lg);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .welcome-orb{
+    position:absolute; top:-70px; right:-60px; width:210px; height:210px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    pointer-events:none; filter:blur(4px);
+    animation:welcomeOrb 14s var(--ease-io) infinite alternate;
+  }
+  @keyframes welcomeOrb{ from{ transform:scale(1) translate(0,0); } to{ transform:scale(1.16) translate(-10px,10px); } }
+  .welcome-tile{
+    position:relative; width:52px; height:52px; border-radius:17px; margin-bottom:15px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--on-accent);
+    background:linear-gradient(162deg, var(--accent-bright), var(--accent) 74%);
+    box-shadow:0 8px 22px var(--accent-soft);
+  }
+  .welcome h2{
+    position:relative; font-family:var(--font-display); font-size:22px; font-weight:700;
+    margin:0 0 9px; letter-spacing:-0.03em;
+  }
+  .welcome-lead{
+    position:relative; margin:0 0 17px; font-size:14.5px; line-height:1.6;
+    color:var(--text-muted); letter-spacing:-0.01em;
+  }
+  .welcome-points{ position:relative; display:flex; flex-direction:column; gap:11px; margin-bottom:19px; }
+  .welcome-point{ display:flex; gap:11px; align-items:flex-start; font-size:13.5px; line-height:1.5; color:var(--text-muted); letter-spacing:-0.01em; }
+  .welcome-point .dot{
+    width:26px; height:26px; border-radius:9px; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; color:var(--accent);
+    background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  .welcome-point .dot svg{ width:14px; height:14px; }
+  .welcome-point b{ color:var(--text); font-weight:600; }
+  .welcome-actions{ position:relative; display:flex; flex-direction:column; gap:9px; }
+  .welcome-actions .btn-primary, .welcome-actions .btn-secondary{ width:100%; margin:0; }
 
   /* --- Recherche & filtres --- */
   .search{ position:relative; margin-bottom:12px; }
@@ -446,6 +512,12 @@
   .sheet h2{ font-family:var(--font-display); font-size:19px; margin:0 0 18px; font-weight:700; letter-spacing:-0.025em; }
   .section-title{ font-size:15px; font-weight:600; margin:0; letter-spacing:-0.02em; }
   .close-x{ position:absolute; top:18px; right:18px; }
+  #shippingZone{
+    margin:4px 0 16px; padding:14px 14px 2px; border-radius:16px;
+    background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  #shippingZone .section-title{ margin-bottom:3px; }
+  .field-hint{ margin:0 0 13px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; line-height:1.45; }
 
   /* --- Formulaires --- */
   .field{ margin-bottom:14px; }
@@ -578,8 +650,8 @@
       radial-gradient(95% 50% at 15% 10%, var(--tint-1), transparent 58%),
       radial-gradient(85% 46% at 88% 92%, var(--tint-2), transparent 60%);
   }
-  #splash.hide{ opacity:0; transform:scale(1.03); pointer-events:none; }
-  .splash-inner{ position:relative; text-align:center; animation:splashIn .8s var(--ease-out); }
+  #splash.hide{ opacity:0; transform:scale(1.05); filter:blur(7px); pointer-events:none; }
+  .splash-inner{ position:relative; text-align:center; }
   @keyframes splashIn{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
   .splash-icon{
     width:68px; height:68px; margin:0 auto 18px; border-radius:21px;
@@ -591,6 +663,71 @@
   }
   .splash-inner h1{ font-family:var(--font-display); font-size:26px; font-weight:700; margin:0; letter-spacing:-0.03em; color:var(--text); }
   .splash-inner p{ margin:7px 0 0; font-size:13px; color:var(--text-faint); letter-spacing:-0.01em; }
+
+  /* Le logo prend corps : halo, verre, éclat, puis le titre s'installe. */
+  .splash-mark{ position:relative; width:86px; height:86px; margin:0 auto 22px; }
+  .splash-glow{
+    position:absolute; inset:-46%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--accent-soft), transparent 68%);
+    filter:blur(7px); opacity:0; transform:scale(.55);
+    animation:splashGlow 1.1s var(--ease-out) .03s both;
+  }
+  @keyframes splashGlow{
+    0%{ opacity:0; transform:scale(.55); }
+    45%{ opacity:1; transform:scale(1.06); }
+    100%{ opacity:.62; transform:scale(1); }
+  }
+  .splash-tile{
+    position:absolute; inset:0; border-radius:27px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise-lg);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    animation:splashTile .85s var(--spring) .06s both;
+  }
+  @keyframes splashTile{
+    from{ opacity:0; transform:scale(.66) translateY(14px); filter:blur(13px); }
+    55%{ opacity:1; filter:blur(0); }
+    to{ opacity:1; transform:none; filter:blur(0); }
+  }
+  .splash-tile::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:var(--specular); opacity:.55;
+  }
+  .splash-glyph{
+    position:relative; z-index:1;
+    font-family:var(--font-display); font-size:40px; font-weight:700; color:var(--accent);
+    animation:splashGlyph .62s var(--spring) .3s both;
+  }
+  @keyframes splashGlyph{
+    from{ opacity:0; transform:scale(.55) rotate(-10deg); }
+    to{ opacity:1; transform:none; }
+  }
+  .splash-sheen{
+    position:absolute; top:-70%; left:-130%; width:62%; height:240%; z-index:2;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(19deg); pointer-events:none;
+    animation:splashSheen .8s var(--ease-io) .38s both;
+  }
+  @keyframes splashSheen{
+    0%{ left:-130%; opacity:0; }
+    22%{ opacity:1; }
+    100%{ left:140%; opacity:0; }
+  }
+  .splash-title{ overflow:hidden; padding:0 2px 2px; }
+  .splash-title h1{ animation:splashTitle .68s var(--ease-out) .34s both; }
+  @keyframes splashTitle{
+    from{ opacity:0; transform:translateY(105%); letter-spacing:.07em; }
+    to{ opacity:1; transform:none; letter-spacing:-0.03em; }
+  }
+  .splash-inner p{ animation:splashTagline .5s var(--ease-out) .6s both; }
+  @keyframes splashTagline{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+
+  /* Reprise de main : l'app arrive pendant que l'ouverture s'efface. */
+  #app.app-enter{ animation:appEnter .55s var(--ease-out) both; }
+  @keyframes appEnter{
+    from{ opacity:0; transform:scale(.985) translateY(6px); }
+    to{ opacity:1; transform:none; }
+  }
 
   #loginScreen{
     position:fixed; inset:0; z-index:90; display:none;
@@ -633,7 +770,7 @@
       radial-gradient(95% 50% at 15% 10%, var(--tint-1), transparent 58%),
       radial-gradient(85% 46% at 88% 92%, var(--tint-2), transparent 60%);
   }
-  .lock-box{ position:relative; text-align:center; max-width:320px; width:100%; animation:splashIn .55s var(--ease-out); }
+  .lock-box{ position:relative; text-align:center; max-width:320px; width:100%; }
   .lock-box h2{ font-family:var(--font-display); font-size:20px; margin:0 0 7px; font-weight:700; letter-spacing:-0.025em; }
   .lock-box p{ font-size:13.5px; color:var(--text-faint); margin:0 0 22px; line-height:1.55; letter-spacing:-0.01em; }
   .pin-dots{ display:flex; gap:13px; justify-content:center; margin-bottom:24px; }
@@ -947,7 +1084,12 @@
   @media (min-width:1000px){ #app{ max-width:820px; padding-top:36px; } }
 
   @media (prefers-reduced-motion:reduce){
-    *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+    *{ animation-duration:.01ms !important; transition-duration:.01ms !important;
+       animation-iteration-count:1 !important; }
+    /* Une animation infinie accélérée clignoterait : on la coupe net. */
+    body::before, .kpi.pending.active .value, .chat-msg.thinking,
+    .splash-sheen, .splash-glow, .welcome-orb{ animation:none !important; }
+    .reveal{ opacity:1 !important; transform:none !important; }
   }
 </style>
 </head>
@@ -986,8 +1128,14 @@
 </div>
 <div id="splash">
   <div class="splash-inner">
-    <div class="splash-icon">$</div>
-    <h1>DOLLAR$ SOURCING</h1>
+    <div class="splash-mark">
+      <span class="splash-glow"></span>
+      <span class="splash-tile">
+        <span class="splash-glyph">$</span>
+        <span class="splash-sheen"></span>
+      </span>
+    </div>
+    <div class="splash-title"><h1>DOLLAR$ SOURCING</h1></div>
     <p data-i18n="tagline">Sourcing &amp; revente</p>
   </div>
 </div>
@@ -1035,13 +1183,36 @@
   </div>
 
   <div id="commandesView">
-    <div class="kpis">
-      <div class="kpi"><div class="label" data-i18n="kpiActive">En cours</div><div class="value" id="kpiActive">0</div></div>
-      <div class="kpi money"><div class="label" data-i18n="kpiMargin">Marge totale</div><div class="value" id="kpiMargin">0€</div></div>
-      <div class="kpi money pending" id="kpiPendingCard"><div class="label" data-i18n="kpiPending">À encaisser</div><div class="value" id="kpiPending">0€</div></div>
-      <div class="kpi"><div class="label" data-i18n="kpiDelivered">Livrées</div><div class="value" id="kpiDelivered">0</div></div>
+    <div class="welcome" id="guestWelcome" style="display:none;">
+      <div class="welcome-card reveal">
+        <span class="welcome-orb"></span>
+        <div class="welcome-tile">$</div>
+        <h2 id="welcomeTitle">Bienvenue</h2>
+        <p class="welcome-lead" data-i18n="welcomeLead">Ton espace est prêt. Voici comment il fonctionne.</p>
+        <div class="welcome-points">
+          <div class="welcome-point">
+            <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
+            <span data-i18n="welcomePrivate">Tes <b>clients</b> et tes <b>commandes</b> n'appartiennent qu'à toi : personne d'autre ne les voit.</span>
+          </div>
+          <div class="welcome-point">
+            <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9l5 3V9l5 3V9l4 2.5V21"/><path d="M3 21h18"/></svg></span>
+            <span data-i18n="welcomeShared">Les <b>fournisseurs</b> sont partagés avec l'équipe : tu profites du carnet d'adresses commun.</span>
+          </div>
+        </div>
+        <div class="welcome-actions">
+          <button type="button" class="btn-primary" id="welcomeAddClient" data-i18n="welcomeActionClient">Ajouter mon premier client</button>
+          <button type="button" class="btn-secondary" id="welcomeAddOrder" data-i18n="welcomeActionOrder">Créer une commande</button>
+          <button type="button" class="btn-secondary" id="welcomeSeeSuppliers" data-i18n="welcomeActionSuppliers">Voir les fournisseurs de l'équipe</button>
+        </div>
+      </div>
     </div>
-    <div class="search">
+    <div class="kpis" id="kpisMain">
+      <div class="kpi reveal"><div class="label" data-i18n="kpiActive">En cours</div><div class="value" id="kpiActive">0</div></div>
+      <div class="kpi money reveal"><div class="label" data-i18n="kpiMargin">Marge totale</div><div class="value" id="kpiMargin">0€</div></div>
+      <div class="kpi money pending reveal" id="kpiPendingCard"><div class="label" data-i18n="kpiPending">À encaisser</div><div class="value" id="kpiPending">0€</div></div>
+      <div class="kpi reveal"><div class="label" data-i18n="kpiDelivered">Livrées</div><div class="value" id="kpiDelivered">0</div></div>
+    </div>
+    <div class="search" id="ordersSearch">
       <input type="text" id="searchInput" data-i18n-placeholder="searchOrders" placeholder="Rechercher un client ou un produit...">
     </div>
     <div class="tabs" id="tabs"></div>
@@ -1066,12 +1237,12 @@
   <div id="statsView" style="display:none;">
     <div class="tabs" id="rangeTabs"></div>
     <div class="kpis">
-      <div class="kpi money"><div class="label" data-i18n="statRevenuePeriod">CA (période)</div><div class="value" id="statRevenue">0€</div></div>
-      <div class="kpi money"><div class="label" data-i18n="statMarginPeriod">Marge (période)</div><div class="value" id="statMargin">0€</div></div>
-      <div class="kpi"><div class="label" data-i18n="statAvgBasket">Panier moyen</div><div class="value" id="statAvg">0€</div></div>
-      <div class="kpi"><div class="label" data-i18n="statAvgMargin">Marge moyenne</div><div class="value" id="statPct">0%</div></div>
+      <div class="kpi money reveal"><div class="label" data-i18n="statRevenuePeriod">CA (période)</div><div class="value" id="statRevenue">0€</div></div>
+      <div class="kpi money reveal"><div class="label" data-i18n="statMarginPeriod">Marge (période)</div><div class="value" id="statMargin">0€</div></div>
+      <div class="kpi reveal"><div class="label" data-i18n="statAvgBasket">Panier moyen</div><div class="value" id="statAvg">0€</div></div>
+      <div class="kpi reveal"><div class="label" data-i18n="statAvgMargin">Marge moyenne</div><div class="value" id="statPct">0%</div></div>
     </div>
-    <div class="chart-wrap">
+    <div class="chart-wrap reveal">
       <div id="chartContainer"></div>
       <div class="chart-legend">
         <span><i class="legend-dot" style="background:#8a8a91;"></i><span data-i18n="legendRevenue">Revenu</span></span>
@@ -1150,8 +1321,27 @@
       </div>
       <div class="margin-preview" id="marginPreview">Marge : 0€</div>
       <div class="field">
-        <label data-i18n="fieldNote">Note (n° de suivi, précisions...)</label>
+        <label data-i18n="fieldNote">Note (précisions pour le client...)</label>
         <textarea id="f_note" rows="2"></textarea>
+      </div>
+
+      <div id="shippingZone" style="display:none;">
+        <p class="section-title" data-i18n="shipSection">Expédition</p>
+        <p class="field-hint" data-i18n="shipHint">Ces informations s'affichent dans l'espace du client.</p>
+        <div class="field">
+          <label data-i18n="fieldCarrier">Transitaire</label>
+          <input type="text" id="f_carrier" data-i18n-placeholder="placeholderCarrier" placeholder="YunExpress, 4PX, Cainiao...">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label data-i18n="fieldTracking">Numéro de suivi</label>
+            <input type="text" id="f_tracking" data-i18n-placeholder="placeholderTracking" placeholder="Numéro donné par le transitaire">
+          </div>
+          <div class="field">
+            <label data-i18n="fieldEta">Livraison estimée</label>
+            <input type="date" id="f_eta">
+          </div>
+        </div>
       </div>
 
       <div id="stepperZone" style="display:none;">
@@ -1422,6 +1612,11 @@ const I18N = {
     loginDenied:"Ce compte Google n'a pas accès à cet espace.", loginFailed:'Connexion impossible. Réessaie.',
     navOrders:'Commandes', navClients:'Clients', navSuppliers:'Fournisseurs', navStats:'Stats', navRequests:'Demandes',
     kpiActive:'En cours', kpiMargin:'Marge totale', kpiPending:'À encaisser', kpiDelivered:'Livrées',
+    welcomeTitle:'Bienvenue, {name}', welcomeTitleNoName:'Bienvenue', welcomeLead:'Ton espace est prêt. Voici comment il fonctionne.',
+    welcomePrivate:"Tes <b>clients</b> et tes <b>commandes</b> n'appartiennent qu'à toi : personne d'autre ne les voit.",
+    welcomeShared:"Les <b>fournisseurs</b> sont partagés avec l'équipe : tu profites du carnet d'adresses commun.",
+    welcomeActionClient:'Ajouter mon premier client', welcomeActionOrder:'Créer une commande',
+    welcomeActionSuppliers:"Voir les fournisseurs de l'équipe",
     searchOrders:'Rechercher un client ou un produit...', searchClients:'Rechercher un client...', searchSuppliers:'Rechercher un fournisseur...',
     tabAll:'Tous',
     statusNouveau:'Nouvelle demande', statusDevis:'Devis envoyé', statusPaye:'Payé', statusCommande:'Commandé usine', statusExpedie:'Expédié', statusLivre:'Livré', statusAnnule:'Annulé',
@@ -1438,7 +1633,10 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
     fieldNewClientName:'Nom du nouveau client', fieldContact:'Contact (réseau, tél...)', fieldNewClientAddress:'Adresse de livraison',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldStatus:'Statut',
-    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (n° de suivi, précisions...)',
+    shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
+    fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
+    placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
+    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)',
     save:'Enregistrer', cancelOrder:'Annuler la commande', reactivateOrder:'Réactiver la commande', deleteOrder:'Supprimer',
     clientProfile:'Profil client', fieldName:'Nom', fieldAddress:'Adresse de livraison',
     ordersSectionTitle:'Commandes', addOrderForClient:'+ Commande', deleteClient:'Supprimer ce client', newClientTitle:'Nouveau client',
@@ -1526,6 +1724,11 @@ const I18N = {
     loginDenied:'This Google account does not have access to this space.', loginFailed:'Sign-in failed. Try again.',
     navOrders:'Orders', navClients:'Clients', navSuppliers:'Suppliers', navStats:'Stats', navRequests:'Requests',
     kpiActive:'In progress', kpiMargin:'Total margin', kpiPending:'To collect', kpiDelivered:'Delivered',
+    welcomeTitle:'Welcome, {name}', welcomeTitleNoName:'Welcome', welcomeLead:'Your space is ready. Here is how it works.',
+    welcomePrivate:'Your <b>clients</b> and <b>orders</b> are yours alone: nobody else can see them.',
+    welcomeShared:'<b>Suppliers</b> are shared with the team: you get the common address book.',
+    welcomeActionClient:'Add my first client', welcomeActionOrder:'Create an order',
+    welcomeActionSuppliers:'See the team suppliers',
     searchOrders:'Search a client or product...', searchClients:'Search a client...', searchSuppliers:'Search a supplier...',
     tabAll:'All',
     statusNouveau:'New request', statusDevis:'Quote sent', statusPaye:'Paid', statusCommande:'Ordered from factory', statusExpedie:'Shipped', statusLivre:'Delivered', statusAnnule:'Cancelled',
@@ -1542,7 +1745,10 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
     fieldNewClientName:'New client name', fieldContact:'Contact (social, phone...)', fieldNewClientAddress:'Delivery address',
     fieldProduct:'Product', fieldQty:'Quantity', fieldStatus:'Status',
-    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (tracking number, details...)',
+    shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
+    fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
+    placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
+    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)',
     save:'Save', cancelOrder:'Cancel order', reactivateOrder:'Reactivate order', deleteOrder:'Delete',
     clientProfile:'Client profile', fieldName:'Name', fieldAddress:'Delivery address',
     ordersSectionTitle:'Orders', addOrderForClient:'+ Order', deleteClient:'Delete this client', newClientTitle:'New client',
@@ -1659,6 +1865,12 @@ let viewState = 'commandes';
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// Une date de livraison est stockée au format ISO (AAAA-MM-JJ) : lisible partout,
+// affichée dans la langue du client par le portail.
+function isoDate(v){
+  if(!v) return '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
 }
 function fmtMoney(n){
   const loc = currentLang==='fr' ? 'fr-FR' : 'en-GB';
@@ -1785,6 +1997,7 @@ const OWNER_EMAIL = 'dollars.sourcing@gmail.com';
 let currentUid = null;
 let trashedOrders = [], trashedClients = [], trashedSuppliers = [];
 let currentEmail = '';
+let currentName = '';
 let isOwner = false;
 let allowedEmails = [];      // comptes invités, gérés par le propriétaire
 
@@ -1989,17 +2202,66 @@ function buildStatusSelect(selectEl, selected){
   ).join('');
 }
 
+// ================= Mouvement du tableau de bord =================
+// Les chiffres montent depuis zéro une seule fois, à l'arrivée.
+function countUp(el, to, format, duration){
+  if(!el) return;
+  if(el._countRaf){ cancelAnimationFrame(el._countRaf); el._countRaf = null; }
+  if(reduceMotion() || !duration){ el.textContent = format(to); return; }
+  const t0 = performance.now();
+  const step = (now)=>{
+    const p = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = format(to * eased, p < 1);
+    if(p < 1) el._countRaf = requestAnimationFrame(step);
+    else el._countRaf = null;
+  };
+  el._countRaf = requestAnimationFrame(step);
+}
+const countInt = (v)=>String(Math.round(v));
+const countMoney = (v, running)=>fmtMoney(running ? Math.round(v) : v);
+const countPct = (v)=>Math.round(v) + '%';
+
+// Les cartes du tableau de bord se révèlent en montant quand elles arrivent à l'écran.
+let revealObserver = null;
+function revealAll(){ document.querySelectorAll('.reveal').forEach(el=>el.classList.add('revealed')); }
+function initReveal(){
+  if(reduceMotion() || !('IntersectionObserver' in window)){ revealAll(); return; }
+  revealObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      en.target.classList.add('revealed');
+      revealObserver.unobserve(en.target);
+    });
+  }, { rootMargin:'0px 0px -6% 0px', threshold:0.06 });
+  observeReveals();
+}
+function observeReveals(){
+  if(!revealObserver){ if(!reduceMotion() && ('IntersectionObserver' in window)) return; revealAll(); return; }
+  document.querySelectorAll('.reveal:not(.revealed)').forEach((el,i)=>{
+    el.style.transitionDelay = Math.min(i,5)*55 + 'ms';
+    revealObserver.observe(el);
+  });
+}
+
 function renderKPIs(){
   const active = orders.filter(o=>o.status!=='livre' && o.status!=='annule').length;
   const margin = orders.filter(o=>o.status!=='annule').reduce((s,o)=>s+orderMargin(o),0);
   const pending = orders.filter(o=>o.status!=='annule' && o.status!=='livre').reduce((s,o)=>s+orderRemaining(o),0);
   const delivered = orders.filter(o=>o.status==='livre').length;
-  $('#kpiActive').textContent = active;
-  $('#kpiMargin').textContent = fmtMoney(margin);
-  $('#kpiPending').textContent = fmtMoney(pending);
-  $('#kpiDelivered').textContent = delivered;
+  // On ne compte qu'une fois, et seulement quand l'app est visible avec de vraies données.
+  const animate = appEntered && !kpisCounted && (active + margin + pending + delivered) !== 0;
+  if(animate) kpisCounted = true;
+  const d = animate ? 900 : 0;
+  countUp($('#kpiActive'), active, countInt, d);
+  countUp($('#kpiMargin'), margin, countMoney, d);
+  countUp($('#kpiPending'), pending, countMoney, d);
+  countUp($('#kpiDelivered'), delivered, countInt, d);
   $('#kpiPendingCard').classList.toggle('active', pending>0);
 }
+let kpisCounted = false;
+let statsCounted = false;
+let appEntered = false;
 
 function renderList(){
   let filtered = orders.slice().sort((a,b)=>b.createdAt-a.createdAt);
@@ -2016,9 +2278,8 @@ function renderList(){
     const meta = STATUS_META[o.status];
     const margin = orderMargin(o);
     const mult = orderMultiplier(o);
-    const delay = Math.min(i,8)*35;
     return `
-      <div class="order-card card-in" style="animation-delay:${delay}ms" data-id="${o.id}">
+      <div class="order-card" data-id="${o.id}">
         <div class="card-top">
           <div class="client">${escapeHtml(clientName(o))}</div>
           <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
@@ -2066,9 +2327,8 @@ function renderClients(){
   el.innerHTML = list.map((c,i)=>{
     const s = computeClientStats(c.id);
     const due = clientRemaining(c.id);
-    const delay = Math.min(i,8)*35;
     return `
-      <div class="order-card card-in" style="animation-delay:${delay}ms" data-client-id="${c.id}">
+      <div class="order-card" data-client-id="${c.id}">
         <div class="card-top">
           <div class="client">${escapeHtml(c.name)}</div>
           ${due > 0
@@ -2100,9 +2360,8 @@ function renderRequests(){
   el.innerHTML = pendingRequests.map((r,i)=>{
     const c = clientById(r.clientId);
     const name = c ? c.name : (r.clientName || '?');
-    const delay = Math.min(i,8)*35;
     return `
-      <div class="request-card card-in" style="animation-delay:${delay}ms" data-req-id="${r.id}">
+      <div class="request-card" data-req-id="${r.id}">
         <div class="card-top">
           <div class="client">${escapeHtml(name)}</div>
           <div class="date">${fmtDate(r.createdAt||Date.now())}</div>
@@ -2152,7 +2411,7 @@ function renderSuppliers(){
     const brands = Array.isArray(s.brands) ? s.brands.filter(b=>b.name) : [];
     const modelCount = brands.reduce((n,b)=>n + (b.models ? b.models.length : 0), 0);
     return `
-    <div class="order-card card-in" style="animation-delay:${Math.min(i,8)*35}ms" data-supplier-id="${s.id}">
+    <div class="order-card" data-supplier-id="${s.id}">
       <div class="card-top">
         <div class="client">${escapeHtml(s.name)}</div>
         ${brands.length ? `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${modelCount} ${modelCount>1?t('modelsPlural'):t('modelSingular')}</div>` : ''}
@@ -2168,10 +2427,41 @@ function render(){
   buildTabs();
   renderKPIs();
   renderList();
+  renderGuestWelcome();
   if(viewState==='clients') renderClients();
 }
 
+// ================= Accueil des comptes invités =================
+// Un invité qui arrive sur un espace encore vide est accueilli, pas laissé
+// devant une liste vide : on lui explique ce qui est à lui et ce qui est partagé.
+function firstName(){
+  const raw = (currentName || '').trim();
+  if(raw) return raw.split(/\s+/)[0];
+  const local = (currentEmail || '').split('@')[0].replace(/[._-]+/g,' ').trim();
+  if(!local) return '';
+  return local.split(/\s+/)[0].replace(/^./, c=>c.toUpperCase());
+}
+function renderGuestWelcome(){
+  const el = $('#guestWelcome');
+  if(!el) return;
+  const empty = orders.length===0 && clients.length===0 && pendingRequests.length===0
+             && trashedOrders.length===0 && trashedClients.length===0;
+  const show = appEntered && !isOwner && empty;
+  el.style.display = show ? 'block' : 'none';
+  ['#kpisMain','#ordersSearch','#tabs','#list'].forEach(sel=>{
+    const node = $(sel);
+    if(node) node.style.display = show ? 'none' : '';
+  });
+  if(!show) return;
+  const name = firstName();
+  $('#welcomeTitle').textContent = name ? t('welcomeTitle').replace('{name}', name) : t('welcomeTitleNoName');
+  observeReveals();
+}
+
+const VIEW_ORDER = ['commandes','clients','suppliers','stats','requests'];
 function switchView(view){
+  const from = VIEW_ORDER.indexOf(viewState);
+  const to = VIEW_ORDER.indexOf(view);
   viewState = view;
   Object.entries(VIEW_IDS).forEach(([key,id])=>{
     $('#'+id).style.display = (key===view) ? 'block' : 'none';
@@ -2180,9 +2470,12 @@ function switchView(view){
   Object.values(VIEW_BTN_IDS).forEach(id=>$('#'+id).classList.remove('active'));
   $('#'+VIEW_BTN_IDS[view]).classList.add('active');
   const activeEl = $('#'+VIEW_IDS[view]);
-  activeEl.classList.remove('view-fade-in');
+  // La nouvelle vue arrive du côté vers lequel on se déplace.
+  activeEl.style.setProperty('--view-dir', (to >= from ? '18px' : '-18px'));
+  activeEl.classList.remove('view-in');
   void activeEl.offsetWidth;
-  activeEl.classList.add('view-fade-in');
+  activeEl.classList.add('view-in');
+  observeReveals();
   if(view==='stats'){ buildRangeTabs(); renderStats(); }
   if(view==='clients') renderClients();
   if(view==='suppliers') renderSuppliers();
@@ -2292,10 +2585,13 @@ function renderChart(buckets){
 
 function renderStats(){
   const s = computeStats();
-  $('#statRevenue').textContent = fmtMoney(s.totalRevenue);
-  $('#statMargin').textContent = fmtMoney(s.totalMargin);
-  $('#statAvg').textContent = fmtMoney(s.avgBasket);
-  $('#statPct').textContent = Math.round(s.pctMargin)+'%';
+  // Comptés une fois, à la première ouverture des stats ; ensuite instantané.
+  const sd = (!statsCounted && (s.totalRevenue || s.totalMargin)) ? 900 : 0;
+  if(sd) statsCounted = true;
+  countUp($('#statRevenue'), s.totalRevenue, countMoney, sd);
+  countUp($('#statMargin'), s.totalMargin, countMoney, sd);
+  countUp($('#statAvg'), s.avgBasket, countMoney, sd);
+  countUp($('#statPct'), s.pctMargin, countPct, sd);
   renderChart(s.buckets);
 }
 
@@ -2336,8 +2632,16 @@ function openSheet(order, presetClientId, prefill){
   $('#f_unitCost').value = order ? order.unitCost : '';
   $('#f_unitPrice').value = order ? order.unitPrice : '';
   $('#f_note').value = order ? order.note : (prefill ? (prefill.note||'') : '');
+  // Sans ça, rouvrir une commande remettait l'acompte déjà encaissé à zéro.
+  $('#f_paid').value = order ? (order.paidAmount || '') : '';
   buildStatusSelect($('#f_status'), order ? order.status : 'nouveau');
   updateMarginPreview();
+
+  // L'expédition ne concerne qu'une commande déjà créée.
+  $('#f_carrier').value = order ? (order.carrier || order.forwarder || '') : '';
+  $('#f_tracking').value = order ? (order.tracking || order.trackingNumber || '') : '';
+  $('#f_eta').value = order ? isoDate(order.eta || order.estimatedDelivery) : '';
+  $('#shippingZone').style.display = order ? 'block' : 'none';
 
   $('#editActions').style.display = order ? 'flex' : 'none';
   $('#stepperZone').style.display = order ? 'block' : 'none';
@@ -2391,6 +2695,10 @@ $('#langMenu').querySelectorAll('button').forEach(btn=>{
     await saveLang();
   });
 });
+
+$('#welcomeAddClient').addEventListener('click', ()=>openClientSheet(null));
+$('#welcomeAddOrder').addEventListener('click', ()=>openSheet(null));
+$('#welcomeSeeSuppliers').addEventListener('click', ()=>switchView('suppliers'));
 
 $('#viewBtnCommandes').addEventListener('click', ()=>switchView('commandes'));
 $('#viewBtnClients').addEventListener('click', ()=>switchView('clients'));
@@ -2468,7 +2776,10 @@ form.addEventListener('submit', async (e)=>{
   }
   const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal,
                  paidAmount: parseFloat($('#f_paid').value) || 0,
-                 note:$('#f_note').value.trim() };
+                 note:$('#f_note').value.trim(),
+                 carrier:$('#f_carrier').value.trim(),
+                 tracking:$('#f_tracking').value.trim(),
+                 eta:$('#f_eta').value || '' };
   if(pendingPhoto){ data.photo = pendingPhoto.data; data.photoType = pendingPhoto.type; }
   if(editingId){
     await updateOrderDoc(editingId, Object.assign({status: stepperStatus}, data));
@@ -3987,12 +4298,26 @@ loadLangSync();
 updateLangUI();
 applyTranslations();
 
+// L'ouverture a le droit de prendre son temps : elle ne joue qu'une fois.
+// On lui garantit sa durée même si la connexion répond instantanément.
+const SPLASH_START = Date.now();
+let splashLeaving = false;
+function reduceMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 function hideSplash(){
   const splash = document.getElementById('splash');
-  if(splash){
+  if(!splash || splashLeaving) return;
+  splashLeaving = true;
+  const minStay = reduceMotion() ? 200 : 1100;
+  const wait = Math.max(0, minStay - (Date.now() - SPLASH_START));
+  setTimeout(()=>{
+    const app = document.getElementById('app');
+    if(app && app.style.display !== 'none' && !reduceMotion()){
+      app.classList.add('app-enter');
+      setTimeout(()=>app.classList.remove('app-enter'), 700);
+    }
     splash.classList.add('hide');
-    setTimeout(()=>{ if(splash.parentNode) splash.remove(); }, 550);
-  }
+    setTimeout(()=>{ if(splash.parentNode) splash.remove(); }, 600);
+  }, wait);
 }
 function showLogin(errorKey){
   hideSplash();
@@ -4010,7 +4335,10 @@ function showApp(){
   document.getElementById('app').style.display = 'block';
   document.getElementById('fabAdd').style.display = 'flex';
   applyRoleUI();
-  setTimeout(hideSplash, 1200);
+  appEntered = true;
+  renderKPIs();
+  initReveal();
+  hideSplash();
 }
 
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
@@ -4045,6 +4373,7 @@ auth.onAuthStateChanged(async (user)=>{
 
   currentUid = user.uid;
   currentEmail = (user.email || '').toLowerCase();
+  currentName = user.displayName || '';
   isOwner = currentEmail === OWNER_EMAIL;
 
   if(!isOwner){
