@@ -322,6 +322,10 @@
   .margin.neg{ color:var(--danger); }
   .mult{ opacity:.62; font-weight:500; font-family:var(--font-body); font-size:12px; }
 
+  .req-photo{
+    width:100%; max-height:220px; object-fit:cover; border-radius:12px;
+    margin-top:10px; display:block; border:0.5px solid var(--hairline);
+  }
   .request-actions{ display:flex; gap:9px; margin-top:12px; }
   .req-reject, .req-validate{
     flex:1; padding:10px; border-radius:12px; font-family:var(--font-body); font-weight:600; font-size:13.5px;
@@ -1982,6 +1986,7 @@ function renderList(){
           <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
         </div>
         <div class="card-mid">${escapeHtml(o.product)} × ${o.qty}</div>
+        ${o.photo ? `<img class="req-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="">` : ''}
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
           ? `<div class="due-line">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
@@ -2066,6 +2071,7 @@ function renderRequests(){
         </div>
         <div class="card-mid">${escapeHtml(r.product||'')} × ${r.qty||1}</div>
         ${r.note ? `<div class="card-mid" style="margin-top:4px; font-style:italic;">"${escapeHtml(r.note)}"</div>` : ''}
+        ${r.photo ? `<img class="req-photo" src="data:${r.photoType||'image/jpeg'};base64,${r.photo}" alt="">` : ''}
         <div class="request-actions">
           <button type="button" class="req-reject" data-action="reject">${t('rejectRequest')}</button>
           <button type="button" class="req-validate" data-action="validate">${t('validateRequest')}</button>
@@ -2075,6 +2081,7 @@ function renderRequests(){
 }
 
 let pendingSourceId = null;
+let pendingPhoto = null;
 $('#requestsList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('button[data-action]');
   if(!btn) return;
@@ -2088,6 +2095,7 @@ $('#requestsList').addEventListener('click', async (e)=>{
     showToast(t('toastRequestRejected'));
   } else {
     pendingSourceId = reqId;
+    pendingPhoto = req.photo ? { data:req.photo, type:req.photoType||'image/jpeg' } : null;
     openSheet(null, req.clientId, { product:req.product, qty:req.qty, note:req.note });
   }
 });
@@ -2305,6 +2313,7 @@ function closeSheet(){
   overlay.classList.remove('open');
   editingId = null;
   pendingSourceId = null;
+  pendingPhoto = null;
 }
 
 let stepperStatus = 'nouveau';
@@ -2422,6 +2431,7 @@ form.addEventListener('submit', async (e)=>{
   const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal,
                  paidAmount: parseFloat($('#f_paid').value) || 0,
                  note:$('#f_note').value.trim() };
+  if(pendingPhoto){ data.photo = pendingPhoto.data; data.photoType = pendingPhoto.type; }
   if(editingId){
     await updateOrderDoc(editingId, Object.assign({status: stepperStatus}, data));
   } else {
