@@ -151,7 +151,7 @@ l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
 et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
 livraison estimée.
 
-### Programme de fidélité — les Dollars (décidé, à construire)
+### Programme de fidélité — les Dollars
 
 Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
 des coupons de remise dans une boutique en libre-service de son espace.
@@ -188,7 +188,23 @@ grosse commande viendrait ruiner la marge d'une petite.
 
 **Le solde ne se stocke jamais** : il se recalcule à partir des commandes
 livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une
-commande corrigée met le solde à jour toute seule.
+commande corrigée met le solde à jour toute seule. **Un coupon est consommé**
+dès qu'une commande porte son `couponId` — là encore rien à marquer.
+
+Ce que ça donne dans les données : `orders.discount` et `orders.couponId` pour
+la remise appliquée, `clients.coupons[]` pour les coupons accordés. La remise
+entre dans tous les calculs d'argent via `orderNetPrice()` — marge, reste à
+régler, chiffre d'affaires, statistiques : une remise sort de la poche du
+vendeur, elle doit se voir partout.
+
+L'échange passe par `pendingOrders` avec `type:'coupon'` : c'est la seule
+écriture publique, et elle est déjà validée par les règles. Le document porte
+un `product` et un `qty` factices pour satisfaire cette validation. Le solde du
+client est **revérifié au moment d'accorder**, jamais seulement à l'affichage.
+
+La monnaie reprend l'identité de l'icône de l'app : dégradé vert (orange en
+thème sombre) et glyphe `$`, classe `.ds-coin`. En mode discret, le solde d'un
+client se cache comme les marges : il révèle ce qu'il a dépensé.
 
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
@@ -304,12 +320,12 @@ d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
 date estimée) avec lien de suivi côté client, dates de parcours par commande,
 historique par client dans sa fiche, archivage volontaire côté client,
-mode discret qui floute les montants.
+mode discret qui masque montants et marges, programme de fidélité complet
+(Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
+commande).
 
 ## À faire
 
-- Programme de fidélité : boutique de coupons côté client, validation des
-  échanges côté vendeur, champ remise sur la commande (barème ci-dessus)
 - Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
   pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur
