@@ -3499,15 +3499,13 @@ $('#resetBtn').addEventListener('click' , async ()=>{
 });
 
 // ================= ASSISTANT IA =================
-// Point d'entrée unique vers le modèle.
-// En production (Netlify), remplace AI_ENDPOINT par '/.netlify/functions/ai'
-// pour que la clé API reste sur le serveur et jamais dans cette page.
-// Détection automatique : en ligne (Netlify) on passe par la fonction serveur
-// qui garde la clé API cachée ; dans l'aperçu Claude on appelle directement.
-// En ligne (n'importe quel hébergeur), on passe par la fonction serveur qui garde la clé cachée.
-const AI_ENDPOINT = (location.protocol === 'https:')
-  ? "/.netlify/functions/ai"
-  : "https://api.anthropic.com/v1/messages";
+// Point d'entrée unique vers le modèle. En ligne, on passe toujours par une
+// fonction serveur qui garde la clé API cachée ; son chemin dépend de
+// l'hébergeur, déduit du nom de domaine — jamais d'adresse en dur.
+// Hors ligne (aperçu local), on appelle l'API directement.
+const AI_ENDPOINT = (location.protocol !== 'https:')
+  ? "https://api.anthropic.com/v1/messages"
+  : (location.hostname.endsWith('netlify.app') ? "/.netlify/functions/ai" : "/api/ai");
 const AI_MODEL = "claude-sonnet-5";
 
 let assistantHistory = [];

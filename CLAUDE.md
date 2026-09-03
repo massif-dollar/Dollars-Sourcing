@@ -18,7 +18,12 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `index.html` — application pro (Massif et ses invités)
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
-- `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
+- `functions/api/ai.js` — proxy serveur vers l'API Anthropic sur Cloudflare
+  Pages (garde la clé cachée). Répond à `/api/ai`, le chemin se déduit de
+  l'emplacement du fichier.
+- `netlify/functions/ai.js` — le même proxy, version Netlify, gardé en secours.
+  L'app choisit le bon chemin d'après le nom de domaine : `/.netlify/functions/ai`
+  sur `*.netlify.app`, `/api/ai` partout ailleurs.
 - `firestore-rules.txt` — règles de sécurité. On l'ouvre, on sélectionne tout,
   on colle dans la console Firebase (Firestore Database → Règles → Publier).
   Publier des règles ne coûte aucun déploiement Netlify, et la console garde
@@ -77,7 +82,11 @@ déploiement est un choix assumé.
 
 - **Backend** : Firebase Firestore (projet `dollar-sourcing`)
 - **Auth** : Google Sign-In. Propriétaire = `dollars.sourcing@gmail.com`
-- **Hébergement** : Netlify, déploiement depuis GitHub
+- **Hébergement** : Cloudflare Pages, déploiement depuis GitHub.
+  Le plan gratuit y autorise 500 constructions par mois et l'usage commercial,
+  là où Netlify plafonnait à une vingtaine de mises en production — c'est ce
+  qui a motivé le déménagement. `netlify/functions/ai.js` et `netlify.toml`
+  sont conservés : le site Netlify reste servable en secours.
 - **IA** : API Anthropic via la fonction Netlify, modèle `claude-sonnet-5`
 
 ### Multi-utilisateur
