@@ -264,6 +264,30 @@
   .kpi.pending.active .value{ animation:pulseAccent 2.4s var(--ease-io) infinite; }
   @keyframes pulseAccent{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
 
+  /* --- Mode discret : montrer l'app sans montrer ce qu'on gagne --- */
+  /* Tout ce qui parle d'argent passe par ces sélecteurs : les montants ajoutés
+     plus tard dans ces conteneurs seront couverts sans y penser. */
+  html[data-discreet="1"] .secret,
+  html[data-discreet="1"] .kpi.money .value,
+  html[data-discreet="1"] #statsView .kpi .value,
+  html[data-discreet="1"] #clientStatsSummary .value,
+  html[data-discreet="1"] .margin,
+  html[data-discreet="1"] .due-line,
+  html[data-discreet="1"] .top3-margin,
+  html[data-discreet="1"] .badge-due,
+  html[data-discreet="1"] #marginPreview,
+  html[data-discreet="1"] #chartContainer,
+  html[data-discreet="1"] #f_unitCost,
+  html[data-discreet="1"] #f_unitPrice,
+  html[data-discreet="1"] #f_paid{
+    filter:blur(7px);
+    -webkit-user-select:none; user-select:none;
+    transition:filter .3s var(--ease-io);
+  }
+  .secret, .margin, .due-line, .top3-margin, .badge-due, .kpi .value,
+  #marginPreview, #chartContainer{ transition:filter .3s var(--ease-io); }
+  .icon-btn.on{ color:var(--accent); border-color:var(--accent); }
+
   /* --- Révélation au défilement (tableau de bord uniquement) --- */
   .reveal{
     opacity:0; transform:translateY(15px);
@@ -1168,6 +1192,9 @@
       <button class="icon-btn" id="accessBtn" data-i18n-title="accessTitle" title="Accès" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M18 8v6M15 11h6"/></svg>
       </button>
+      <button class="icon-btn" id="discreetBtn" data-i18n-title="discreetTitle" title="Masquer les montants">
+        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
       <button class="icon-btn" id="themeToggle" data-i18n-title="themeTitle" title="Thème">
         <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>
@@ -1639,7 +1666,8 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
     fieldNewClientName:'Nom du nouveau client', fieldContact:'Contact (réseau, tél...)', fieldNewClientAddress:'Adresse de livraison',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldStatus:'Statut',
-    statusSaved:'Statut enregistré : {status}', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
+    statusSaved:'Statut enregistré : {status}',
+    discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
     fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)',
@@ -1751,7 +1779,8 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
     fieldNewClientName:'New client name', fieldContact:'Contact (social, phone...)', fieldNewClientAddress:'Delivery address',
     fieldProduct:'Product', fieldQty:'Quantity', fieldStatus:'Status',
-    statusSaved:'Status saved: {status}', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
+    statusSaved:'Status saved: {status}',
+    discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
     fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)',
@@ -2873,7 +2902,7 @@ function clientOrderCard(o){
         </div>
         ${trail}
         <div class="card-bottom" style="margin-top:6px;">
-          <div class="date">${t('clientSideLabel')} : ${fmtMoney(orderTotalPrice(o))}</div>
+          <div class="date secret">${t('clientSideLabel')} : ${fmtMoney(orderTotalPrice(o))}</div>
           <div class="margin ${orderMargin(o)>=0?'pos':'neg'}">${t('proSideLabel')} : ${orderMargin(o)>=0?'+':''}${fmtMoney(orderMargin(o))}</div>
         </div>
       </div>`;
@@ -4294,6 +4323,30 @@ let currentThemeMode = null;
 try{ currentThemeMode = localStorage.getItem('ds_theme'); }catch(e){}
 let currentTheme = currentThemeMode || autoTheme();
 applyTheme(currentTheme);
+// ================= Mode discret =================
+// Un geste pour montrer l'app à quelqu'un sans lui montrer ce qu'on gagne :
+// la structure reste lisible, seuls les montants se floutent.
+const EYE_ICONS = {
+  open: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  off:  '<path d="M3 3l18 18"/><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 3.6-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'
+};
+let discreetMode = false;
+try{ discreetMode = localStorage.getItem('ds_discreet') === '1'; }catch(e){}
+function applyDiscreet(){
+  document.documentElement.setAttribute('data-discreet', discreetMode ? '1' : '0');
+  const btn = document.getElementById('discreetBtn');
+  if(!btn) return;
+  btn.classList.toggle('on', discreetMode);
+  btn.querySelector('.eye-icon').innerHTML = discreetMode ? EYE_ICONS.off : EYE_ICONS.open;
+}
+applyDiscreet();
+document.getElementById('discreetBtn').addEventListener('click', ()=>{
+  discreetMode = !discreetMode;
+  try{ localStorage.setItem('ds_discreet', discreetMode ? '1' : '0'); }catch(e){}
+  applyDiscreet();
+  showToast(t(discreetMode ? 'discreetOn' : 'discreetOff'));
+});
+
 document.getElementById('themeToggle').addEventListener('click', ()=>{
   currentTheme = (currentTheme === 'light') ? 'dark' : 'light';
   applyTheme(currentTheme);

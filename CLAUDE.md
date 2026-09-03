@@ -148,6 +148,12 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
 - **Le rouge est réservé au danger** (suppression, marge négative). Les actions
   destructives sont les seules en bouton plein.
 - **Ambre** (`--warn`) uniquement pour les soldes clients impayés.
+- **Mode discret** : un bouton dans l'en-tête floute tous les montants pour
+  montrer l'app sans montrer ce qu'elle rapporte. Le floutage passe par des
+  sélecteurs de conteneurs (`html[data-discreet="1"] .margin`, `.kpi.money
+  .value`, `#marginPreview`...) et non par une classe posée sur chaque nombre :
+  un montant ajouté plus tard dans l'un de ces blocs est couvert sans y penser.
+  Choix mémorisé. Les noms, produits, statuts et compteurs restent lisibles.
 - Effet tactile « liquid glass » sur tout élément cliquable : enfoncement,
   onde depuis le point de contact, rebond au relâchement.
 - Finitions : bordures 0.5px, chiffres tabulaires, flou avec saturation,
@@ -241,7 +247,8 @@ plein écran, écran d'ouverture animé, mouvement du tableau de bord, écran
 d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
 date estimée) avec lien de suivi côté client, dates de parcours par commande,
-historique par client dans sa fiche, archivage volontaire côté client.
+historique par client dans sa fiche, archivage volontaire côté client,
+mode discret qui floute les montants.
 
 ## À faire
 
