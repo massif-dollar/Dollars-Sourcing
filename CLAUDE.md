@@ -151,6 +151,45 @@ l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
 et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
 livraison estimée.
 
+### Programme de fidélité — les Dollars (décidé, à construire)
+
+Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
+des coupons de remise dans une boutique en libre-service de son espace.
+Barème arrêté le 3 septembre 2026, **à ne pas modifier à la légère** : dévaluer
+des Dollars déjà accumulés se voit et se paie en confiance.
+
+| Dollars | Coupon | Valable dès | Ce qu'on rend |
+|---|---|---|---|
+| 100 | 5 € | 50 € d'achat | 5 % |
+| 300 | 18 € | 120 € d'achat | 6 % |
+| 600 | 42 € | 250 € d'achat | 7 % |
+| 1 200 | 90 € | 600 € d'achat | 7,5 % |
+| 2 500 | 200 € | 1 350 € d'achat | 8 % |
+
+Le taux s'améliore avec la patience, pour pousser à accumuler. Les minimums des
+deux plus gros coupons sont calés pour qu'une remise ne dépasse jamais **15 % du
+total** de la commande où elle s'applique : sans ça, un coupon gagné sur une
+grosse commande viendrait ruiner la marge d'une petite.
+
+**Les six règles :**
+
+1. **Un Dollar par euro réellement payé**, crédité au passage à « Livré ». Une
+   commande annulée ne rapporte rien.
+2. **Les Dollars se gagnent sur le montant après remise** — sinon la cagnotte
+   s'auto-alimenterait sur de l'argent jamais dépensé.
+3. **Un seul coupon par commande.**
+4. **Pas d'expiration.** Un client qui perd ses points ne retient que ça.
+5. **Ni transférable, ni convertible en euros** : uniquement une remise sur un
+   achat futur. C'est ce qui garde le programme du côté du geste commercial et
+   non de la monnaie électronique — décisif tant qu'il n'y a pas de SIRET.
+6. **Le vendeur valide chaque échange.** Le client choisit librement dans la
+   boutique, l'échange arrive dans l'onglet « Demandes », rien ne sort sans un
+   geste du vendeur.
+
+**Le solde ne se stocke jamais** : il se recalcule à partir des commandes
+livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une
+commande corrigée met le solde à jour toute seule.
+
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
 bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
@@ -163,12 +202,14 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
 - **Le rouge est réservé au danger** (suppression, marge négative). Les actions
   destructives sont les seules en bouton plein.
 - **Ambre** (`--warn`) uniquement pour les soldes clients impayés.
-- **Mode discret** : un bouton dans l'en-tête floute tous les montants pour
-  montrer l'app sans montrer ce qu'elle rapporte. Le floutage passe par des
-  sélecteurs de conteneurs (`html[data-discreet="1"] .margin`, `.kpi.money
-  .value`, `#marginPreview`...) et non par une classe posée sur chaque nombre :
-  un montant ajouté plus tard dans l'un de ces blocs est couvert sans y penser.
-  Choix mémorisé. Les noms, produits, statuts et compteurs restent lisibles.
+- **Mode discret** : un bouton dans l'en-tête pour montrer l'app — ou la filmer
+  — sans montrer ce qu'elle rapporte. Deux niveaux, et la distinction compte :
+  les montants « neutres » (prix client, CA, panier moyen) sont **floutés** ;
+  tout ce qui trahit le modèle — marges, prix d'achat, à encaisser, soldes dus —
+  porte la classe `.private` et **disparaît**. Un flou à côté du mot « Marge »
+  en dit déjà trop et attire l'œil : pour une vidéo, il faut que ça n'existe pas
+  à l'écran. Choix mémorisé, bouton allumé tant que le mode est actif. Les noms,
+  produits, statuts, dates et compteurs restent lisibles.
 - Effet tactile « liquid glass » sur tout élément cliquable : enfoncement,
   onde depuis le point de contact, rebond au relâchement.
 - Finitions : bordures 0.5px, chiffres tabulaires, flou avec saturation,
@@ -267,6 +308,8 @@ mode discret qui floute les montants.
 
 ## À faire
 
+- Programme de fidélité : boutique de coupons côté client, validation des
+  échanges côté vendeur, champ remise sur la commande (barème ci-dessus)
 - Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
   pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur

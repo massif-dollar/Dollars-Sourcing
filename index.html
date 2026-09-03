@@ -296,6 +296,10 @@
   .secret, .margin, .due-line, .top3-margin, .badge-due, .kpi .value,
   #marginPreview, #chartContainer{ transition:filter .3s var(--ease-io); }
   .icon-btn.on{ color:var(--accent); border-color:var(--accent); }
+  /* Ce qui trahit le modèle — marges, coûts, encours — ne se floute pas :
+     ça disparaît. Un flou à côté du mot « Marge » en dit déjà trop, et attire
+     l'œil. En mode discret, l'app peut être filmée sans rien révéler. */
+  html[data-discreet="1"] .private{ display:none !important; }
 
   /* --- Révélation au défilement (tableau de bord uniquement) --- */
   .reveal{
@@ -1250,8 +1254,8 @@
     </div>
     <div class="kpis" id="kpisMain">
       <div class="kpi reveal"><div class="label" data-i18n="kpiActive">En cours</div><div class="value" id="kpiActive">0</div></div>
-      <div class="kpi money reveal"><div class="label" data-i18n="kpiMargin">Marge totale</div><div class="value" id="kpiMargin">0€</div></div>
-      <div class="kpi money pending reveal" id="kpiPendingCard"><div class="label" data-i18n="kpiPending">À encaisser</div><div class="value" id="kpiPending">0€</div></div>
+      <div class="kpi money reveal private"><div class="label" data-i18n="kpiMargin">Marge totale</div><div class="value" id="kpiMargin">0€</div></div>
+      <div class="kpi money pending reveal private" id="kpiPendingCard"><div class="label" data-i18n="kpiPending">À encaisser</div><div class="value" id="kpiPending">0€</div></div>
       <div class="kpi reveal"><div class="label" data-i18n="kpiDelivered">Livrées</div><div class="value" id="kpiDelivered">0</div></div>
     </div>
     <div class="search" id="ordersSearch">
@@ -1280,15 +1284,15 @@
     <div class="tabs" id="rangeTabs"></div>
     <div class="kpis">
       <div class="kpi money reveal"><div class="label" data-i18n="statRevenuePeriod">CA (période)</div><div class="value" id="statRevenue">0€</div></div>
-      <div class="kpi money reveal"><div class="label" data-i18n="statMarginPeriod">Marge (période)</div><div class="value" id="statMargin">0€</div></div>
+      <div class="kpi money reveal private"><div class="label" data-i18n="statMarginPeriod">Marge (période)</div><div class="value" id="statMargin">0€</div></div>
       <div class="kpi reveal"><div class="label" data-i18n="statAvgBasket">Panier moyen</div><div class="value" id="statAvg">0€</div></div>
-      <div class="kpi reveal"><div class="label" data-i18n="statAvgMargin">Marge moyenne</div><div class="value" id="statPct">0%</div></div>
+      <div class="kpi reveal private"><div class="label" data-i18n="statAvgMargin">Marge moyenne</div><div class="value" id="statPct">0%</div></div>
     </div>
     <div class="chart-wrap reveal">
       <div id="chartContainer"></div>
       <div class="chart-legend">
         <span><i class="legend-dot" style="background:#8a8a91;"></i><span data-i18n="legendRevenue">Revenu</span></span>
-        <span><i class="legend-dot" style="background:var(--gold);"></i><span data-i18n="legendMargin">Marge</span></span>
+        <span class="private"><i class="legend-dot" style="background:var(--gold);"></i><span data-i18n="legendMargin">Marge</span></span>
       </div>
     </div>
   </div>
@@ -1346,7 +1350,7 @@
         </div>
       </div>
       <div class="row2">
-        <div class="field">
+        <div class="field private">
           <label data-i18n="fieldUnitCost">Prix usine / unité (€)</label>
           <input type="number" id="f_unitCost" min="0" step="0.01">
           <div class="field-error"></div>
@@ -1361,7 +1365,7 @@
         <label data-i18n="fieldPaid">Déjà reçu (€)</label>
         <input type="number" id="f_paid" min="0" step="0.01" data-i18n-placeholder="paidPlaceholder" placeholder="0 = rien encaissé">
       </div>
-      <div class="margin-preview" id="marginPreview">Marge : 0€</div>
+      <div class="margin-preview private" id="marginPreview">Marge : 0€</div>
       <div class="field">
         <label data-i18n="fieldNote">Note (précisions pour le client...)</label>
         <textarea id="f_note" rows="2"></textarea>
@@ -1661,7 +1665,7 @@ const I18N = {
     welcomeActionSuppliers:"Voir les fournisseurs de l'équipe",
     searchOrders:'Rechercher un client ou un produit...', searchClients:'Rechercher un client...', searchSuppliers:'Rechercher un fournisseur...',
     tabAll:'Tous',
-    statusNouveau:'Nouvelle demande', statusDevis:'Devis envoyé', statusPaye:'Payé', statusCommande:'Commandé usine', statusExpedie:'Expédié', statusLivre:'Livré', statusAnnule:'Annulé',
+    statusNouveau:'Nouvelle demande', statusDevis:'Devis envoyé', statusPaye:'Payé', statusCommande:'Commandé', statusExpedie:'Expédié', statusLivre:'Livré', statusAnnule:'Annulé',
     emptyOrders:"Pas encore de commande ici.<br>Ajoute-la avec le bouton + en bas.",
     emptyClients:"Pas encore de client.<br>Ajoute-le avec le bouton + en bas.",
     emptySuppliers:"Pas encore de fournisseur.<br>Ajoute-le avec le bouton + en bas.",
@@ -1774,7 +1778,7 @@ const I18N = {
     welcomeActionSuppliers:'See the team suppliers',
     searchOrders:'Search a client or product...', searchClients:'Search a client...', searchSuppliers:'Search a supplier...',
     tabAll:'All',
-    statusNouveau:'New request', statusDevis:'Quote sent', statusPaye:'Paid', statusCommande:'Ordered from factory', statusExpedie:'Shipped', statusLivre:'Delivered', statusAnnule:'Cancelled',
+    statusNouveau:'New request', statusDevis:'Quote sent', statusPaye:'Paid', statusCommande:'Ordered', statusExpedie:'Shipped', statusLivre:'Delivered', statusAnnule:'Cancelled',
     emptyOrders:'No orders yet.<br>Add one with the + button below.',
     emptyClients:'No clients yet.<br>Add one with the + button below.',
     emptySuppliers:'No suppliers yet.<br>Add one with the + button below.',
@@ -2331,10 +2335,10 @@ function renderList(){
         <div class="card-mid">${escapeHtml(o.product)} × ${o.qty}</div>
         ${o.photo ? `<img class="req-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
-          ? `<div class="due-line">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
+          ? `<div class="due-line private">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
           <div class="date">${fmtDate(o.createdAt)}</div>
-          <div class="margin ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
+          <div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
         </div>
       </div>`;
   }).join('');
@@ -2353,7 +2357,7 @@ function renderClientsTop3(){
       <div class="top3-card rank-${i+1}" style="animation-delay:${i*60}ms">
         <div class="top3-rank">#${i+1}</div>
         <div class="top3-name">${escapeHtml(r.c.name)}</div>
-        <div class="top3-margin">+${fmtMoney(r.margin)}</div>
+        <div class="top3-margin private">+${fmtMoney(r.margin)}</div>
       </div>`).join('') +
     '</div>';
 }
@@ -2912,7 +2916,7 @@ function clientOrderCard(o){
         ${trail}
         <div class="card-bottom" style="margin-top:6px;">
           <div class="date secret">${t('clientSideLabel')} : ${fmtMoney(orderTotalPrice(o))}</div>
-          <div class="margin ${orderMargin(o)>=0?'pos':'neg'}">${t('proSideLabel')} : ${orderMargin(o)>=0?'+':''}${fmtMoney(orderMargin(o))}</div>
+          <div class="margin private ${orderMargin(o)>=0?'pos':'neg'}">${t('proSideLabel')} : ${orderMargin(o)>=0?'+':''}${fmtMoney(orderMargin(o))}</div>
         </div>
       </div>`;
 }
@@ -2955,8 +2959,8 @@ function renderClientStatsSummary(clientId){
   const due = clientRemaining(clientId);
   el.innerHTML = `
     <div class="kpi"><div class="label">${t('statOrders')}</div><div class="value">${s.count}</div></div>
-    <div class="kpi money"><div class="label">${t('statRevenueGenerated')}</div><div class="value">${fmtMoney(s.revenue)}</div></div>
-    <div class="kpi"><div class="label">${due > 0 ? t('statDue') : t('statMarginGenerated')}</div>
+    <div class="kpi money private"><div class="label">${t('statRevenueGenerated')}</div><div class="value">${fmtMoney(s.revenue)}</div></div>
+    <div class="kpi private"><div class="label">${due > 0 ? t('statDue') : t('statMarginGenerated')}</div>
       <div class="value" style="color:${due > 0 ? 'var(--warn)' : 'var(--accent)'}">${fmtMoney(due > 0 ? due : s.margin)}</div></div>
   `;
 }
