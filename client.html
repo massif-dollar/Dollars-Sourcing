@@ -305,6 +305,7 @@
   .list{ display:flex; flex-direction:column; gap:9px; }
   .empty{ text-align:center; padding:44px 20px; color:var(--text-ghost); font-size:14px; line-height:1.6; letter-spacing:-0.01em; }
   .order-card{
+    position:relative; overflow:hidden;
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:17px; padding:14px 15px;
     box-shadow:var(--raise); animation:cardIn .5s var(--ease-out) backwards;
     animation-delay:var(--d, 0ms);
@@ -312,6 +313,20 @@
     transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
   }
   @keyframes cardIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
+  /* Un reflet balaie la carte à son arrivée, une seule fois : c'est ce qui
+     fait lire la surface comme du verre plutôt que comme un rectangle. */
+  .order-card::before{
+    content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%; z-index:3;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(18deg); pointer-events:none; opacity:0;
+    animation:cardSheen 1.1s var(--ease-io) backwards;
+    animation-delay:calc(var(--d, 0ms) + 260ms);
+  }
+  @keyframes cardSheen{
+    0%{ left:-140%; opacity:0; }
+    18%{ opacity:.9; }
+    100%{ left:150%; opacity:0; }
+  }
   .card-top{ display:flex; align-items:center; justify-content:space-between; gap:9px; }
   .card-top .product{ font-weight:600; font-size:15px; letter-spacing:-0.015em; }
   .badge{ font-size:10.5px; font-weight:600; padding:3.5px 9px; border-radius:100px; white-space:nowrap; flex-shrink:0; }
@@ -319,7 +334,25 @@
   .card-bottom{ margin-top:9px; font-size:12px; color:var(--text-ghost); }
 
   /* ===== Espace personnel du client ===== */
+  /* Deux lumières lentes derrière le prénom. Rien ne clignote, rien n'attire
+     l'œil : ça donne juste l'impression que la page est vivante. Transform
+     seulement, donc composé par le GPU. */
   .hello{ position:relative; }
+  .hello-aura{
+    position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+    width:230px; height:230px; top:-96px; left:-70px;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    filter:blur(10px); opacity:.9;
+    animation:auraDrift 19s var(--ease-io) infinite alternate;
+  }
+  .hello-aura-2{
+    width:190px; height:190px; top:-58px; left:auto; right:-64px;
+    animation-duration:24s; animation-delay:-7s;
+  }
+  @keyframes auraDrift{
+    from{ transform:translate(0,0) scale(1); }
+    to{ transform:translate(26px,18px) scale(1.22); }
+  }
   .hello .brand{ animation:helloIn .6s var(--ease-out) both; }
   .hello h1{ animation:helloIn .7s var(--ease-out) .08s both; }
   .hello .hello-sub{ animation:helloIn .7s var(--ease-out) .16s both; }
@@ -737,6 +770,85 @@
   }
   .bio-enable-link.show{ display:block; }
 
+  /* ===== Ouverture du portail =====
+     Elle ne fait pas attendre : elle couvre le chargement Firestore qui a lieu
+     à cet instant précis. Sans elle, le client voit une page nue se peupler. */
+  .curtain{
+    position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); text-align:center;
+    transition:opacity .5s var(--ease-io), transform .5s var(--ease-io);
+  }
+  .curtain.lift{ opacity:0; transform:scale(1.04); pointer-events:none; }
+  .curtain-mark{ position:relative; width:82px; height:82px; margin:0 auto 20px; }
+  .curtain-glow{
+    position:absolute; inset:-48%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--accent-soft), transparent 68%);
+    filter:blur(7px); opacity:0; transform:scale(.55);
+    animation:curtainGlow 1.05s var(--ease-out) .03s both;
+  }
+  @keyframes curtainGlow{
+    0%{ opacity:0; transform:scale(.55); }
+    45%{ opacity:1; transform:scale(1.08); }
+    100%{ opacity:.6; transform:scale(1); }
+  }
+  .curtain-tile{
+    position:absolute; inset:0; border-radius:26px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    box-shadow:var(--raise-lg);
+    animation:curtainTile .8s var(--spring) .06s both;
+  }
+  @keyframes curtainTile{
+    from{ opacity:0; transform:scale(.64) translateY(14px); filter:blur(12px); }
+    55%{ opacity:1; filter:blur(0); }
+    to{ opacity:1; transform:none; filter:blur(0); }
+  }
+  .curtain-tile::after{ content:''; position:absolute; inset:0; background:var(--specular); opacity:.5; }
+  .curtain-glyph{
+    position:relative; z-index:1;
+    font-family:var(--font-display); font-size:38px; font-weight:800; color:var(--on-accent);
+    letter-spacing:-0.03em;
+    animation:curtainGlyph .6s var(--spring) .28s both;
+  }
+  @keyframes curtainGlyph{
+    from{ opacity:0; transform:scale(.5) rotate(-12deg); }
+    to{ opacity:1; transform:none; }
+  }
+  .curtain-sheen{
+    position:absolute; top:-70%; left:-130%; width:60%; height:240%; z-index:2;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(19deg); pointer-events:none;
+    animation:curtainSheen .78s var(--ease-io) .36s both;
+  }
+  @keyframes curtainSheen{
+    0%{ left:-130%; opacity:0; }
+    22%{ opacity:1; }
+    100%{ left:140%; opacity:0; }
+  }
+  .curtain-name{ overflow:hidden; padding:0 2px 3px; }
+  .curtain-name h2{
+    margin:0; font-family:var(--font-display); font-size:25px; font-weight:700;
+    letter-spacing:-0.03em; color:var(--text);
+    animation:curtainName .66s var(--ease-out) .32s both;
+  }
+  @keyframes curtainName{
+    from{ opacity:0; transform:translateY(105%); letter-spacing:.07em; }
+    to{ opacity:1; transform:none; letter-spacing:-0.03em; }
+  }
+  .curtain-brand{
+    margin:9px 0 0; font-size:11px; font-weight:600; letter-spacing:.16em;
+    color:var(--text-ghost); text-transform:uppercase;
+    animation:curtainBrand .5s var(--ease-out) .58s both;
+  }
+  @keyframes curtainBrand{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+
+  /* L'app prend la main pendant que l'ouverture s'efface : jamais de trou noir. */
+  #app.app-enter{ animation:appEnter .55s var(--ease-out) both; }
+  @keyframes appEnter{
+    from{ opacity:0; transform:scale(.985) translateY(6px); }
+    to{ opacity:1; transform:none; }
+  }
+
   .shake{ animation:shakeX .4s var(--ease-out); }
   @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
 
@@ -765,7 +877,9 @@
     body::before, .track-step.current .track-dot::after,
     .balance-amount .ds-coin::before, .balance-orb,
     .shop-item.affordable, .track.animate .track-dot,
-    .track.animate .track-label{ animation:none !important; }
+    .track.animate .track-label, .hello-aura,
+    .order-card::before{ animation:none !important; }
+    .order-card::before{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
   }
@@ -775,8 +889,21 @@
 <div id="bgfill"></div>
 <button class="lang-toggle" id="langToggle" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
 <button class="theme-toggle" id="themeToggle" data-i18n-title="themeTitle" title="Thème"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+<div class="curtain" id="portalCurtain" style="display:none;">
+  <div>
+    <div class="curtain-mark">
+      <span class="curtain-glow"></span>
+      <span class="curtain-tile"><span class="curtain-glyph">$</span><i class="curtain-sheen"></i></span>
+    </div>
+    <div class="curtain-name"><h2 id="curtainName">&nbsp;</h2></div>
+    <p class="curtain-brand">DOLLAR$ SOURCING</p>
+  </div>
+</div>
+
 <div id="app" style="display:none;">
   <header class="hello">
+    <span class="hello-aura" aria-hidden="true"></span>
+    <span class="hello-aura hello-aura-2" aria-hidden="true"></span>
     <div class="brand">DOLLAR$ SOURCING</div>
     <h1 id="greeting">Bonjour</h1>
     <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
@@ -943,6 +1070,7 @@ const I18N = {
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
     cwTitle:'Bienvenue {name}', cwTitleNoName:'Bienvenue',
+    curtainHello:'{name}', curtainHelloNoName:'Ton espace',
     cwIntro:'Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.',
     cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
     cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
@@ -1011,6 +1139,7 @@ const I18N = {
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
     cwTitle:'Welcome {name}', cwTitleNoName:'Welcome',
+    curtainHello:'{name}', curtainHelloNoName:'Your space',
     cwIntro:'This is your own space: every order and where it stands, live.',
     cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
     cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
@@ -1421,11 +1550,33 @@ function enterApp(){
   document.getElementById('codeScreen').classList.remove('show');
   updateGreeting();
   $('#loadingScreen').style.display = 'none';
+
+  // Le rideau s'ouvre par-dessus l'app, pas à sa place : les écouteurs
+  // Firestore partent tout de suite, et le temps d'ouverture est du temps de
+  // chargement déguisé, pas du temps ajouté.
+  const rideau = $('#portalCurtain');
+  const prenom = clientFirstName();
+  const jouer = rideau && !reduceMotion();
+  if(jouer){
+    $('#curtainName').textContent = prenom ? t('curtainHello').replace('{name}', prenom) : t('curtainHelloNoName');
+    rideau.style.display = 'flex';
+    rideau.classList.remove('lift');
+  }
+
   $('#app').style.display = 'block';
   renderWelcome();
   renderDollarsIntro();
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
+
+  if(!jouer){ if(rideau) rideau.style.display = 'none'; return; }
+  $('#app').classList.add('app-enter');
+  setTimeout(()=>{
+    rideau.classList.add('lift');
+    // Retiré du flux une fois effacé : un calque plein écran laissé là
+    // mangerait tous les touchers.
+    setTimeout(()=>{ rideau.style.display = 'none'; }, 520);
+  }, 1150);
 }
 function askCode(){
   $('#loadingScreen').style.display = 'none';

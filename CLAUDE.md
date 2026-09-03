@@ -333,6 +333,14 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   l'arrivée), cartes révélées en montant au défilement (`.reveal` +
   IntersectionObserver), passage d'un onglet à l'autre qui glisse (`.view-in`,
   la direction suit l'ordre des onglets), fond en dégradé qui respire sur 28 s.
+- **Le portail client a son ouverture à lui.** Après le code, un rideau plein
+  écran : la pièce `$` de l'app éclot avec son halo, un reflet la balaie, le
+  prénom du client monte, la marque se pose. Puis il se lève et l'app entre.
+  Point clé : le rideau s'affiche **par-dessus** l'app déjà montée, et
+  `listenOrders()` part avant lui — l'ouverture ne fait donc pas attendre, elle
+  **couvre** le chargement Firestore qui a lieu à cet instant. Sans elle, le
+  client regardait une page nue se peupler. Le calque est retiré du flux
+  (`display:none`) une fois effacé, sinon il mangerait tous les touchers.
 - **Le portail client est la zone la plus travaillée**, parce que c'est la
   vitrine : c'est là que le client décide s'il reste. Compteurs du résumé et
   solde en Dollars qui montent depuis zéro, cartes et paliers de la boutique en
@@ -352,6 +360,13 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   Piège technique : l'étape courante de la frise porte un `transform:scale(1.45)`
   qu'une animation d'entrée écraserait. Le repos passe donc par une variable
   (`--pop`) que le `to:` du keyframe réutilise.
+
+  **Ce qui donne l'impression que ça a coûté cher, ce n'est pas la quantité de
+  mouvement — c'est la matière et l'arrivée.** Deux lumières lentes dérivent
+  derrière le prénom (`.hello-aura`, transform seulement, donc composé par le
+  GPU), et un reflet balaie chaque carte à son apparition : c'est ce qui fait
+  lire la surface comme du verre plutôt que comme un rectangle. Une page où
+  tout bouge tout le temps ne fait pas riche, elle fait bon marché.
 - **`prefers-reduced-motion` partout.** Attention : accélérer une animation
   infinie la fait clignoter — il faut la couper (`animation:none`), pas la
   raccourcir. Les blocs `@media (prefers-reduced-motion:reduce)` des deux
