@@ -3,48 +3,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function connecte() { return request.auth != null; }
+    // Le propriétaire, identifié par son adresse Google.
+    function proprietaire() {
+      return request.auth != null
+          && request.auth.token.email == 'dollars.sourcing@gmail.com';
+    }
+
+    // L'équipe : le propriétaire, plus les invités qu'il a lui-même ajoutés
+    // dans settings/access depuis le bouton « Accès » de l'app.
+    // Être connecté avec un compte Google ne suffit pas : il faut être dans
+    // la liste, sinon n'importe qui pourrait lire et écrire les données.
+    function equipe() {
+      return proprietaire()
+          || (request.auth != null
+              && exists(/databases/$(database)/documents/settings/access)
+              && request.auth.token.email
+                 in get(/databases/$(database)/documents/settings/access).data.emails);
+    }
 
     // --- Clients ---------------------------------------------------------
-    // Le portail lit UNE fiche, par son identifiant, pour afficher le prénom
-    // et vérifier le code. La liste complète reste réservée à l'app pro.
+    // Le portail client n'est jamais connecté : il lit UNE fiche, par son
+    // identifiant, pour afficher le prénom et vérifier le code d'accès.
+    // La liste complète reste réservée à l'équipe.
     match /clients/{clientId} {
       allow get: if true;
-      allow list, create, update, delete: if connecte();
+      allow list, create, update, delete: if equipe();
     }
 
     // --- Commandes -------------------------------------------------------
     // Le portail doit pouvoir lire les commandes de son client, sinon le
-    // client ne voit rien. Écriture réservée à l'app pro.
+    // client ne voit rien. Écriture réservée à l'équipe.
     match /orders/{orderId} {
       allow read: if true;
-      allow create, update, delete: if connecte();
+      allow create, update, delete: if equipe();
     }
 
     // --- Demandes envoyées par les clients --------------------------------
-    // Le portail en crée et relit les siennes ; seul le vendeur les valide
+    // Le portail en crée et relit les siennes ; seule l'équipe les valide
     // ou les supprime.
     match /pendingOrders/{requestId} {
       allow read, create: if true;
-      allow update, delete: if connecte();
+      allow update, delete: if equipe();
     }
 
     // --- Fournisseurs ----------------------------------------------------
     // Partagés entre les comptes autorisés, jamais visibles publiquement.
     match /suppliers/{supplierId} {
-      allow read, write: if connecte();
+      allow read, write: if equipe();
     }
 
-    // --- Réglages du propriétaire (accès invités, mémoire de l'assistant) --
+    // --- Liste des invités ------------------------------------------------
+    // Tout compte connecté doit pouvoir la lire : c'est ainsi que l'app
+    // vérifie, à la connexion, si le compte a le droit d'entrer.
+    // Seul le propriétaire peut la modifier.
+    match /settings/access {
+      allow read: if request.auth != null;
+      allow write: if proprietaire();
+    }
+
+    // --- Autres réglages (mémoire de l'assistant IA) -----------------------
+    // L'assistant est réservé au propriétaire : sa mémoire aussi.
     match /settings/{document} {
-      allow read, write: if connecte();
+      allow read, write: if proprietaire();
     }
 
     // --- Verrou par utilisateur (code PIN) --------------------------------
     // Chacun ne touche qu'au sien : c'est ce qui permet aux invités
     // de créer leur propre code.
     match /userSettings/{uid} {
-      allow read, write: if connecte() && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     // Tout le reste est fermé.

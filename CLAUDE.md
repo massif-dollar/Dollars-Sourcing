@@ -25,6 +25,16 @@ Objectif à terme : en faire un SaaS payant par abonnement.
   doit y être ajouté hors du langage de règles, sinon on ne sait plus quoi
   copier. Publier des règles ne coûte aucun déploiement Netlify.
 
+### Qui a le droit de quoi, dans les règles
+
+`request.auth != null` **ne suffit pas** : n'importe quel compte Google peut se
+connecter à Firebase. Les règles vérifient donc l'adresse — le propriétaire en
+dur, et les invités relus dans `settings/access`, la même liste que celle du
+bouton « Accès ». Sans ça, la liste d'invités ne serait qu'un contrôle
+d'interface, contournable en s'adressant directement à la base.
+Seul le propriétaire peut modifier cette liste, et la mémoire de l'assistant
+lui est réservée.
+
 ### Ce que les règles autorisent, et ce que ça coûte
 
 Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
