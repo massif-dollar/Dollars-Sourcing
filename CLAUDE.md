@@ -361,6 +361,25 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   qu'une animation d'entrée écraserait. Le repos passe donc par une variable
   (`--pop`) que le `to:` du keyframe réutilise.
 
+  **L'ambiance et le cadre.** Trois masses de lumière dérivent en fond de page
+  (`#aurora`, transform seul, `contain:strict`), avec **trois durées premières
+  entre elles** (34 s, 46 s, 58 s) : des durées égales donneraient un battement
+  mécanique qu'on repère immédiatement. Quand le grand en-tête sort de l'écran,
+  une **barre compacte** prend le relais avec le prénom et le solde en Dollars ;
+  elle est pilotée par un IntersectionObserver sur une sentinelle, **jamais par
+  un écouteur de défilement** — le navigateur prévient, on ne l'interroge pas à
+  chaque pixel. Pendant le chargement, un **squelette qui scintille** remplace le
+  mot « chargement » : il donne la forme de ce qui arrive, donc l'attente paraît
+  plus courte et le vide ne ressemble plus à une panne.
+
+  **La pastille des onglets glisse** au lieu de sauter d'un onglet à l'autre.
+  Piège : `--fill` n'est qu'à 10 % d'opacité, la pastille passait donc en
+  fantôme vert sous les onglets inactifs. Ils sont devenus opaques — fond de
+  page plus la même teinte en `::before` — donc exactement la couleur perçue
+  d'avant, sans transparence. La pastille se recale à la bascule, **au
+  changement de langue** (les libellés anglais n'ont pas la même largeur) et au
+  redimensionnement.
+
   **Ce qui donne l'impression que ça a coûté cher, ce n'est pas la quantité de
   mouvement — c'est la matière et l'arrivée.** Deux lumières lentes dérivent
   derrière le prénom (`.hello-aura`, transform seulement, donc composé par le

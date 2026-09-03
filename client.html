@@ -38,6 +38,9 @@
     --bg-elevated:#ffffff;
     --tint-1:rgba(46,179,92,0.055);
     --tint-2:rgba(142,142,138,0.09);
+    --aurora-1:rgba(46,179,92,0.16);
+    --aurora-2:rgba(142,142,138,0.15);
+    --aurora-3:rgba(46,179,92,0.09);
 
     --accent:#2eb35c;
     --accent-bright:#5fe08c;
@@ -81,6 +84,9 @@
     --bg-elevated:#151516;
     --tint-1:rgba(255,122,26,0.10);
     --tint-2:rgba(142,142,138,0.07);
+    --aurora-1:rgba(255,122,26,0.20);
+    --aurora-2:rgba(142,142,138,0.13);
+    --aurora-3:rgba(255,122,26,0.11);
 
     --accent:#ff7a1a;
     --accent-bright:#ffb066;
@@ -130,6 +136,41 @@
   #bgfill{
     position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:var(--bg); transition:background .45s var(--ease-io);
+  }
+  #aurora{
+    position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;
+    contain:strict;                 /* la peinture ne déborde pas sur le reste */
+  }
+  #aurora i{
+    position:absolute; display:block; border-radius:50%;
+    filter:blur(48px); will-change:transform;
+  }
+  #aurora .a1{
+    width:62vw; height:62vw; max-width:520px; max-height:520px; top:-16vh; left:-18vw;
+    background:radial-gradient(circle, var(--aurora-1), transparent 68%);
+    animation:auroraA 34s var(--ease-io) infinite alternate;
+  }
+  #aurora .a2{
+    width:54vw; height:54vw; max-width:460px; max-height:460px; top:26vh; right:-22vw;
+    background:radial-gradient(circle, var(--aurora-2), transparent 68%);
+    animation:auroraB 46s var(--ease-io) infinite alternate;
+  }
+  #aurora .a3{
+    width:70vw; height:70vw; max-width:580px; max-height:580px; bottom:-24vh; left:6vw;
+    background:radial-gradient(circle, var(--aurora-3), transparent 70%);
+    animation:auroraC 58s var(--ease-io) infinite alternate;
+  }
+  @keyframes auroraA{
+    from{ transform:translate3d(0,0,0) scale(1); }
+    to{ transform:translate3d(16vw,12vh,0) scale(1.25); }
+  }
+  @keyframes auroraB{
+    from{ transform:translate3d(0,0,0) scale(1.1); }
+    to{ transform:translate3d(-14vw,-16vh,0) scale(.85); }
+  }
+  @keyframes auroraC{
+    from{ transform:translate3d(0,0,0) scale(.9); }
+    to{ transform:translate3d(12vw,-14vh,0) scale(1.2); }
   }
   body::before{
     content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
@@ -182,7 +223,14 @@
   header h1{ font-family:var(--font-display); font-size:26px; font-weight:700; margin:8px 0 3px; letter-spacing:-0.03em; }
   header p{ margin:0; font-size:13px; color:var(--text-faint); letter-spacing:-0.01em; }
 
-  .tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .tabs{ display:flex; gap:8px; margin-bottom:20px; position:relative; }
+  .tab-pill{
+    position:absolute; top:0; left:0; height:100%; border-radius:100px; z-index:0;
+    background:var(--accent); box-shadow:var(--raise); pointer-events:none;
+    opacity:0; transform:translateX(0) scaleX(1); transform-origin:left center;
+    transition:transform .46s var(--spring), width .46s var(--spring), opacity .3s var(--ease-io);
+  }
+  .tab-pill.ready{ opacity:1; }
   .tab{
     flex:1; padding:11px 8px; border-radius:100px; font-size:13.5px; font-weight:600; text-align:center;
     background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-faint); cursor:pointer;
@@ -192,7 +240,20 @@
                color .3s var(--ease-io), border-color .3s var(--ease-io);
   }
   .tab.is-pressed{ transform:scale(.96); }
-  .tab.active{ background:var(--accent); border-color:transparent; color:var(--on-accent); }
+  /* La pastille porte désormais la couleur : l'onglet actif devient
+     transparent et laisse voir le fond qui a glissé jusqu'à lui.
+     Piège : --fill n'est qu'à 10 % d'opacité. Si on laissait les onglets tels
+     quels, on verrait la pastille verte passer en fantôme sous les inactifs.
+     Ils deviennent donc opaques — fond de page + la même teinte par-dessus,
+     donc exactement la couleur perçue d'avant, mais sans transparence. */
+  .tab{ z-index:1; background:var(--bg); }
+  .tab::before{
+    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:var(--fill); transition:opacity .3s var(--ease-io);
+  }
+  .tab > *{ position:relative; z-index:1; }
+  .tab.active{ background:transparent; border-color:transparent; color:var(--on-accent); }
+  .tab.active::before{ opacity:0; }
   .tab .ripple{
     position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
     background:radial-gradient(circle, rgba(255,255,255,.35) 0%, transparent 66%);
@@ -852,6 +913,53 @@
   .shake{ animation:shakeX .4s var(--ease-out); }
   @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
 
+  /* Barre compacte : elle prend le relais quand le grand en-tête sort de
+     l'écran, et garde le prénom et le solde toujours sous les yeux.
+     Le padding droit dégage les deux boutons fixes (langue et thème). */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:55;
+    display:flex; align-items:center; gap:10px;
+    padding:calc(env(safe-area-inset-top) + 11px) 112px 11px 18px;
+    background:var(--mat); border-bottom:0.5px solid var(--hairline);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    opacity:0; transform:translateY(-100%); pointer-events:none;
+    transition:opacity .38s var(--ease-io), transform .42s var(--ease-out);
+  }
+  .topbar.show{ opacity:1; transform:none; }
+  .topbar-name{
+    flex:1; min-width:0; font-family:var(--font-display); font-weight:700; font-size:15px;
+    letter-spacing:-0.022em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .topbar-dollars{
+    display:inline-flex; align-items:center; gap:.34em; flex-shrink:0;
+    font-family:var(--font-display); font-weight:700; font-size:14.5px;
+    letter-spacing:-0.02em; font-variant-numeric:tabular-nums; color:var(--text);
+  }
+  .topbar-dollars.hidden{ display:none; }
+  #headSentinel{ height:1px; margin-top:-1px; }
+
+  /* Un squelette qui respire vaut mieux qu'un mot « chargement » : il donne la
+     forme de ce qui arrive, donc l'attente paraît plus courte, et un écran
+     vide ne ressemble plus à une panne. */
+  .skel-card{
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:17px;
+    padding:15px; margin-bottom:9px; box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+    animation:cardIn .5s var(--ease-out) backwards; animation-delay:var(--d,0ms);
+  }
+  .skel{ display:block; border-radius:7px; background:var(--fill-2); position:relative; overflow:hidden; }
+  .skel::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(100deg, transparent 20%, var(--sheen) 50%, transparent 80%);
+    transform:translateX(-100%);
+    animation:skelSweep 1.5s var(--ease-io) infinite;
+  }
+  @keyframes skelSweep{ to{ transform:translateX(100%); } }
+  .skel-line{ height:13px; }
+  .skel-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .skel-track{ height:11px; margin:16px 0 14px; border-radius:100px; }
+  .skel-sm{ height:11px; }
+
   .theme-toggle{
     position:fixed; top:calc(env(safe-area-inset-top) + 16px); right:16px; z-index:60;
     width:38px; height:38px; border-radius:12px; cursor:pointer; flex-shrink:0;
@@ -878,7 +986,9 @@
     .balance-amount .ds-coin::before, .balance-orb,
     .shop-item.affordable, .track.animate .track-dot,
     .track.animate .track-label, .hello-aura,
+    #aurora i, .skel::after,
     .order-card::before{ animation:none !important; }
+    .skel::after{ display:none !important; }
     .order-card::before{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
@@ -887,6 +997,7 @@
 </head>
 <body style="background:#fbfcfa;">
 <div id="bgfill"></div>
+<div id="aurora" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
 <button class="lang-toggle" id="langToggle" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
 <button class="theme-toggle" id="themeToggle" data-i18n-title="themeTitle" title="Thème"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
 <div class="curtain" id="portalCurtain" style="display:none;">
@@ -900,6 +1011,11 @@
   </div>
 </div>
 
+<div class="topbar" id="topbar">
+  <span class="topbar-name" id="topbarName"></span>
+  <span class="topbar-dollars hidden" id="topbarDollars"><span class="ds-coin">$</span><span id="topbarDollarsN">0</span></span>
+</div>
+
 <div id="app" style="display:none;">
   <header class="hello">
     <span class="hello-aura" aria-hidden="true"></span>
@@ -908,6 +1024,7 @@
     <h1 id="greeting">Bonjour</h1>
     <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
   </header>
+  <div id="headSentinel" aria-hidden="true"></div>
 
   <div class="welcome" id="clientWelcome" style="display:none;">
     <div class="welcome-card">
@@ -972,6 +1089,7 @@
   </div>
 
   <div class="tabs">
+    <i class="tab-pill" id="tabPill" aria-hidden="true"></i>
     <button class="tab" id="tabHistory" data-i18n="tabHistory">Mes commandes</button>
     <button class="tab active" id="tabOrder" data-i18n="tabOrder">Nouvelle demande</button>
     <button class="tab" id="tabDollars" data-i18n="tabDollars">Mes Dollars</button>
@@ -1216,7 +1334,9 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   $('#langCode').textContent = currentLang.toUpperCase();
-  if(clientData){ updateGreeting(); renderWelcome(); renderDollarsIntro(); }
+  if(clientData){ updateGreeting(); renderWelcome(); renderDollarsIntro(); refreshTopbar(); }
+  // Les libellés n'ont pas la même largeur en anglais : la pastille se recale.
+  requestAnimationFrame(movePill);
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
@@ -1286,6 +1406,9 @@ const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-tog
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tapDown(el, cx, cy){
   el.classList.add('is-pressed');
+  // Une impulsion très courte : sur les appareils qui la rendent, le bouton
+  // cesse d'être une image et devient un objet. iOS l'ignore, sans erreur.
+  if(!prefersReduced && navigator.vibrate){ try{ navigator.vibrate(8); }catch(e){} }
   if(prefersReduced) return;
   const rect = el.getBoundingClientRect();
   const x = (cx == null ? rect.left + rect.width/2 : cx) - rect.left;
@@ -1569,7 +1692,15 @@ function enterApp(){
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
 
-  if(!jouer){ if(rideau) rideau.style.display = 'none'; return; }
+  if(!jouer){
+    if(rideau) rideau.style.display = 'none';
+    setupTopbar(); refreshTopbar();
+    requestAnimationFrame(movePill);
+    return;
+  }
+  setupTopbar();
+  refreshTopbar();
+  requestAnimationFrame(movePill);
   $('#app').classList.add('app-enter');
   setTimeout(()=>{
     rideau.classList.add('lift');
@@ -1674,6 +1805,7 @@ function listenClientDoc(){
     if(!doc.exists) return;
     clientData = Object.assign({id:doc.id}, doc.data());
     updateGreeting();
+    refreshTopbar();
     // Seulement si l'onglet est ouvert : sinon le compteur du solde se
     // consommerait ici et ne monterait plus quand le client y arrive.
     if(currentTab === 'dollars') renderDollars();
@@ -1952,6 +2084,7 @@ function renderHistory(){
   stagger(el.querySelectorAll('.order-card'));
   renderArchive(ranges);
   renderSummary();
+  refreshTopbar();
   revealCards();
 }
 
@@ -2000,7 +2133,23 @@ function stateHtml(){
       </div>`;
   }
   if(!ordersLoaded || !pendingLoaded){
-    return `<div class="empty">${escapeHtml(t('loadingOrders'))}</div>`;
+    const carte = (i) => `
+      <div class="skel-card" style="--d:${i*90}ms">
+        <div class="skel-row">
+          <span class="skel skel-line" style="width:46%"></span>
+          <span class="skel skel-sm" style="width:64px; border-radius:100px;"></span>
+        </div>
+        <span class="skel skel-track" style="width:100%"></span>
+        <div class="skel-row" style="margin-bottom:8px;">
+          <span class="skel skel-sm" style="width:32%"></span>
+          <span class="skel skel-sm" style="width:22%"></span>
+        </div>
+        <div class="skel-row">
+          <span class="skel skel-sm" style="width:26%"></span>
+          <span class="skel skel-sm" style="width:18%"></span>
+        </div>
+      </div>`;
+    return carte(0) + carte(1);
   }
   return `<div class="empty">${escapeHtml(t('emptyTitle'))}<br>${escapeHtml(t('emptySub'))}</div>`;
 }
@@ -2008,6 +2157,30 @@ function stateHtml(){
 // Les cartes se révèlent en montant, puis la frise se remplit.
 let revealObserver = null;
 function reduceMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+// La barre compacte prend le relais quand le grand en-tête sort de l'écran.
+// Une sentinelle observée plutôt qu'un écouteur de défilement : le navigateur
+// nous prévient, on ne lui demande rien à chaque pixel.
+let topbarObserver = null;
+function setupTopbar(){
+  const bar = $('#topbar'), sentinel = $('#headSentinel');
+  if(!bar || !sentinel || topbarObserver) return;
+  if(!('IntersectionObserver' in window)) return;
+  topbarObserver = new IntersectionObserver(([en])=>{
+    bar.classList.toggle('show', !en.isIntersecting);
+  }, { rootMargin: '-56px 0px 0px 0px', threshold: 0 });
+  topbarObserver.observe(sentinel);
+}
+// Ce qu'elle affiche suit l'app : son prénom, et son solde dès qu'il en a un.
+function refreshTopbar(){
+  const nom = $('#topbarName'), sac = $('#topbarDollars'), n = $('#topbarDollarsN');
+  if(!nom) return;
+  const prenom = clientFirstName();
+  nom.textContent = prenom || t('curtainHelloNoName');
+  const solde = myDollars();
+  sac.classList.toggle('hidden', !solde);
+  n.textContent = solde;
+}
+
 // Retard progressif sur une liste. Plafonné à cinq éléments : au-delà, un
 // retard n'embellit plus rien, il fait attendre.
 function stagger(nodes, pas){
@@ -2150,6 +2323,16 @@ $('#photoInput').addEventListener('change', async (e)=>{
 // ---- Onglets ----
 const TABS = ['history','order','dollars'];
 let currentTab = 'order';
+// La pastille se cale sur l'onglet actif. Recalculée à chaque bascule et au
+// changement de langue : les libellés n'ont pas la même largeur en anglais.
+function movePill(){
+  const pill = $('#tabPill');
+  const actif = document.querySelector('.tab.active');
+  if(!pill || !actif) return;
+  pill.style.width = actif.offsetWidth + 'px';
+  pill.style.transform = 'translateX(' + actif.offsetLeft + 'px)';
+  pill.classList.add('ready');
+}
 function switchTab(tab){
   const from = TABS.indexOf(currentTab);
   const to = TABS.indexOf(tab);
@@ -2166,11 +2349,14 @@ function switchTab(tab){
   panel.classList.remove('view-in');
   void panel.offsetWidth;
   panel.classList.add('view-in');
+  movePill();
   if(tab === 'history') revealCards();
 }
 $('#tabOrder').addEventListener('click', ()=>switchTab('order'));
 $('#tabHistory').addEventListener('click', ()=>switchTab('history'));
 $('#tabDollars').addEventListener('click', ()=>switchTab('dollars'));
+// Rotation de l'écran, clavier qui s'ouvre : la pastille suit.
+window.addEventListener('resize', movePill);
 
 // À la première arrivée des données : s'il a déjà des commandes, on lui montre.
 let defaultTabApplied = false;
