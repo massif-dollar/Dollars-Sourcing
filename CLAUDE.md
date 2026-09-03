@@ -62,6 +62,12 @@ passage payant : recopier une version publique de chaque commande (produit,
 statut, prix client, acompte, expédition, photo) dans une collection à part, et
 refermer `orders` complètement. Une demi-journée.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
+- `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` —
+  ce qu'il faut pour qu'« Ajouter à l'écran d'accueil » installe une vraie app :
+  fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
+  volontairement pas de manifeste** : son lien porte l'identifiant et le jeton du
+  client, et une adresse de départ fixe les effacerait. Les balises iOS lui
+  suffisent.
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de

@@ -1,0 +1,15 @@
+{
+  "name": "DOLLAR$ SOURCING",
+  "short_name": "DOLLAR$",
+  "description": "Gestion des commandes, clients et fournisseurs.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfcfa",
+  "theme_color": "#2eb35c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
