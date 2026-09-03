@@ -528,6 +528,17 @@
   .top3-margin{ font-family:var(--font-display); font-weight:700; font-size:13.5px; color:var(--accent); letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
 
   /* --- Graphique --- */
+  /* Le solde du client, lisible au moment où on saisit sa commande : c'est là
+     qu'on décide de lui proposer son coupon, pas dans sa fiche. */
+  .coupon-balance{
+    display:flex; align-items:center; gap:.4em; margin-bottom:9px;
+    font-size:13px; color:var(--text-faint); letter-spacing:-0.005em;
+  }
+  .coupon-balance b{
+    display:inline-flex; align-items:center; gap:.32em;
+    font-family:var(--font-display); font-weight:700; font-size:14.5px;
+    color:var(--text); font-variant-numeric:tabular-nums;
+  }
   .loyalty-report{
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:16px;
     padding:15px 16px; margin-bottom:14px; box-shadow:var(--raise);
@@ -1432,7 +1443,8 @@
       </div>
       <div class="field" id="couponField" style="display:none;">
         <label data-i18n="fieldCoupon">Coupon fidélité</label>
-        <select id="f_coupon"></select>
+        <div class="coupon-balance private" id="couponBalance"></div>
+        <select id="f_coupon" style="display:none;"></select>
         <p class="field-hint" id="couponHint" style="margin:6px 0 0;"></p>
       </div>
       <div class="field">
@@ -1766,6 +1778,7 @@ const I18N = {
     fieldCoupon:'Coupon fidélité', couponNone:'Aucun coupon utilisé',
     couponHintNone:"Ce client n'a aucun coupon disponible.",
     couponHintTooSmall:'Coupon de {value} utilisable dès {min} de commande.',
+    couponBalance:'{name} a {n}', couponNoneYet:'Aucun coupon à utiliser pour l\u2019instant.',
     couponApplied:'Remise appliquée : {value}',
     dollarsLabel:'Dollars', dollarsBalance:'Solde de Dollars',
     couponsAvailable:'Coupons disponibles', couponMin:'dès {min}',
@@ -1897,6 +1910,7 @@ const I18N = {
     fieldCoupon:'Loyalty coupon', couponNone:'No coupon used',
     couponHintNone:'This client has no coupon available.',
     couponHintTooSmall:'The {value} coupon needs an order of {min} or more.',
+    couponBalance:'{name} has {n}', couponNoneYet:'No coupon to use yet.',
     couponApplied:'Discount applied: {value}',
     dollarsLabel:'Dollars', dollarsBalance:'Dollars balance',
     couponsAvailable:'Available coupons', couponMin:'from {min}',
@@ -2957,19 +2971,32 @@ function buildCouponSelect(order){
   const sel = $('#f_coupon');
   const zone = $('#couponField');
   const hint = $('#couponHint');
+  const solde = $('#couponBalance');
   const clientId = $('#f_clientSelect').value;
   if(!clientId || clientId === '__new__'){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
 
+  // Le solde s'affiche dès qu'un client est choisi, même sans coupon : c'est
+  // l'information qu'on veut avoir sous les yeux en discutant avec lui.
+  const c = clientById(clientId);
+  zone.style.display = 'block';
+  solde.innerHTML = t('couponBalance')
+    .replace('{name}', escapeHtml(c ? String(c.name||'').trim().split(/\s+/)[0] : ''))
+    .replace('{n}', `<b><span class="ds-coin">$</span>${clientDollars(clientId)}</b>`);
+
   const gross = (parseFloat($('#f_unitPrice').value)||0) * (parseInt($('#f_qty').value)||1);
   // Le coupon déjà posé sur cette commande reste proposé, même s'il est « consommé ».
-  const mine = clientCoupons(clientId).filter(c => !couponUsed(c.id) || (order && order.couponId === c.id));
-  if(!mine.length){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
+  const mine = clientCoupons(clientId).filter(k => !couponUsed(k.id) || (order && order.couponId === k.id));
+  if(!mine.length){
+    sel.style.display = 'none'; sel.innerHTML = '';
+    hint.textContent = t('couponNoneYet');
+    return;
+  }
 
-  const usable = mine.filter(c => gross >= (Number(c.min)||0));
-  const blocked = mine.filter(c => gross < (Number(c.min)||0));
-  zone.style.display = 'block';
+  const usable = mine.filter(k => gross >= (Number(k.min)||0));
+  const blocked = mine.filter(k => gross < (Number(k.min)||0));
+  sel.style.display = 'block';
   sel.innerHTML = `<option value="">${escapeHtml(t('couponNone'))}</option>` +
-    usable.map(c => `<option value="${escapeHtml(c.id)}" ${order && order.couponId===c.id ? 'selected' : ''}>−${fmtMoney(c.value)}</option>`).join('');
+    usable.map(k => `<option value="${escapeHtml(k.id)}" ${order && order.couponId===k.id ? 'selected' : ''}>−${fmtMoney(k.value)}</option>`).join('');
   hint.textContent = blocked.length
     ? t('couponHintTooSmall').replace('{value}', fmtMoney(blocked[0].value)).replace('{min}', fmtMoney(blocked[0].min))
     : '';
@@ -3101,6 +3128,10 @@ $('#stepNext').addEventListener('click', ()=>{
 
 $('#f_clientSelect').addEventListener('change', ()=>{
   $('#newClientFields').style.display = $('#f_clientSelect').value==='__new__' ? 'block' : 'none';
+  // Choisir le client doit suffire à voir son solde et ses coupons : avant, il
+  // fallait toucher au prix pour que le champ apparaisse.
+  buildCouponSelect(editingId ? orders.find(o=>o.id===editingId) : null);
+  updateMarginPreview();
 });
 
 $('#langBtn').addEventListener('click', (e)=>{
