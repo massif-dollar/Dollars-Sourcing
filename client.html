@@ -305,12 +305,28 @@
   .list{ display:flex; flex-direction:column; gap:9px; }
   .empty{ text-align:center; padding:44px 20px; color:var(--text-ghost); font-size:14px; line-height:1.6; letter-spacing:-0.01em; }
   .order-card{
+    position:relative; overflow:hidden;
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:17px; padding:14px 15px;
-    box-shadow:var(--raise); animation:cardIn .45s var(--ease-out) backwards;
+    box-shadow:var(--raise); animation:cardIn .5s var(--ease-out) backwards;
+    animation-delay:var(--d, 0ms);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
     transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
   }
   @keyframes cardIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
+  /* Un reflet balaie la carte à son arrivée, une seule fois : c'est ce qui
+     fait lire la surface comme du verre plutôt que comme un rectangle. */
+  .order-card::before{
+    content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%; z-index:3;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(18deg); pointer-events:none; opacity:0;
+    animation:cardSheen 1.1s var(--ease-io) backwards;
+    animation-delay:calc(var(--d, 0ms) + 260ms);
+  }
+  @keyframes cardSheen{
+    0%{ left:-140%; opacity:0; }
+    18%{ opacity:.9; }
+    100%{ left:150%; opacity:0; }
+  }
   .card-top{ display:flex; align-items:center; justify-content:space-between; gap:9px; }
   .card-top .product{ font-weight:600; font-size:15px; letter-spacing:-0.015em; }
   .badge{ font-size:10.5px; font-weight:600; padding:3.5px 9px; border-radius:100px; white-space:nowrap; flex-shrink:0; }
@@ -318,18 +334,35 @@
   .card-bottom{ margin-top:9px; font-size:12px; color:var(--text-ghost); }
 
   /* ===== Espace personnel du client ===== */
+  /* Deux lumières lentes derrière le prénom. Rien ne clignote, rien n'attire
+     l'œil : ça donne juste l'impression que la page est vivante. Transform
+     seulement, donc composé par le GPU. */
   .hello{ position:relative; }
+  .hello-aura{
+    position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+    width:230px; height:230px; top:-96px; left:-70px;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    filter:blur(10px); opacity:.9;
+    animation:auraDrift 19s var(--ease-io) infinite alternate;
+  }
+  .hello-aura-2{
+    width:190px; height:190px; top:-58px; left:auto; right:-64px;
+    animation-duration:24s; animation-delay:-7s;
+  }
+  @keyframes auraDrift{
+    from{ transform:translate(0,0) scale(1); }
+    to{ transform:translate(26px,18px) scale(1.22); }
+  }
   .hello .brand{ animation:helloIn .6s var(--ease-out) both; }
   .hello h1{ animation:helloIn .7s var(--ease-out) .08s both; }
   .hello .hello-sub{ animation:helloIn .7s var(--ease-out) .16s both; }
   @keyframes helloIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
   .hello-sub{ margin:6px 0 0; font-size:13.5px; color:var(--text-faint); letter-spacing:-0.01em; }
 
-  .summary{
-    display:flex; gap:9px; margin-bottom:18px;
-    animation:helloIn .7s var(--ease-out) .22s both;
-  }
+  .summary{ display:flex; gap:9px; margin-bottom:18px; }
   .summary-tile{
+    animation:helloIn .7s var(--ease-out) both;
+    animation-delay:calc(220ms + var(--i,0) * 80ms);
     flex:1; text-align:center; padding:12px 8px; border-radius:15px;
     background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
@@ -345,6 +378,7 @@
   .reveal{
     opacity:0; transform:translateY(16px);
     transition:opacity .55s var(--ease-out), transform .6s var(--ease-out);
+    transition-delay:var(--d, 0ms);
   }
   .reveal.revealed{ opacity:1; transform:none; }
 
@@ -406,6 +440,111 @@
 
   .state-error .state-title{ color:var(--danger); font-weight:600; margin-bottom:5px; }
 
+  /* --- Les Dollars : même identité que l'icône de l'app --- */
+  .ds-coin{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:1.25em; height:1.25em; border-radius:30%; flex-shrink:0;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    color:var(--on-accent); font-family:var(--font-display); font-weight:800;
+    font-size:.74em; line-height:1; letter-spacing:-0.02em;
+    box-shadow:0 2px 6px var(--accent-soft); position:relative; vertical-align:-0.12em;
+  }
+  .ds-coin::after{
+    content:''; position:absolute; inset:0; border-radius:30%; pointer-events:none;
+    background:linear-gradient(160deg, rgba(255,255,255,.42), rgba(255,255,255,.05) 45%, transparent 70%);
+  }
+  .balance-amount .ds-coin::before{
+    content:''; position:absolute; inset:0; border-radius:30%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,.7) 50%, transparent 60%);
+    background-size:280% 100%; background-position:180% 0;
+    animation:coinShine 5.2s var(--ease-io) 1.4s infinite;
+  }
+  @keyframes coinShine{ 0%{ background-position:180% 0; } 40%,100%{ background-position:-80% 0; } }
+
+  .balance-card{
+    position:relative; overflow:hidden; text-align:center;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius);
+    padding:24px 18px 20px; box-shadow:var(--raise-lg); margin-bottom:18px;
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+  }
+  .balance-orb{
+    position:absolute; top:-80px; left:50%; margin-left:-110px; width:220px; height:220px;
+    border-radius:50%; background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    pointer-events:none; filter:blur(4px);
+    animation:balanceOrb 11s var(--ease-io) infinite alternate;
+  }
+  @keyframes balanceOrb{
+    from{ transform:scale(1) translate(0,0); opacity:.85; }
+    to{ transform:scale(1.18) translate(14px,8px); opacity:1; }
+  }
+  .balance-amount{
+    position:relative; display:inline-flex; align-items:center; gap:.34em;
+    font-family:var(--font-display); font-weight:700; font-size:40px;
+    letter-spacing:-0.04em; font-variant-numeric:tabular-nums; color:var(--text);
+  }
+  .balance-label{ position:relative; display:block; margin-top:4px; font-size:13px; color:var(--text-faint); letter-spacing:-0.01em; }
+  .balance-next{ position:relative; margin-top:16px; }
+  .balance-bar{ height:6px; border-radius:6px; background:var(--fill-2); overflow:hidden; }
+  .balance-fill{
+    display:block;              /* un <i> est en ligne : sans ça, la largeur ne s'applique pas */
+    height:100%; border-radius:6px; width:0;
+    background:linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
+    transition:width 1s var(--ease-out) .2s;
+  }
+  .balance-next p{ margin:9px 0 0; font-size:12.5px; color:var(--text-faint); letter-spacing:-0.01em; }
+
+  .shop-title{ font-size:13px; font-weight:600; color:var(--text-muted); margin:0 0 10px; letter-spacing:-0.01em; }
+  .shop-item{
+    display:flex; align-items:center; gap:13px; margin-bottom:9px; padding:14px 15px;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius-sm);
+    box-shadow:var(--raise);
+    animation:cardIn .5s var(--ease-out) backwards; animation-delay:var(--d, 0ms);
+    transition:opacity .3s var(--ease-io), border-color .3s var(--ease-io);
+  }
+  .shop-item.locked{ opacity:.55; }
+  /* Ce qu'il peut s'offrir respire ; ce qu'il ne peut pas reste immobile.
+     C'est la seule chose qui bouge dans la boutique, donc l'œil y va. */
+  .shop-item.affordable{
+    border-color:var(--accent);
+    animation:cardIn .5s var(--ease-out) backwards,
+              shopBreathe 3.6s var(--ease-io) 1s infinite alternate;
+  }
+  @keyframes shopBreathe{
+    from{ box-shadow:var(--raise), 0 0 0 0 var(--accent-soft); }
+    to{ box-shadow:var(--raise), 0 0 0 5px var(--accent-soft); }
+  }
+  .shop-cost{
+    display:inline-flex; align-items:center; gap:.32em; flex-shrink:0; min-width:78px;
+    font-family:var(--font-display); font-weight:700; font-size:15px;
+    letter-spacing:-0.02em; font-variant-numeric:tabular-nums;
+  }
+  .shop-info{ flex:1; min-width:0; }
+  .shop-value{ font-family:var(--font-display); font-weight:700; font-size:17px; letter-spacing:-0.025em; }
+  /* Le minimum tient sur une ligne : sur les gros paliers (« dès 3 000 € de
+     commande ») il se coupait en deux et la boutique paraissait bâclée.
+     C'est le compteur « il te manque » qui cède la place, pas lui. */
+  .shop-min{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px;
+             letter-spacing:-0.005em; white-space:nowrap; }
+
+  .shop-btn{
+    flex-shrink:0; min-height:38px; padding:9px 15px; border-radius:12px; border:none;
+    background:linear-gradient(162deg, var(--accent-bright), var(--accent) 72%);
+    color:var(--on-accent); font-family:var(--font-body); font-weight:700; font-size:13px;
+    cursor:pointer; letter-spacing:-0.01em; position:relative; overflow:hidden;
+    box-shadow:0 5px 14px var(--accent-soft);
+    transition:transform .44s var(--spring);
+  }
+  .shop-btn.is-pressed{ transform:scale(.96); }
+  .shop-missing{ flex-shrink:1; min-width:0; font-size:12px; color:var(--text-ghost); letter-spacing:-0.005em; text-align:right; }
+  .coupon-chip{
+    display:inline-flex; align-items:center; gap:7px; margin:0 6px 6px 0;
+    padding:7px 12px; border-radius:100px; font-size:13px; font-weight:600;
+    background:var(--accent-soft); color:var(--accent-deep);
+  }
+  html[data-theme="dark"] .coupon-chip{ color:var(--accent-bright); }
+  .coupon-chip .min{ font-weight:500; opacity:.75; }
+  .dollars-note{ margin-top:16px; font-size:12px; line-height:1.55; color:var(--text-ghost); letter-spacing:-0.005em; }
+
   /* --- Frise de suivi --- */
   .track{ margin:15px 0 3px; }
   .track-rail{
@@ -422,13 +561,29 @@
   .track-dot{
     position:relative; width:11px; height:11px; border-radius:50%; margin:-18px auto 7px;
     background:var(--bg-elevated); border:1.5px solid var(--hairline-strong);
-    display:block; transition:background .4s var(--ease-out), border-color .4s var(--ease-out), transform .5s var(--spring);
+    display:block; transform:scale(var(--pop,1));
+    transition:background .4s var(--ease-out), border-color .4s var(--ease-out), transform .5s var(--spring);
   }
   .track-step.done .track-dot{ background:var(--accent); border-color:var(--accent); }
   .track-step.current .track-dot{
-    background:var(--accent); border-color:var(--accent); transform:scale(1.45);
+    background:var(--accent); border-color:var(--accent); --pop:1.45;
     box-shadow:0 0 0 4px var(--accent-soft);
   }
+  /* .animate est posé au moment où la carte devient visible, pas au rendu :
+     sinon la frise se dessinerait derrière l'écran, avant qu'on l'ait vue. */
+  .track.animate .track-dot{
+    animation:dotIn .55s var(--spring) backwards;
+    animation-delay:calc(var(--i,0) * 90ms + 120ms);
+  }
+  @keyframes dotIn{
+    from{ opacity:0; transform:scale(.15); }
+    to{ opacity:1; transform:scale(var(--pop,1)); }
+  }
+  .track.animate .track-label{
+    animation:trackLabelIn .5s var(--ease-out) backwards;
+    animation-delay:calc(var(--i,0) * 90ms + 200ms);
+  }
+  @keyframes trackLabelIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
   .track-step.current .track-dot::after{
     content:''; position:absolute; inset:-5px; border-radius:50%;
     border:1.5px solid var(--accent); opacity:.5;
@@ -615,6 +770,85 @@
   }
   .bio-enable-link.show{ display:block; }
 
+  /* ===== Ouverture du portail =====
+     Elle ne fait pas attendre : elle couvre le chargement Firestore qui a lieu
+     à cet instant précis. Sans elle, le client voit une page nue se peupler. */
+  .curtain{
+    position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); text-align:center;
+    transition:opacity .5s var(--ease-io), transform .5s var(--ease-io);
+  }
+  .curtain.lift{ opacity:0; transform:scale(1.04); pointer-events:none; }
+  .curtain-mark{ position:relative; width:82px; height:82px; margin:0 auto 20px; }
+  .curtain-glow{
+    position:absolute; inset:-48%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--accent-soft), transparent 68%);
+    filter:blur(7px); opacity:0; transform:scale(.55);
+    animation:curtainGlow 1.05s var(--ease-out) .03s both;
+  }
+  @keyframes curtainGlow{
+    0%{ opacity:0; transform:scale(.55); }
+    45%{ opacity:1; transform:scale(1.08); }
+    100%{ opacity:.6; transform:scale(1); }
+  }
+  .curtain-tile{
+    position:absolute; inset:0; border-radius:26px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    box-shadow:var(--raise-lg);
+    animation:curtainTile .8s var(--spring) .06s both;
+  }
+  @keyframes curtainTile{
+    from{ opacity:0; transform:scale(.64) translateY(14px); filter:blur(12px); }
+    55%{ opacity:1; filter:blur(0); }
+    to{ opacity:1; transform:none; filter:blur(0); }
+  }
+  .curtain-tile::after{ content:''; position:absolute; inset:0; background:var(--specular); opacity:.5; }
+  .curtain-glyph{
+    position:relative; z-index:1;
+    font-family:var(--font-display); font-size:38px; font-weight:800; color:var(--on-accent);
+    letter-spacing:-0.03em;
+    animation:curtainGlyph .6s var(--spring) .28s both;
+  }
+  @keyframes curtainGlyph{
+    from{ opacity:0; transform:scale(.5) rotate(-12deg); }
+    to{ opacity:1; transform:none; }
+  }
+  .curtain-sheen{
+    position:absolute; top:-70%; left:-130%; width:60%; height:240%; z-index:2;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(19deg); pointer-events:none;
+    animation:curtainSheen .78s var(--ease-io) .36s both;
+  }
+  @keyframes curtainSheen{
+    0%{ left:-130%; opacity:0; }
+    22%{ opacity:1; }
+    100%{ left:140%; opacity:0; }
+  }
+  .curtain-name{ overflow:hidden; padding:0 2px 3px; }
+  .curtain-name h2{
+    margin:0; font-family:var(--font-display); font-size:25px; font-weight:700;
+    letter-spacing:-0.03em; color:var(--text);
+    animation:curtainName .66s var(--ease-out) .32s both;
+  }
+  @keyframes curtainName{
+    from{ opacity:0; transform:translateY(105%); letter-spacing:.07em; }
+    to{ opacity:1; transform:none; letter-spacing:-0.03em; }
+  }
+  .curtain-brand{
+    margin:9px 0 0; font-size:11px; font-weight:600; letter-spacing:.16em;
+    color:var(--text-ghost); text-transform:uppercase;
+    animation:curtainBrand .5s var(--ease-out) .58s both;
+  }
+  @keyframes curtainBrand{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
+
+  /* L'app prend la main pendant que l'ouverture s'efface : jamais de trou noir. */
+  #app.app-enter{ animation:appEnter .55s var(--ease-out) both; }
+  @keyframes appEnter{
+    from{ opacity:0; transform:scale(.985) translateY(6px); }
+    to{ opacity:1; transform:none; }
+  }
+
   .shake{ animation:shakeX .4s var(--ease-out); }
   @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
 
@@ -640,7 +874,12 @@
   @media (prefers-reduced-motion:reduce){
     *{ animation-duration:.01ms !important; transition-duration:.01ms !important;
        animation-iteration-count:1 !important; }
-    body::before, .track-step.current .track-dot::after{ animation:none !important; }
+    body::before, .track-step.current .track-dot::after,
+    .balance-amount .ds-coin::before, .balance-orb,
+    .shop-item.affordable, .track.animate .track-dot,
+    .track.animate .track-label, .hello-aura,
+    .order-card::before{ animation:none !important; }
+    .order-card::before{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
   }
@@ -650,8 +889,21 @@
 <div id="bgfill"></div>
 <button class="lang-toggle" id="langToggle" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
 <button class="theme-toggle" id="themeToggle" data-i18n-title="themeTitle" title="Thème"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+<div class="curtain" id="portalCurtain" style="display:none;">
+  <div>
+    <div class="curtain-mark">
+      <span class="curtain-glow"></span>
+      <span class="curtain-tile"><span class="curtain-glyph">$</span><i class="curtain-sheen"></i></span>
+    </div>
+    <div class="curtain-name"><h2 id="curtainName">&nbsp;</h2></div>
+    <p class="curtain-brand">DOLLAR$ SOURCING</p>
+  </div>
+</div>
+
 <div id="app" style="display:none;">
   <header class="hello">
+    <span class="hello-aura" aria-hidden="true"></span>
+    <span class="hello-aura hello-aura-2" aria-hidden="true"></span>
     <div class="brand">DOLLAR$ SOURCING</div>
     <h1 id="greeting">Bonjour</h1>
     <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
@@ -668,6 +920,10 @@
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
           <span data-i18n="cwPrivate">Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.</span>
         </div>
+        <div class="welcome-point">
+          <span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span>
+          <span data-i18n="cwDollars">Chaque euro dépensé te rapporte <b>1 Dollar</b>, à échanger contre des remises dans l'onglet « Mes Dollars ».</span>
+        </div>
         <div class="welcome-point" id="cwBioPoint" style="display:none;">
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg></span>
           <span data-i18n="cwBio">La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.</span>
@@ -680,15 +936,45 @@
     </div>
   </div>
 
+  <!-- Les clients déjà venus n'ont jamais vu l'accueil parler des Dollars :
+       ils reçoivent l'annonce une fois, et une seule. -->
+  <div class="welcome" id="dollarsIntro" style="display:none;">
+    <div class="welcome-card">
+      <span class="welcome-orb"></span>
+      <div class="welcome-tile">$</div>
+      <h2 data-i18n="diTitle">Nouveau : les Dollars</h2>
+      <p class="welcome-lead" data-i18n="diLead">La maison a sa monnaie. Tu la cumules en commandant, et tu l'échanges quand tu veux contre une remise.</p>
+      <div class="welcome-points">
+        <div class="welcome-point">
+          <span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span>
+          <span data-i18n="diEarn"><b>1 € dépensé = 1 Dollar</b>, crédité dès que ta commande est livrée.</span>
+        </div>
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 11a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></span>
+          <span data-i18n="diSpend">Dans l'onglet <b>Mes Dollars</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.</span>
+        </div>
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg></span>
+          <span data-i18n="diKeep">Ils n'expirent jamais. Un coupon par commande.</span>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn-primary" id="diShopBtn" data-i18n="diBtn">Voir la boutique</button>
+        <button type="button" class="cw-dismiss" id="diDismiss" data-i18n="diLater">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary" id="summary" style="display:none;">
-    <div class="summary-tile accent"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
-    <div class="summary-tile"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
-    <div class="summary-tile"><span class="n" id="sumWaiting">0</span><span class="l" data-i18n="sumWaiting">En attente</span></div>
+    <div class="summary-tile accent" style="--i:0"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
+    <div class="summary-tile" style="--i:1"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
+    <div class="summary-tile" style="--i:2"><span class="n" id="sumWaiting">0</span><span class="l" data-i18n="sumWaiting">En attente</span></div>
   </div>
 
   <div class="tabs">
     <button class="tab" id="tabHistory" data-i18n="tabHistory">Mes commandes</button>
     <button class="tab active" id="tabOrder" data-i18n="tabOrder">Nouvelle demande</button>
+    <button class="tab" id="tabDollars" data-i18n="tabDollars">Mes Dollars</button>
   </div>
 
   <div id="orderPanel">
@@ -731,6 +1017,8 @@
     <div class="list" id="historyList"></div>
     <div id="archiveBlock"></div>
   </div>
+
+  <div id="dollarsPanel" style="display:none;"></div>
 </div>
 
 <div id="codeScreen">
@@ -782,16 +1070,29 @@ const I18N = {
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
     cwTitle:'Bienvenue {name}', cwTitleNoName:'Bienvenue',
+    curtainHello:'{name}', curtainHelloNoName:'Ton espace',
     cwIntro:'Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.',
     cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
     cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
     cwBioBtn:'Activer Face ID', cwOk:"J'ai compris", cwBioDone:'Face ID activé.',
+    cwDollars:'Chaque euro dépensé te rapporte <b>1 Dollar</b>, à échanger contre des remises dans l\u2019onglet « Mes Dollars ».',
+    diTitle:'Nouveau : les Dollars',
+    diLead:'La maison a sa monnaie. Tu la cumules en commandant, et tu l\u2019échanges quand tu veux contre une remise.',
+    diEarn:'<b>1 € dépensé = 1 Dollar</b>, crédité dès que ta commande est livrée.',
+    diSpend:'Dans l\u2019onglet <b>Mes Dollars</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.',
+    diKeep:'Ils n\u2019expirent jamais. Un coupon par commande.',
+    diBtn:'Voir la boutique', diLater:'Plus tard',
     loadingOrders:'Chargement de tes commandes...',
     errLoadTitle:"Tes commandes ne s'affichent pas",
     errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
     errLoadNet:'Connexion perdue. Vérifie ton réseau, ça se remettra tout seul.',
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
-    tabHistory:'Mes commandes', tabOrder:'Nouvelle demande',
+    tabHistory:'Mes commandes', tabOrder:'Nouvelle demande', tabDollars:'Mes Dollars',
+    dollarsLabel:'Dollars', dollarsNext:'Encore {n} Dollars pour un coupon de {value}.',
+    shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
+    shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
+    shopSent:'Échange envoyé ! Ton vendeur va le valider.',
+    dollarsRules:"Tu gagnes 1 Dollar par euro dépensé, crédité à la livraison. Un seul coupon par commande, sans date d'expiration. Les Dollars ne sont ni transférables ni convertibles en euros.",
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photo du produit',
     fieldDetails:'Précisions (taille, couleur, référence...)', yourDetails:'Tes précisions',
     phProduct:'Ex: paire de chaussures, sac...', phOptional:'Optionnel',
@@ -838,16 +1139,29 @@ const I18N = {
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
     cwTitle:'Welcome {name}', cwTitleNoName:'Welcome',
+    curtainHello:'{name}', curtainHelloNoName:'Your space',
     cwIntro:'This is your own space: every order and where it stands, live.',
     cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
     cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
     cwBioBtn:'Turn on Face ID', cwOk:'Got it', cwBioDone:'Face ID is on.',
+    cwDollars:'Every euro you spend earns you <b>1 Dollar</b>, to trade for discounts in the “My Dollars” tab.',
+    diTitle:'New: Dollars',
+    diLead:'The house has its own currency. You build it up by ordering, and trade it for a discount whenever you like.',
+    diEarn:'<b>1 € spent = 1 Dollar</b>, credited as soon as your order is delivered.',
+    diSpend:'In the <b>My Dollars</b> tab, you pick your coupon. The longer you wait, the more it pays.',
+    diKeep:'They never expire. One coupon per order.',
+    diBtn:'See the shop', diLater:'Later',
     loadingOrders:'Loading your orders...',
     errLoadTitle:'Your orders are not showing',
     errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
     errLoadNet:'Connection lost. Check your network, it will come back on its own.',
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
-    tabHistory:'My orders', tabOrder:'New request',
+    tabHistory:'My orders', tabOrder:'New request', tabDollars:'My Dollars',
+    dollarsLabel:'Dollars', dollarsNext:'{n} more Dollars for a {value} coupon.',
+    shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
+    shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
+    shopSent:'Exchange sent! Your seller will confirm it.',
+    dollarsRules:'You earn 1 Dollar per euro spent, credited on delivery. One coupon per order, no expiry date. Dollars are neither transferable nor convertible into euros.',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photo',
     fieldDetails:'Details (size, colour, reference...)', yourDetails:'Your details',
     phProduct:'E.g. pair of shoes, bag...', phOptional:'Optional',
@@ -902,7 +1216,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   $('#langCode').textContent = currentLang.toUpperCase();
-  if(clientData){ updateGreeting(); renderWelcome(); }
+  if(clientData){ updateGreeting(); renderWelcome(); renderDollarsIntro(); }
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
@@ -968,7 +1282,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head';
+const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head, .shop-btn';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tapDown(el, cx, cy){
   el.classList.add('is-pressed');
@@ -1204,6 +1518,29 @@ function dismissWelcome(){
   $('#clientWelcome').style.display = 'none';
 }
 $('#cwDismiss').addEventListener('click', dismissWelcome);
+
+// Annonce des Dollars : une seule fois, et jamais en même temps que l'accueil.
+// Un nouveau client apprend le programme dans la carte de bienvenue, qui en
+// parle déjà : l'annonce est donc marquée comme vue d'avance pour lui.
+function dollarsIntroKey(){ return 'ds_client_dollars_intro_' + clientId; }
+function dollarsIntroSeen(){
+  try{ return localStorage.getItem(dollarsIntroKey()) === '1'; }catch(e){ return false; }
+}
+function markDollarsIntroSeen(){
+  try{ localStorage.setItem(dollarsIntroKey(), '1'); }catch(e){}
+}
+function renderDollarsIntro(){
+  const box = $('#dollarsIntro');
+  if(!box) return;
+  if(!welcomeSeen()){ markDollarsIntroSeen(); box.style.display = 'none'; return; }
+  box.style.display = dollarsIntroSeen() ? 'none' : 'block';
+}
+function dismissDollarsIntro(){
+  markDollarsIntroSeen();
+  $('#dollarsIntro').style.display = 'none';
+}
+$('#diDismiss').addEventListener('click', dismissDollarsIntro);
+$('#diShopBtn').addEventListener('click', ()=>{ dismissDollarsIntro(); switchTab('dollars'); });
 $('#cwBioBtn').addEventListener('click', async ()=>{
   await registerClientBio();
   if(bioRegistered()){ showToast(t('cwBioDone')); dismissWelcome(); }
@@ -1213,10 +1550,33 @@ function enterApp(){
   document.getElementById('codeScreen').classList.remove('show');
   updateGreeting();
   $('#loadingScreen').style.display = 'none';
+
+  // Le rideau s'ouvre par-dessus l'app, pas à sa place : les écouteurs
+  // Firestore partent tout de suite, et le temps d'ouverture est du temps de
+  // chargement déguisé, pas du temps ajouté.
+  const rideau = $('#portalCurtain');
+  const prenom = clientFirstName();
+  const jouer = rideau && !reduceMotion();
+  if(jouer){
+    $('#curtainName').textContent = prenom ? t('curtainHello').replace('{name}', prenom) : t('curtainHelloNoName');
+    rideau.style.display = 'flex';
+    rideau.classList.remove('lift');
+  }
+
   $('#app').style.display = 'block';
   renderWelcome();
+  renderDollarsIntro();
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
+
+  if(!jouer){ if(rideau) rideau.style.display = 'none'; return; }
+  $('#app').classList.add('app-enter');
+  setTimeout(()=>{
+    rideau.classList.add('lift');
+    // Retiré du flux une fois effacé : un calque plein écran laissé là
+    // mangerait tous les touchers.
+    setTimeout(()=>{ rideau.style.display = 'none'; }, 520);
+  }, 1150);
 }
 function askCode(){
   $('#loadingScreen').style.display = 'none';
@@ -1311,6 +1671,7 @@ function listenOrders(){
     myOrders = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
+    if(currentTab === 'dollars') renderDollars();
     applyDefaultTab();
   }, (err)=>{ ordersLoaded = true; noteError(err); });
   pendingUnsub = db.collection('pendingOrders').where('clientId','==',clientId).onSnapshot(snap=>{
@@ -1318,9 +1679,120 @@ function listenOrders(){
     myPending = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
+    if(currentTab === 'dollars') renderDollars();
     applyDefaultTab();
   }, (err)=>{ pendingLoaded = true; noteError(err); });
 }
+
+// ================= Les Dollars =================
+// Même barème que l'app pro (voir CLAUDE.md). Le solde se recalcule à partir
+// des commandes livrées moins les coupons déjà accordés : rien n'est stocké,
+// donc rien ne peut dériver.
+const LOYALTY_TIERS = [
+  { dollars:400,  value:16,  min:300  },
+  { dollars:1000, value:55,  min:400  },
+  { dollars:2000, value:130, min:900  },
+  { dollars:3500, value:260, min:1800 },
+  { dollars:5000, value:450, min:3000 }
+];
+function orderDiscount(o){ return Number(o.discount) || 0; }
+function orderNetPrice(o){
+  return Math.max(0, (Number(o.unitPrice)||0) * (Number(o.qty)||1) - orderDiscount(o));
+}
+function myCoupons(){
+  return (clientData && Array.isArray(clientData.coupons)) ? clientData.coupons : [];
+}
+// Une commande annulée rend son coupon : rien n'a été payé, rien n'est consommé.
+function couponUsed(id){ return myOrders.some(o => o.couponId === id && o.status !== 'annule'); }
+function myDollars(){
+  const gagnes = myOrders.reduce((sum,o) =>
+    sum + (o.status === 'livre' ? Math.max(0, Math.floor(orderNetPrice(o))) : 0), 0);
+  const depenses = myCoupons().reduce((sum,c) => sum + (Number(c.dollars)||0), 0);
+  return Math.max(0, gagnes - depenses);
+}
+function pendingExchange(){ return myPending.find(p => p.type === 'coupon') || null; }
+
+let dollarsCounted = false;
+function renderDollars(){
+  const el = $('#dollarsPanel');
+  if(!el) return;
+  const solde = myDollars();
+  const dispo = myCoupons().filter(c => !couponUsed(c.id));
+  const attente = pendingExchange();
+  const next = LOYALTY_TIERS.find(t => t.dollars > solde);
+  const pct = next ? Math.min(100, Math.round(solde / next.dollars * 100)) : 100;
+
+  const boutique = LOYALTY_TIERS.map(tier => {
+    const ok = solde >= tier.dollars && !attente;
+    return `
+      <div class="shop-item ${solde >= tier.dollars ? 'affordable' : 'locked'}">
+        <span class="shop-cost"><span class="ds-coin">$</span>${tier.dollars}</span>
+        <span class="shop-info">
+          <span class="shop-value">−${fmtMoney(tier.value)}</span>
+          <span class="shop-min">${escapeHtml(t('shopMin').replace('{min}', fmtMoney(tier.min)))}</span>
+        </span>
+        ${ok
+          ? `<button type="button" class="shop-btn" data-tier="${tier.dollars}">${escapeHtml(t('shopGet'))}</button>`
+          : `<span class="shop-missing">${escapeHtml(
+              attente ? t('shopPending') : t('shopMissing').replace('{n}', tier.dollars - solde))}</span>`}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="balance-card">
+      <span class="balance-orb"></span>
+      <span class="balance-amount"><span class="ds-coin">$</span><span class="balance-n">0</span></span>
+      <span class="balance-label">${escapeHtml(t('dollarsLabel'))}</span>
+      ${next ? `<div class="balance-next">
+        <div class="balance-bar"><i class="balance-fill" data-pct="${pct}"></i></div>
+        <p>${escapeHtml(t('dollarsNext').replace('{n}', next.dollars - solde).replace('{value}', fmtMoney(next.value)))}</p>
+      </div>` : ''}
+    </div>
+    ${dispo.length ? `<p class="shop-title">${escapeHtml(t('myCoupons'))}</p>
+      <div style="margin-bottom:18px;">${dispo.map(c =>
+        `<span class="coupon-chip">−${fmtMoney(c.value)} <span class="min">${escapeHtml(t('shopMin').replace('{min}', fmtMoney(c.min)))}</span></span>`
+      ).join('')}</div>` : ''}
+    <p class="shop-title">${escapeHtml(t('shopTitle'))}</p>
+    ${boutique}
+    <p class="dollars-note">${escapeHtml(t('dollarsRules'))}</p>`;
+
+  stagger(el.querySelectorAll('.shop-item'), 60);
+  // Le solde monte, et la barre se remplit après le rendu — sinon ni l'un ni
+  // l'autre ne se verrait. Le compte ne se rejoue pas à chaque retour sur
+  // l'onglet : la première fois est un plaisir, la dixième une attente.
+  const duree = dollarsCounted ? 0 : 1100;
+  dollarsCounted = true;
+  countUp(el.querySelector('.balance-n'), solde, duree);
+  requestAnimationFrame(()=>{
+    const fill = el.querySelector('.balance-fill');
+    if(fill) fill.style.width = (fill.dataset.pct || 0) + '%';
+  });
+}
+
+$('#dollarsPanel').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.shop-btn');
+  if(!btn) return;
+  const tier = LOYALTY_TIERS.find(x => x.dollars === Number(btn.dataset.tier));
+  if(!tier || myDollars() < tier.dollars || pendingExchange()) return;
+  btn.disabled = true;
+  try{
+    // On passe par la même porte que les demandes produit : c'est la seule
+    // écriture publique, et le vendeur valide de toute façon.
+    await db.collection('pendingOrders').add({
+      type: 'coupon',
+      clientId, clientName: clientData.name, token: clientToken,
+      ownerId: clientData.ownerId || null,
+      product: 'Coupon ' + tier.value + ' EUR',
+      qty: 1,
+      dollars: tier.dollars, value: tier.value, min: tier.min,
+      createdAt: Date.now()
+    });
+    showToast(t('shopSent'));
+  }catch(err){
+    showToast(t('toastSendError'));
+    btn.disabled = false;
+  }
+});
 
 // ---- Frise de suivi : où en est la commande ----
 function trackHtml(status, order){
@@ -1330,7 +1802,7 @@ function trackHtml(status, order){
   const pct = TRACK_FLOW.length > 1 ? (done / (TRACK_FLOW.length - 1)) * 100 : 0;
   const steps = TRACK_FLOW.map((st,i)=>{
     const cls = cancelled ? '' : (i < idx ? 'done' : (i === idx ? 'current' : ''));
-    return `<div class="track-step ${cls}">
+    return `<div class="track-step ${cls}" style="--i:${i}">
         <span class="track-dot"></span>
         <span class="track-label">${escapeHtml(t(STATUS_META[st].short))}</span>
       </div>`;
@@ -1455,7 +1927,10 @@ function renderHistory(){
     </div>`).join('');
 
   const html = pendingCards + visibles.map(o => orderCardHtml(o, false)).join('');
+  // Le retard ne court que sur la première hauteur d'écran : au-delà il ne se
+  // verrait pas, il se subirait.
   el.innerHTML = html || (ranges.length ? '' : stateHtml());
+  stagger(el.querySelectorAll('.order-card'));
   renderArchive(ranges);
   renderSummary();
   revealCards();
@@ -1514,10 +1989,38 @@ function stateHtml(){
 // Les cartes se révèlent en montant, puis la frise se remplit.
 let revealObserver = null;
 function reduceMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+// Retard progressif sur une liste. Plafonné à cinq éléments : au-delà, un
+// retard n'embellit plus rien, il fait attendre.
+function stagger(nodes, pas){
+  const step = pas || 55;
+  Array.prototype.forEach.call(nodes, (n,i)=>{
+    n.style.setProperty('--d', Math.min(i, 5) * step + 'ms');
+  });
+}
+// Un chiffre qui monte depuis zéro. Une seule fois, à l'arrivée : le revoir
+// à chaque rendu deviendrait une attente.
+function countUp(el, to, duree){
+  if(!el) return;
+  const cible = Number(to) || 0;
+  if(reduceMotion() || !duree){ el.textContent = cible; return; }
+  const t0 = performance.now();
+  const pas = (now)=>{
+    const p = Math.min(1, (now - t0) / duree);
+    el.textContent = Math.round(cible * (1 - Math.pow(1 - p, 3)));
+    if(p < 1) requestAnimationFrame(pas);
+  };
+  requestAnimationFrame(pas);
+}
+
 function fillTracks(scope){
-  (scope || document).querySelectorAll('.track-fill').forEach(f=>{
+  const root = scope || document;
+  root.querySelectorAll('.track-fill').forEach(f=>{
     f.style.width = (f.dataset.progress || 0) + '%';
   });
+  // Les points se posent l'un après l'autre derrière la ligne qui avance.
+  // Déclenché ici, donc jamais joué hors de l'écran.
+  if(reduceMotion()) return;
+  root.querySelectorAll('.track').forEach(tr => tr.classList.add('animate'));
 }
 function revealCards(){
   const cards = document.querySelectorAll('#historyList .reveal');
@@ -1542,6 +2045,7 @@ function revealCards(){
   });
 }
 
+let summaryCounted = false;
 function renderSummary(){
   const box = $('#summary');
   if(!box) return;
@@ -1550,9 +2054,13 @@ function renderSummary(){
   const waiting = myPending.length;
   if(!active && !delivered && !waiting){ box.style.display = 'none'; return; }
   box.style.display = 'flex';
-  $('#sumActive').textContent = active;
-  $('#sumDelivered').textContent = delivered;
-  $('#sumWaiting').textContent = waiting;
+  // Les chiffres montent à l'arrivée seulement. Aux rendus suivants ils se
+  // posent net : un compteur qui repart à chaque mise à jour est une attente.
+  const duree = summaryCounted ? 0 : 950;
+  summaryCounted = true;
+  countUp($('#sumActive'), active, duree);
+  countUp($('#sumDelivered'), delivered, duree);
+  countUp($('#sumWaiting'), waiting, duree);
 }
 
 // ---- Photo du produit ----
@@ -1621,23 +2129,29 @@ $('#photoInput').addEventListener('change', async (e)=>{
 });
 
 // ---- Onglets ----
+const TABS = ['history','order','dollars'];
 let currentTab = 'order';
 function switchTab(tab){
+  const from = TABS.indexOf(currentTab);
+  const to = TABS.indexOf(tab);
   currentTab = tab;
-  const history = tab === 'history';
-  $('#tabHistory').classList.toggle('active', history);
-  $('#tabOrder').classList.toggle('active', !history);
-  $('#historyPanel').style.display = history ? 'block' : 'none';
-  $('#orderPanel').style.display = history ? 'none' : 'block';
-  const panel = history ? $('#historyPanel') : $('#orderPanel');
-  panel.style.setProperty('--view-dir', history ? '-18px' : '18px');
+  const panels = { history:'#historyPanel', order:'#orderPanel', dollars:'#dollarsPanel' };
+  const boutons = { history:'#tabHistory', order:'#tabOrder', dollars:'#tabDollars' };
+  TABS.forEach(k=>{
+    $(boutons[k]).classList.toggle('active', k === tab);
+    $(panels[k]).style.display = (k === tab) ? 'block' : 'none';
+  });
+  if(tab === 'dollars') renderDollars();
+  const panel = $(panels[tab]);
+  panel.style.setProperty('--view-dir', (to >= from ? '18px' : '-18px'));
   panel.classList.remove('view-in');
   void panel.offsetWidth;
   panel.classList.add('view-in');
-  if(history) revealCards();
+  if(tab === 'history') revealCards();
 }
 $('#tabOrder').addEventListener('click', ()=>switchTab('order'));
 $('#tabHistory').addEventListener('click', ()=>switchTab('history'));
+$('#tabDollars').addEventListener('click', ()=>switchTab('dollars'));
 
 // À la première arrivée des données : s'il a déjà des commandes, on lui montre.
 let defaultTabApplied = false;

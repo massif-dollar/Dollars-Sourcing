@@ -111,10 +111,16 @@ d'affichage, elle ne justifie pas d'ouvrir une écriture publique. Contrepartie
 assumée : depuis un autre appareil, son rangement ne le suit pas.
 
 À sa toute première visite, le client est accueilli par une carte qui explique
-l'espace : lien personnel protégé par son code, et proposition d'activer Face ID
-pour les fois suivantes (seulement si l'appareil le permet et que ce n'est pas
-déjà fait). Elle se ferme d'un bouton et ne revient plus (`ds_client_welcomed_<id>`
-en localStorage).
+l'espace : lien personnel protégé par son code, programme de fidélité (1 € = 1
+Dollar), et proposition d'activer Face ID pour les fois suivantes (seulement si
+l'appareil le permet et que ce n'est pas déjà fait). Elle se ferme d'un bouton et
+ne revient plus (`ds_client_welcomed_<id>` en localStorage).
+
+Les clients **déjà venus** n'ont jamais vu cet accueil parler des Dollars : ils
+reçoivent une annonce dédiée, une seule fois (`ds_client_dollars_intro_<id>`),
+avec un bouton qui les emmène directement dans la boutique. **Jamais deux cartes
+à la fois** : un nouveau client a l'annonce marquée comme vue d'avance, puisque
+sa carte de bienvenue en parle déjà.
 
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
@@ -151,30 +157,50 @@ l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
 et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
 livraison estimée.
 
-### Programme de fidélité — les Dollars (décidé, à construire)
+### Programme de fidélité — les Dollars
 
 Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
 des coupons de remise dans une boutique en libre-service de son espace.
-Barème arrêté le 3 septembre 2026, **à ne pas modifier à la légère** : dévaluer
-des Dollars déjà accumulés se voit et se paie en confiance.
 
-| Dollars | Coupon | Valable dès | Ce qu'on rend |
-|---|---|---|---|
-| 100 | 5 € | 50 € d'achat | 5 % |
-| 300 | 18 € | 120 € d'achat | 6 % |
-| 600 | 42 € | 250 € d'achat | 7 % |
-| 1 200 | 90 € | 600 € d'achat | 7,5 % |
-| 2 500 | 200 € | 1 350 € d'achat | 8 % |
+**Ce programme n'est pas un remerciement, c'est un tri.** Il sert à avantager
+les meilleurs clients et ceux qui commandent en gros, pas l'acheteur de passage.
+Barème requalifié le 3 septembre 2026 après un premier jet calibré pour du
+détail, **à ne pas modifier à la légère** : dévaluer des Dollars déjà accumulés
+se voit et se paie en confiance. La requalification a pu se faire sans dégât
+parce qu'il n'y avait encore que des clients de test — ce ne sera plus vrai.
 
-Le taux s'améliore avec la patience, pour pousser à accumuler. Les minimums des
-deux plus gros coupons sont calés pour qu'une remise ne dépasse jamais **15 % du
-total** de la commande où elle s'applique : sans ça, un coupon gagné sur une
-grosse commande viendrait ruiner la marge d'une petite.
+| Dollars | Coupon | Valable dès | Ce qu'on rend | Remise au minimum |
+|---|---|---|---|---|
+| 400 | 16 € | 300 € d'achat | 4 % | 5,3 % |
+| 1 000 | 55 € | 400 € d'achat | 5,5 % | 13,8 % |
+| 2 000 | 130 € | 900 € d'achat | 6,5 % | 14,4 % |
+| 3 500 | 260 € | 1 800 € d'achat | 7,4 % | 14,4 % |
+| 5 000 | 450 € | 3 000 € d'achat | 9 % | 15 % |
+
+**Deux leviers, et ils tirent dans le même sens.** Le taux passe de 4 % à 9 % :
+la patience rapporte plus du double. Et le minimum d'achat de chaque coupon met
+les gros paliers **hors de portée d'un acheteur au détail** — un client qui
+commande à 400 € n'utilisera jamais le coupon à 450 €, quoi qu'il accumule.
+Ce n'est pas un effet de bord, c'est le mécanisme.
+
+Aucune remise ne dépasse **15 % du total** de la commande où elle s'applique :
+sans ça, un coupon gagné sur une grosse commande viendrait ruiner la marge d'une
+petite. C'est cette règle qui fixe les minimums, et donc qui plafonne la valeur
+du plus gros coupon à ce qu'une commande réelle peut absorber. Le jour où les
+paniers montent, on peut ajouter un palier au-dessus ; **ajouter, jamais
+resserrer**.
+
+Un coupon **déjà accordé fige ses conditions** (`dollars`, `value`, `min` sont
+recopiés dans la fiche du client) : changer le barème ne dévalue rien
+rétroactivement. Une demande d'échange encore en attente, elle, référence un
+palier qui peut avoir disparu — `grantCoupon()` retombe alors sur la valeur
+portée par la demande, pour honorer ce que le client avait sous les yeux.
 
 **Les six règles :**
 
 1. **Un Dollar par euro réellement payé**, crédité au passage à « Livré ». Une
-   commande annulée ne rapporte rien.
+   commande annulée ne rapporte rien — et **rend le coupon** qu'elle portait :
+   le client n'a rien payé, il serait injuste de le lui brûler.
 2. **Les Dollars se gagnent sur le montant après remise** — sinon la cagnotte
    s'auto-alimenterait sur de l'argent jamais dépensé.
 3. **Un seul coupon par commande.**
@@ -186,9 +212,75 @@ grosse commande viendrait ruiner la marge d'une petite.
    boutique, l'échange arrive dans l'onglet « Demandes », rien ne sort sans un
    geste du vendeur.
 
+### Ce que le programme coûte vraiment
+
+La question s'est posée : un client qui enchaîne les petites commandes pour
+encaisser le coupon d'entrée, est-ce une fuite ? **Non, et c'est l'inverse.**
+
+Le coût est **borné par construction**, pour trois raisons qui s'empilent : un
+coupon s'achète en Dollars, les Dollars ne viennent que d'argent réellement
+payé, et ils se gagnent **après** remise — la cagnotte ne se nourrit donc jamais
+d'elle-même. Un palier qui rend `r` ne peut pas coûter plus de `r / (1 + r)` du
+chiffre d'affaires brut, quoi que fasse le client :
+
+| Palier | Ce qu'on rend | Coût maximum du CA |
+|---|---|---|
+| 400 | 4 % | 3,85 % |
+| 1 000 | 5,5 % | 5,21 % |
+| 2 000 | 6,5 % | 6,10 % |
+| 3 500 | 7,4 % | 6,91 % |
+| 5 000 | 9 % | 8,26 % |
+
+Simulé sur 400 commandes avec un client rationnel (il prend à chaque fois le
+meilleur coupon qu'il peut utiliser) : **3,8 % du CA** pour celui qui commande à
+300 €, **8,2 %** pour celui qui commande à 3 000 € et thésaurise. Le « spammeur »
+de petites commandes est donc le client **le moins cher** du programme, et le
+gros client patient le plus cher — ce qui est exactement l'intention.
+
+**Il n'y a donc aucun plafond d'utilisation à ajouter** : le plafond est déjà là,
+il est mathématique. Le seul vrai levier reste le taux du haut du barème.
+
+**Un Dollar ne coûte rien, un coupon coûte de vrais euros.** La confusion est
+facile et elle a été faite : émettre des Dollars, c'est écrire un nombre dans
+une base. La dépense arrive quand le coupon est *utilisé* — le client verse
+284 € au lieu de 300 €, et les 16 € manquants n'arrivent jamais sur le compte.
+La monnaie fictive, c'est le marketing ; le coupon, c'est la facture. C'est ce
+décalage qui fait la force du programme (annoncer « 2 000 Dollars » coûte 130 €),
+mais il ne rend pas le programme gratuit.
+
+À marge ×3 sur le prix d'usine, le programme se paie tout seul dès qu'il fait
+grossir le volume de **5 à 10 %**. Sur la pire commande possible (3 000 € avec
+le coupon de 450 €), il reste 77 % de la marge.
+
+**Le compteur de l'onglet Statistiques existe pour une raison précise** : le coût
+est visible et chiffré en euros, le bénéfice est invisible — on ne voit jamais
+le client qui est resté. Sans rapprochement, un programme rentable finit par
+être arrêté au ressenti. Le bloc met donc côte à côte les remises accordées, la
+dette (coupons dus + Dollars en circulation au meilleur taux du barème) et le
+rythme de commande des clients avec coupon face à ceux sans. Le rythme est
+**normalisé par l'ancienneté** — sinon un client arrivé la semaine dernière
+paraîtrait plus fidèle qu'un ancien — et **aucun verdict n'est affiché sous
+3 clients de chaque côté** : en dessous, l'écart n'est que du bruit.
+
 **Le solde ne se stocke jamais** : il se recalcule à partir des commandes
 livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une
-commande corrigée met le solde à jour toute seule.
+commande corrigée met le solde à jour toute seule. **Un coupon est consommé**
+dès qu'une commande porte son `couponId` — là encore rien à marquer.
+
+Ce que ça donne dans les données : `orders.discount` et `orders.couponId` pour
+la remise appliquée, `clients.coupons[]` pour les coupons accordés. La remise
+entre dans tous les calculs d'argent via `orderNetPrice()` — marge, reste à
+régler, chiffre d'affaires, statistiques : une remise sort de la poche du
+vendeur, elle doit se voir partout.
+
+L'échange passe par `pendingOrders` avec `type:'coupon'` : c'est la seule
+écriture publique, et elle est déjà validée par les règles. Le document porte
+un `product` et un `qty` factices pour satisfaire cette validation. Le solde du
+client est **revérifié au moment d'accorder**, jamais seulement à l'affichage.
+
+La monnaie reprend l'identité de l'icône de l'app : dégradé vert (orange en
+thème sombre) et glyphe `$`, classe `.ds-coin`. En mode discret, le solde d'un
+client se cache comme les marges : il révèle ce qu'il a dépensé.
 
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
@@ -210,6 +302,16 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
   en dit déjà trop et attire l'œil : pour une vidéo, il faut que ça n'existe pas
   à l'écran. Choix mémorisé, bouton allumé tant que le mode est actif. Les noms,
   produits, statuts, dates et compteurs restent lisibles.
+
+  **Le piège du flou oublié** : la classe `.margin` (comme `.badge-due`) est
+  seulement *floutée* par défaut ; c'est le balisage `.private` posé à côté qui
+  la fait disparaître. Oublier le `.private` sur une occurrence donne un rendu
+  qui a l'air protégé et ne l'est pas — la liste des clients a vécu ça, elle
+  affichait la marge générée et le solde dû en flou. **À chaque nouvel affichage
+  d'un montant, vérifier lequel des deux niveaux s'applique**, et ne jamais se
+  fier au fait que « ça a l'air flouté ». Quand un élément `.private` laisse un
+  trou (le badge « doit X € » d'une fiche client), un `.only-discreet` prend sa
+  place : visible seulement en mode discret, il évite la carte nue.
 - Effet tactile « liquid glass » sur tout élément cliquable : enfoncement,
   onde depuis le point de contact, rebond au relâchement.
 - Finitions : bordures 0.5px, chiffres tabulaires, flou avec saturation,
@@ -231,6 +333,40 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   l'arrivée), cartes révélées en montant au défilement (`.reveal` +
   IntersectionObserver), passage d'un onglet à l'autre qui glisse (`.view-in`,
   la direction suit l'ordre des onglets), fond en dégradé qui respire sur 28 s.
+- **Le portail client a son ouverture à lui.** Après le code, un rideau plein
+  écran : la pièce `$` de l'app éclot avec son halo, un reflet la balaie, le
+  prénom du client monte, la marque se pose. Puis il se lève et l'app entre.
+  Point clé : le rideau s'affiche **par-dessus** l'app déjà montée, et
+  `listenOrders()` part avant lui — l'ouverture ne fait donc pas attendre, elle
+  **couvre** le chargement Firestore qui a lieu à cet instant. Sans elle, le
+  client regardait une page nue se peupler. Le calque est retiré du flux
+  (`display:none`) une fois effacé, sinon il mangerait tous les touchers.
+- **Le portail client est la zone la plus travaillée**, parce que c'est la
+  vitrine : c'est là que le client décide s'il reste. Compteurs du résumé et
+  solde en Dollars qui montent depuis zéro, cartes et paliers de la boutique en
+  cascade (`stagger()`, plafonnée à cinq éléments — au-delà un retard ne
+  s'admire plus, il se subit), frise qui se dessine point par point derrière la
+  ligne, halo du solde qui respire, reflet qui balaie la pièce.
+
+  Trois règles apprises en le construisant. **Un compteur ne se rejoue jamais**
+  (`summaryCounted`, `dollarsCounted`) : la première fois c'est un plaisir, la
+  dixième une attente. **La frise ne s'anime qu'au moment où la carte devient
+  visible** — déclenchée dans `fillTracks()`, pas au rendu, sinon elle se
+  dessine derrière l'écran et le client ne voit rien. Et **une seule chose
+  bouge en boucle par écran** : dans la boutique, seul le palier accessible
+  respire, ce qui envoie l'œil exactement là où on veut. Cinq pièces qui
+  brillent en même temps, ce n'est pas du luxe, c'est un sapin de Noël.
+
+  Piège technique : l'étape courante de la frise porte un `transform:scale(1.45)`
+  qu'une animation d'entrée écraserait. Le repos passe donc par une variable
+  (`--pop`) que le `to:` du keyframe réutilise.
+
+  **Ce qui donne l'impression que ça a coûté cher, ce n'est pas la quantité de
+  mouvement — c'est la matière et l'arrivée.** Deux lumières lentes dérivent
+  derrière le prénom (`.hello-aura`, transform seulement, donc composé par le
+  GPU), et un reflet balaie chaque carte à son apparition : c'est ce qui fait
+  lire la surface comme du verre plutôt que comme un rectangle. Une page où
+  tout bouge tout le temps ne fait pas riche, elle fait bon marché.
 - **`prefers-reduced-motion` partout.** Attention : accélérer une animation
   infinie la fait clignoter — il faut la couper (`animation:none`), pas la
   raccourcir. Les blocs `@media (prefers-reduced-motion:reduce)` des deux
@@ -304,12 +440,13 @@ d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
 date estimée) avec lien de suivi côté client, dates de parcours par commande,
 historique par client dans sa fiche, archivage volontaire côté client,
-mode discret qui floute les montants.
+mode discret qui masque montants et marges, programme de fidélité complet
+(Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
+commande), annonce du programme aux clients, compteur de rentabilité de la
+fidélité dans les statistiques.
 
 ## À faire
 
-- Programme de fidélité : boutique de coupons côté client, validation des
-  échanges côté vendeur, champ remise sur la commande (barème ci-dessus)
 - Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
   pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur

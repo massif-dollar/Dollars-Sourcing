@@ -300,6 +300,45 @@
      ça disparaît. Un flou à côté du mot « Marge » en dit déjà trop, et attire
      l'œil. En mode discret, l'app peut être filmée sans rien révéler. */
   html[data-discreet="1"] .private{ display:none !important; }
+  /* Contrepartie : quand le badge « doit X € » disparaît d'une fiche client,
+     un badge neutre prend sa place, sinon la carte reste nue à l'écran. */
+  .only-discreet{ display:none; }
+  html[data-discreet="1"] .only-discreet{ display:block; }
+
+  /* --- Les Dollars : même identité que l'icône de l'app --- */
+  .ds-coin{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:1.25em; height:1.25em; border-radius:30%; flex-shrink:0;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    color:var(--on-accent); font-family:var(--font-display); font-weight:800;
+    font-size:.74em; line-height:1; letter-spacing:-0.02em;
+    box-shadow:0 2px 6px var(--accent-soft);
+    position:relative; vertical-align:-0.12em;
+  }
+  .ds-coin::after{
+    content:''; position:absolute; inset:0; border-radius:30%; pointer-events:none;
+    background:linear-gradient(160deg, rgba(255,255,255,.42), rgba(255,255,255,.05) 45%, transparent 70%);
+  }
+  .ds-amount{
+    display:inline-flex; align-items:center; gap:.4em;
+    font-family:var(--font-display); font-weight:700; letter-spacing:-0.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .coupon-chip{
+    display:inline-flex; align-items:center; gap:7px; margin:0 6px 6px 0;
+    padding:6px 11px; border-radius:100px; font-size:12.5px; font-weight:600;
+    background:var(--accent-soft); color:var(--accent-deep); border:0.5px solid transparent;
+  }
+  html[data-theme="dark"] .coupon-chip{ color:var(--accent-bright); }
+  .coupon-chip .min{ font-weight:500; opacity:.75; }
+  .loyalty-box{
+    margin-bottom:16px; padding:14px 15px; border-radius:16px;
+    background:var(--accent-soft); border:0.5px solid transparent;
+  }
+  .loyalty-label{ display:block; font-size:11.5px; color:var(--text-faint); letter-spacing:-0.005em; }
+  .loyalty-value{ font-size:22px; margin-top:3px; color:var(--accent-deep); }
+  html[data-theme="dark"] .loyalty-value{ color:var(--accent-bright); }
+  .loyalty-coupons{ margin-top:10px; }
 
   /* --- Révélation au défilement (tableau de bord uniquement) --- */
   .reveal{
@@ -489,6 +528,31 @@
   .top3-margin{ font-family:var(--font-display); font-weight:700; font-size:13.5px; color:var(--accent); letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
 
   /* --- Graphique --- */
+  .loyalty-report{
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:16px;
+    padding:15px 16px; margin-bottom:14px; box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .loyalty-report h3{
+    margin:0 0 12px; font-family:var(--font-display); font-size:14px; font-weight:700;
+    letter-spacing:-0.02em; color:var(--text);
+  }
+  .loy-row{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:8px 0; border-top:0.5px solid var(--hairline);
+  }
+  .loy-row:first-of-type{ border-top:none; }
+  .loy-row .k{ font-size:12.5px; color:var(--text-faint); letter-spacing:-0.005em; }
+  .loy-row .v{
+    font-family:var(--font-display); font-weight:700; font-size:15px;
+    letter-spacing:-0.02em; font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .loy-row .v small{ display:block; font-weight:500; font-size:11px; color:var(--text-ghost); letter-spacing:0; }
+  .loy-verdict{
+    margin-top:11px; padding-top:11px; border-top:0.5px solid var(--hairline);
+    font-size:12.5px; line-height:1.5; color:var(--text-faint); letter-spacing:-0.005em;
+  }
+  .loy-verdict b{ color:var(--accent); }
   .chart-wrap{
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:16px;
     padding:15px 11px 9px; margin-bottom:14px; box-shadow:var(--raise);
@@ -1295,6 +1359,11 @@
         <span class="private"><i class="legend-dot" style="background:var(--gold);"></i><span data-i18n="legendMargin">Marge</span></span>
       </div>
     </div>
+    <!-- Le programme de fidélité se juge sur deux chiffres qu'on ne voit jamais
+         ensemble : ce qu'il coûte (visible, en euros) et ce qu'il retient
+         (invisible). Ce bloc les met côte à côte. Tout est .private : ce sont
+         des chiffres de marge. -->
+    <div class="loyalty-report reveal private" id="loyaltyReport" style="display:none;"></div>
   </div>
 
   <div id="requestsView" style="display:none;">
@@ -1361,6 +1430,11 @@
           <div class="field-error"></div>
         </div>
       </div>
+      <div class="field" id="couponField" style="display:none;">
+        <label data-i18n="fieldCoupon">Coupon fidélité</label>
+        <select id="f_coupon"></select>
+        <p class="field-hint" id="couponHint" style="margin:6px 0 0;"></p>
+      </div>
       <div class="field">
         <label data-i18n="fieldPaid">Déjà reçu (€)</label>
         <input type="number" id="f_paid" min="0" step="0.01" data-i18n-placeholder="paidPlaceholder" placeholder="0 = rien encaissé">
@@ -1412,6 +1486,7 @@
     <button class="icon-btn close-x" id="closeClientSheet">✕</button>
     <h2 id="clientSheetTitle">Profil client</h2>
     <div id="clientStatsSummary" style="display:none;"></div>
+    <div id="clientLoyalty" style="display:none;"></div>
     <form id="clientForm" novalidate>
       <div class="row2">
         <div class="field">
@@ -1674,12 +1749,30 @@ const I18N = {
     topClients:'Top clients',
     statRevenuePeriod:'CA (période)', statMarginPeriod:'Marge (période)', statAvgBasket:'Panier moyen', statAvgMargin:'Marge moyenne',
     legendRevenue:'Revenu', legendMargin:'Marge',
+    loyTitle:'Ce que la fidélité coûte, et ce qu\u2019elle retient',
+    loyDiscounts:'Remises accordées', loyOutstanding:'Dollars en circulation',
+    loyOwed:'{v} à honorer si tu arrêtes',
+    loyWith:'Clients ayant utilisé un coupon', loyWithout:'Clients sans coupon',
+    loyRate:'{n} cmd/mois', loyClients:'{n} clients',
+    loyVerdictUp:'Les clients fidélisés commandent {p} plus souvent. C\u2019est ce que le programme achète.',
+    loyVerdictDown:'Les clients fidélisés commandent {p} moins souvent. Si ça dure, le programme ne sert à rien.',
+    loySmall:'Trop peu de recul pour conclure : il faut au moins 3 clients de chaque côté. En dessous, l\u2019écart n\u2019est que du hasard.',
     range7:'7 jours', range30:'30 jours', range90:'90 jours', rangeAll:'Tout',
     sheetNewOrder:'Nouvelle commande', sheetEditOrder:'Modifier la commande',
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
     fieldNewClientName:'Nom du nouveau client', fieldContact:'Contact (réseau, tél...)', fieldNewClientAddress:'Adresse de livraison',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldStatus:'Statut',
     statusSaved:'Statut enregistré : {status}',
+    fieldCoupon:'Coupon fidélité', couponNone:'Aucun coupon utilisé',
+    couponHintNone:"Ce client n'a aucun coupon disponible.",
+    couponHintTooSmall:'Coupon de {value} utilisable dès {min} de commande.',
+    couponApplied:'Remise appliquée : {value}',
+    dollarsLabel:'Dollars', dollarsBalance:'Solde de Dollars',
+    couponsAvailable:'Coupons disponibles', couponMin:'dès {min}',
+    exchangeTitle:'Échange de Dollars', exchangeWants:'{name} échange {dollars} Dollars',
+    exchangeGrant:'Accorder', exchangeRefuse:'Refuser',
+    exchangeGranted:'Coupon accordé.', exchangeRefused:'Échange refusé.',
+    exchangeTooPoor:"Solde insuffisant : l'échange a été refusé.",
     discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
@@ -1787,12 +1880,30 @@ const I18N = {
     topClients:'Top clients',
     statRevenuePeriod:'Revenue (period)', statMarginPeriod:'Margin (period)', statAvgBasket:'Average order', statAvgMargin:'Average margin',
     legendRevenue:'Revenue', legendMargin:'Margin',
+    loyTitle:'What loyalty costs, and what it keeps',
+    loyDiscounts:'Discounts granted', loyOutstanding:'Dollars outstanding',
+    loyOwed:'{v} to honour if you stop',
+    loyWith:'Clients who used a coupon', loyWithout:'Clients without',
+    loyRate:'{n} orders/mo', loyClients:'{n} clients',
+    loyVerdictUp:'Loyal clients order {p} more often. That is what the programme buys.',
+    loyVerdictDown:'Loyal clients order {p} less often. If that holds, the programme is pointless.',
+    loySmall:'Not enough history to conclude: you need at least 3 clients on each side. Below that, the gap is just noise.',
     range7:'7 days', range30:'30 days', range90:'90 days', rangeAll:'All',
     sheetNewOrder:'New order', sheetEditOrder:'Edit order',
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
     fieldNewClientName:'New client name', fieldContact:'Contact (social, phone...)', fieldNewClientAddress:'Delivery address',
     fieldProduct:'Product', fieldQty:'Quantity', fieldStatus:'Status',
     statusSaved:'Status saved: {status}',
+    fieldCoupon:'Loyalty coupon', couponNone:'No coupon used',
+    couponHintNone:'This client has no coupon available.',
+    couponHintTooSmall:'The {value} coupon needs an order of {min} or more.',
+    couponApplied:'Discount applied: {value}',
+    dollarsLabel:'Dollars', dollarsBalance:'Dollars balance',
+    couponsAvailable:'Available coupons', couponMin:'from {min}',
+    exchangeTitle:'Dollars exchange', exchangeWants:'{name} is redeeming {dollars} Dollars',
+    exchangeGrant:'Grant', exchangeRefuse:'Decline',
+    exchangeGranted:'Coupon granted.', exchangeRefused:'Exchange declined.',
+    exchangeTooPoor:'Not enough Dollars: the exchange was declined.',
     discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
@@ -1998,14 +2109,59 @@ function showConfirm(message){
   });
 }
 
+// ================= Programme de fidélité — les Dollars =================
+// Barème requalifié pour le gros, décrit dans CLAUDE.md. Il n'est pas fait pour
+// remercier un achat, mais pour avantager celui qui revient et qui commande
+// gros : le taux va de 4 % à 9 %, et le minimum d'achat de chaque coupon met
+// mécaniquement les gros paliers hors de portée d'un acheteur au détail.
+// Ne pas modifier sans mesurer ce que ça dévalue chez les clients.
+const LOYALTY_TIERS = [
+  { dollars:400,  value:16,  min:300  },
+  { dollars:1000, value:55,  min:400  },
+  { dollars:2000, value:130, min:900  },
+  { dollars:3500, value:260, min:1800 },
+  { dollars:5000, value:450, min:3000 }
+];
+
+// Le solde ne se stocke jamais : il se recalcule, donc il ne peut pas dériver.
+// Gagné sur ce qui a été réellement payé (après remise), à la livraison seulement.
+function orderDiscount(o){ return Number(o.discount) || 0; }
+function dollarsEarned(o){
+  if(o.status !== 'livre' || o.deletedAt) return 0;
+  return Math.max(0, Math.floor(orderTotalPrice(o) - orderDiscount(o)));
+}
+function clientCoupons(clientId){
+  const c = clientById(clientId);
+  return (c && Array.isArray(c.coupons)) ? c.coupons : [];
+}
+// Un coupon est consommé dès qu'une commande le référence : rien à marquer,
+// rien à désynchroniser si on corrige une commande. Une commande annulée fait
+// exception : le client n'a rien payé et n'a rien gagné, il serait injuste de
+// lui brûler son coupon au passage. Il repart dans sa réserve.
+function couponUsed(couponId){
+  return orders.some(o => o.couponId === couponId && !o.deletedAt && o.status !== 'annule');
+}
+function clientDollars(clientId){
+  const gagnes = orders.filter(o => o.clientId === clientId).reduce((sum,o) => sum + dollarsEarned(o), 0);
+  const depenses = clientCoupons(clientId).reduce((sum,c) => sum + (Number(c.dollars)||0), 0);
+  return Math.max(0, gagnes - depenses);
+}
+function availableCoupons(clientId){
+  return clientCoupons(clientId).filter(c => !couponUsed(c.id));
+}
+function tierFor(dollars){ return LOYALTY_TIERS.find(t => t.dollars === Number(dollars)) || null; }
+
 function orderTotalCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1); }
 function orderTotalPrice(o){ return (Number(o.unitPrice)||0) * (Number(o.qty)||1); }
-function orderMargin(o){ return orderTotalPrice(o) - orderTotalCost(o); }
-function orderMultiplier(o){ const c = orderTotalCost(o); return c>0 ? orderTotalPrice(o)/c : null; }
+// Ce que le client paie réellement : une remise fidélité sort de ta poche,
+// elle doit donc baisser la marge, le reste à régler et le chiffre d'affaires.
+function orderNetPrice(o){ return Math.max(0, orderTotalPrice(o) - orderDiscount(o)); }
+function orderMargin(o){ return orderNetPrice(o) - orderTotalCost(o); }
+function orderMultiplier(o){ const c = orderTotalCost(o); return c>0 ? orderNetPrice(o)/c : null; }
 function orderPaid(o){ return Number(o.paidAmount) || 0; }
 function orderRemaining(o){
   if(o.status === 'annule') return 0;
-  const r = orderTotalPrice(o) - orderPaid(o);
+  const r = orderNetPrice(o) - orderPaid(o);
   return r > 0.009 ? r : 0;
 }
 function clientRemaining(clientId){
@@ -2016,7 +2172,7 @@ function clientById(id){ return clients.find(c=>c.id===id); }
 function clientName(o){ const c = clientById(o.clientId); return c ? c.name : 'Client supprimé'; }
 function computeClientStats(clientId){
   const co = orders.filter(o=>o.clientId===clientId && o.status!=='annule');
-  const revenue = co.reduce((s,o)=>s+orderTotalPrice(o),0);
+  const revenue = co.reduce((s,o)=>s+orderNetPrice(o),0);
   const margin = co.reduce((s,o)=>s+orderMargin(o),0);
   return { count:co.length, revenue, margin };
 }
@@ -2380,13 +2536,14 @@ function renderClients(){
         <div class="card-top">
           <div class="client">${escapeHtml(c.name)}</div>
           ${due > 0
-            ? `<div class="badge-due">${t('owesLabel')} ${fmtMoney(due)}</div>`
+            ? `<div class="badge-due private">${t('owesLabel')} ${fmtMoney(due)}</div>
+               <div class="badge only-discreet" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`
             : `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`}
         </div>
         <div class="card-mid">${escapeHtml(c.contact||t('noContact'))}</div>
         <div class="card-bottom">
           <div class="date">${c.address?escapeHtml(c.address):''}</div>
-          <div class="margin ${s.margin>=0?'pos':'neg'}">${s.margin>=0?'+':''}${fmtMoney(s.margin)}</div>
+          <div class="margin private ${s.margin>=0?'pos':'neg'}">${s.margin>=0?'+':''}${fmtMoney(s.margin)}</div>
         </div>
       </div>`;
   }).join('');
@@ -2408,6 +2565,7 @@ function renderRequests(){
   el.innerHTML = pendingRequests.map((r,i)=>{
     const c = clientById(r.clientId);
     const name = c ? c.name : (r.clientName || '?');
+    if(r.type === 'coupon') return couponRequestCard(r, name);
     return `
       <div class="request-card" data-req-id="${r.id}">
         <div class="card-top">
@@ -2425,6 +2583,58 @@ function renderRequests(){
   }).join('');
 }
 
+// Un échange de Dollars arrive comme une demande : le client choisit, le vendeur
+// accorde. Le solde du client est revérifié au moment d'accorder, jamais avant.
+function couponRequestCard(r, name){
+  const tier = tierFor(r.dollars);
+  const value = tier ? tier.value : Number(r.value)||0;
+  const min = tier ? tier.min : Number(r.min)||0;
+  const solde = clientDollars(r.clientId);
+  const assez = solde >= (Number(r.dollars)||0);
+  return `
+      <div class="request-card" data-req-id="${escapeHtml(r.id)}" data-coupon="1">
+        <div class="card-top">
+          <div class="client">${escapeHtml(name)}</div>
+          <div class="badge" style="background:var(--accent-soft); color:var(--accent-deep);">${escapeHtml(t('exchangeTitle'))}</div>
+        </div>
+        <div class="card-mid private">${t('exchangeWants')
+          .replace('{name}', escapeHtml(name))
+          .replace('{dollars}', `<span class="ds-amount"><span class="ds-coin">$</span>${Number(r.dollars)||0}</span>`)}</div>
+        <div class="card-mid" style="margin-top:6px;">
+          <span class="coupon-chip">−${fmtMoney(value)} <span class="min">${t('couponMin').replace('{min}', fmtMoney(min))}</span></span>
+        </div>
+        ${assez ? '' : `<div class="card-mid" style="color:var(--danger); margin-top:6px;">${escapeHtml(t('exchangeTooPoor'))}</div>`}
+        <div class="request-actions">
+          <button type="button" class="req-reject" data-action="reject">${t('exchangeRefuse')}</button>
+          <button type="button" class="req-validate" data-action="grant" ${assez ? '' : 'disabled style="opacity:.45;"'}>${t('exchangeGrant')}</button>
+        </div>
+      </div>`;
+}
+
+async function grantCoupon(req){
+  // Une demande déposée sous un barème précédent référence un palier qui
+  // n'existe plus. Plutôt que d'échouer sans rien dire, on honore ce que le
+  // client avait sous les yeux au moment de demander : la demande porte sa
+  // propre valeur et son propre minimum.
+  const tier = tierFor(req.dollars);
+  const dollars = Number(req.dollars) || 0;
+  const value = tier ? tier.value : Number(req.value) || 0;
+  const min = tier ? tier.min : Number(req.min) || 0;
+  if(!dollars || !value) return false;
+  if(clientDollars(req.clientId) < dollars) return false;
+  const c = clientById(req.clientId);
+  if(!c) return false;
+  const coupon = {
+    id: genToken().slice(0,12),
+    dollars: dollars,
+    value: value,
+    min: min,
+    createdAt: Date.now()
+  };
+  const list = (Array.isArray(c.coupons) ? c.coupons : []).concat([coupon]);
+  return await updateClientDoc(req.clientId, { coupons: list });
+}
+
 let pendingSourceId = null;
 let pendingPhoto = null;
 $('#requestsList').addEventListener('click', async (e)=>{
@@ -2434,6 +2644,19 @@ $('#requestsList').addEventListener('click', async (e)=>{
   const reqId = card.dataset.reqId;
   const req = pendingRequests.find(r=>r.id===reqId);
   if(!req) return;
+  if(req.type === 'coupon'){
+    if(btn.dataset.action === 'grant'){
+      const ok = await grantCoupon(req);
+      if(!ok){ showToast(t('toastSaveError')); return; }
+      await deletePendingOrderDoc(reqId);
+      showToast(t('exchangeGranted'));
+    } else {
+      if(!(await showConfirm(t('confirmRejectRequest')))) return;
+      await deletePendingOrderDoc(reqId);
+      showToast(t('exchangeRefused'));
+    }
+    return;
+  }
   if(btn.dataset.action==='reject'){
     if(!(await showConfirm(t('confirmRejectRequest')))) return;
     await deletePendingOrderDoc(reqId);
@@ -2586,10 +2809,10 @@ function computeStats(){
   inRange.forEach(o=>{
     const k = bucketKeyFor(o.createdAt, gran);
     const b = bucketMap[k];
-    if(b){ b.revenue += orderTotalPrice(o); b.margin += orderMargin(o); }
+    if(b){ b.revenue += orderNetPrice(o); b.margin += orderMargin(o); }
   });
 
-  const totalRevenue = inRange.reduce((s,o)=>s+orderTotalPrice(o),0);
+  const totalRevenue = inRange.reduce((s,o)=>s+orderNetPrice(o),0);
   const totalMargin = inRange.reduce((s,o)=>s+orderMargin(o),0);
   const avgBasket = inRange.length ? totalRevenue/inRange.length : 0;
   const pctMargin = totalRevenue>0 ? (totalMargin/totalRevenue*100) : 0;
@@ -2631,6 +2854,84 @@ function renderChart(buckets){
   container.innerHTML = svg;
 }
 
+// Rythme de commande d'un client, normalisé par son ancienneté : sans ça un
+// client arrivé la semaine dernière paraîtrait plus fidèle qu'un ancien.
+const MOIS = 30*24*3600*1000;
+function clientOrdersPerMonth(clientId){
+  const mine = orders.filter(o => o.clientId === clientId && !o.deletedAt);
+  if(!mine.length) return null;
+  const premier = Math.min.apply(null, mine.map(o => o.createdAt || Date.now()));
+  const mois = Math.max(1, (Date.now() - premier) / MOIS);
+  return mine.length / mois;
+}
+// Ce que le programme coûte (visible, en euros) face à ce qu'il retient
+// (invisible). Sans ce rapprochement, seul le coût se voit — et un programme
+// rentable finit par être arrêté au ressenti.
+function computeLoyaltyReport(){
+  const vivantes = orders.filter(o => !o.deletedAt);
+  const remises = vivantes.reduce((t,o) => t + orderDiscount(o), 0);
+
+  // Deux dettes distinctes : les coupons déjà accordés mais pas encore posés,
+  // et les Dollars pas encore échangés (au pire au meilleur taux du barème).
+  const meilleurTaux = LOYALTY_TIERS.reduce((m,t) => Math.max(m, t.value/t.dollars), 0);
+  let couponsDus = 0, dollarsDehors = 0;
+  clients.forEach(c => {
+    if(c.deletedAt) return;
+    couponsDus += availableCoupons(c.id).reduce((t,k) => t + (Number(k.value)||0), 0);
+    dollarsDehors += clientDollars(c.id);
+  });
+
+  // Un client est « fidélisé » dès qu'une de ses commandes porte un coupon.
+  const avecCoupon = new Set(vivantes.filter(o => o.couponId && o.status !== 'annule').map(o => o.clientId));
+  const groupes = { avec:[], sans:[] };
+  clients.forEach(c => {
+    if(c.deletedAt) return;
+    const r = clientOrdersPerMonth(c.id);
+    if(r === null) return;                       // jamais commandé : hors sujet
+    (avecCoupon.has(c.id) ? groupes.avec : groupes.sans).push(r);
+  });
+  const moyenne = a => a.length ? a.reduce((x,y)=>x+y,0) / a.length : 0;
+
+  return {
+    remises, couponsDus, dollarsDehors,
+    detteMax: couponsDus + dollarsDehors * meilleurTaux,
+    nAvec: groupes.avec.length, nSans: groupes.sans.length,
+    rythmeAvec: moyenne(groupes.avec), rythmeSans: moyenne(groupes.sans),
+    // Trois clients de chaque côté : en dessous, l'écart n'est que du bruit.
+    concluant: groupes.avec.length >= 3 && groupes.sans.length >= 3
+  };
+}
+function renderLoyaltyReport(){
+  const el = $('#loyaltyReport');
+  if(!el) return;
+  const r = computeLoyaltyReport();
+  // Rien à dire tant que le programme n'a pas servi.
+  if(!r.remises && !r.dollarsDehors && !r.couponsDus){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  let verdict;
+  if(!r.concluant){
+    verdict = escapeHtml(t('loySmall'));
+  } else {
+    const ecart = r.rythmeSans > 0 ? (r.rythmeAvec / r.rythmeSans - 1) * 100 : 0;
+    const pct = '<b>' + (ecart>=0?'+':'') + ecart.toFixed(0) + '\u00a0%</b>';
+    verdict = t(ecart >= 0 ? 'loyVerdictUp' : 'loyVerdictDown').replace('{p}', pct);
+  }
+  const ligne = (k,v,sub) => `
+      <div class="loy-row"><span class="k">${escapeHtml(k)}</span>
+        <span class="v">${escapeHtml(v)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span></div>`;
+  const rythme = n => t('loyRate').replace('{n}', n.toFixed(1).replace('.', ','));
+
+  el.innerHTML = `
+    <h3>${escapeHtml(t('loyTitle'))}</h3>
+    ${ligne(t('loyDiscounts'), fmtMoney(r.remises))}
+    ${ligne(t('loyOutstanding'), r.dollarsDehors + ' $',
+            t('loyOwed').replace('{v}', fmtMoney(Math.round(r.detteMax))))}
+    ${ligne(t('loyWith'),  rythme(r.rythmeAvec),  t('loyClients').replace('{n}', r.nAvec))}
+    ${ligne(t('loyWithout'), rythme(r.rythmeSans), t('loyClients').replace('{n}', r.nSans))}
+    <div class="loy-verdict">${verdict}</div>`;
+}
+
 function renderStats(){
   const s = computeStats();
   // Comptés une fois, à la première ouverture des stats ; ensuite instantané.
@@ -2641,18 +2942,53 @@ function renderStats(){
   countUp($('#statAvg'), s.avgBasket, countMoney, sd);
   countUp($('#statPct'), s.pctMargin, countPct, sd);
   renderChart(s.buckets);
+  renderLoyaltyReport();
+}
+
+// Le vendeur ne voit que les coupons réellement utilisables sur cette commande :
+// ceux du client, pas encore consommés, dont le minimum d'achat est atteint.
+function selectedCouponValue(){
+  const sel = $('#f_coupon');
+  if(!sel || !sel.value) return 0;
+  const c = availableCoupons($('#f_clientSelect').value).find(x => x.id === sel.value);
+  return c ? (Number(c.value)||0) : 0;
+}
+function buildCouponSelect(order){
+  const sel = $('#f_coupon');
+  const zone = $('#couponField');
+  const hint = $('#couponHint');
+  const clientId = $('#f_clientSelect').value;
+  if(!clientId || clientId === '__new__'){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
+
+  const gross = (parseFloat($('#f_unitPrice').value)||0) * (parseInt($('#f_qty').value)||1);
+  // Le coupon déjà posé sur cette commande reste proposé, même s'il est « consommé ».
+  const mine = clientCoupons(clientId).filter(c => !couponUsed(c.id) || (order && order.couponId === c.id));
+  if(!mine.length){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
+
+  const usable = mine.filter(c => gross >= (Number(c.min)||0));
+  const blocked = mine.filter(c => gross < (Number(c.min)||0));
+  zone.style.display = 'block';
+  sel.innerHTML = `<option value="">${escapeHtml(t('couponNone'))}</option>` +
+    usable.map(c => `<option value="${escapeHtml(c.id)}" ${order && order.couponId===c.id ? 'selected' : ''}>−${fmtMoney(c.value)}</option>`).join('');
+  hint.textContent = blocked.length
+    ? t('couponHintTooSmall').replace('{value}', fmtMoney(blocked[0].value)).replace('{min}', fmtMoney(blocked[0].min))
+    : '';
 }
 
 function updateMarginPreview(){
   const qty = parseInt($('#f_qty').value)||1;
   const uc = parseFloat($('#f_unitCost').value)||0;
   const up = parseFloat($('#f_unitPrice').value)||0;
-  const totalCost = uc*qty, totalPrice = up*qty, margin = totalPrice-totalCost;
+  const discount = selectedCouponValue();
+  const totalCost = uc*qty, gross = up*qty;
+  const totalPrice = Math.max(0, gross - discount);
+  const margin = totalPrice-totalCost;
   const mult = totalCost>0 ? (totalPrice/totalCost) : 0;
   const paid = parseFloat($('#f_paid').value) || 0;
   const remaining = Math.max(totalPrice - paid, 0);
   $('#marginPreview').innerHTML =
     `${t('totalCostLabel')} : ${fmtMoney(totalCost)} &nbsp;·&nbsp; ${t('totalSaleLabel')} : ${fmtMoney(totalPrice)}<br>` +
+    (discount > 0 ? `${t('couponApplied').replace('{value}', fmtMoney(discount))}<br>` : '') +
     `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
     `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
     (paid > 0
@@ -2683,6 +3019,7 @@ function openSheet(order, presetClientId, prefill){
   // Sans ça, rouvrir une commande remettait l'acompte déjà encaissé à zéro.
   $('#f_paid').value = order ? (order.paidAmount || '') : '';
   buildStatusSelect($('#f_status'), order ? order.status : 'nouveau');
+  buildCouponSelect(order);
   updateMarginPreview();
 
   // L'expédition ne concerne qu'une commande déjà créée.
@@ -2805,6 +3142,11 @@ $('#f_qty').addEventListener('input', updateMarginPreview);
 $('#f_unitCost').addEventListener('input', updateMarginPreview);
 $('#f_unitPrice').addEventListener('input', updateMarginPreview);
 $('#f_paid').addEventListener('input', updateMarginPreview);
+$('#f_coupon').addEventListener('change', updateMarginPreview);
+['#f_unitPrice','#f_qty'].forEach(sel => $(sel).addEventListener('input', ()=>{
+  buildCouponSelect(editingId ? orders.find(o=>o.id===editingId) : null);
+  updateMarginPreview();
+}));
 
 $('#searchInput').addEventListener('input', (e)=>{ searchTerm = e.target.value; renderList(); });
 $('#clientSearchInput').addEventListener('input', renderClients);
@@ -2865,7 +3207,9 @@ form.addEventListener('submit', async (e)=>{
                  note:$('#f_note').value.trim(),
                  carrier:$('#f_carrier').value.trim(),
                  tracking:$('#f_tracking').value.trim(),
-                 eta:$('#f_eta').value || '' };
+                 eta:$('#f_eta').value || '',
+                 couponId:$('#f_coupon').value || '',
+                 discount:selectedCouponValue() };
   if(pendingPhoto){ data.photo = pendingPhoto.data; data.photoType = pendingPhoto.type; }
   if(editingId){
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
@@ -2915,7 +3259,7 @@ function clientOrderCard(o){
         </div>
         ${trail}
         <div class="card-bottom" style="margin-top:6px;">
-          <div class="date secret">${t('clientSideLabel')} : ${fmtMoney(orderTotalPrice(o))}</div>
+          <div class="date secret">${t('clientSideLabel')} : ${fmtMoney(orderNetPrice(o))}</div>
           <div class="margin private ${orderMargin(o)>=0?'pos':'neg'}">${t('proSideLabel')} : ${orderMargin(o)>=0?'+':''}${fmtMoney(orderMargin(o))}</div>
         </div>
       </div>`;
@@ -2949,6 +3293,25 @@ $('#clientOrdersList').addEventListener('click', (e)=>{
   closeClientSheet();
   openSheet(order);
 });
+
+// Le solde en Dollars révèle ce que ce client a dépensé : il se cache en mode
+// discret, comme les marges.
+function renderClientLoyalty(clientId){
+  const el = $('#clientLoyalty');
+  if(!el) return;
+  const solde = clientDollars(clientId);
+  const coupons = availableCoupons(clientId);
+  if(!solde && !coupons.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="loyalty-box private">
+      <span class="loyalty-label">${escapeHtml(t('dollarsBalance'))}</span>
+      <span class="ds-amount loyalty-value"><span class="ds-coin">$</span>${solde}</span>
+      ${coupons.length ? `<div class="loyalty-coupons">${coupons.map(c =>
+        `<span class="coupon-chip">−${fmtMoney(c.value)} <span class="min">${t('couponMin').replace('{min}', fmtMoney(c.min))}</span></span>`
+      ).join('')}</div>` : ''}
+    </div>`;
+}
 
 function renderClientStatsSummary(clientId){
   const el = $('#clientStatsSummary');
@@ -3057,6 +3420,7 @@ function openClientSheet(id){
   }
   if(c){
     renderClientStatsSummary(id);
+    renderClientLoyalty(id);
     renderClientOrders(id);
   } else {
     $('#clientStatsSummary').style.display = 'none';
@@ -3718,9 +4082,9 @@ function buildDataSnapshot(){
   const active = orders.filter(o => o.status !== 'livre' && o.status !== 'annule');
   const valid = orders.filter(o => o.status !== 'annule');
   const margin = valid.reduce((s,o)=>s+orderMargin(o),0);
-  const revenue = valid.reduce((s,o)=>s+orderTotalPrice(o),0);
+  const revenue = valid.reduce((s,o)=>s+orderNetPrice(o),0);
   const pending = orders.filter(o => o.status==='nouveau' || o.status==='devis');
-  const pendingAmount = pending.reduce((s,o)=>s+orderTotalPrice(o),0);
+  const pendingAmount = pending.reduce((s,o)=>s+orderNetPrice(o),0);
   const delivered = orders.filter(o => o.status === 'livre').length;
 
   const now = Date.now();
