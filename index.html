@@ -300,6 +300,10 @@
      ça disparaît. Un flou à côté du mot « Marge » en dit déjà trop, et attire
      l'œil. En mode discret, l'app peut être filmée sans rien révéler. */
   html[data-discreet="1"] .private{ display:none !important; }
+  /* Contrepartie : quand le badge « doit X € » disparaît d'une fiche client,
+     un badge neutre prend sa place, sinon la carte reste nue à l'écran. */
+  .only-discreet{ display:none; }
+  html[data-discreet="1"] .only-discreet{ display:block; }
 
   /* --- Les Dollars : même identité que l'icône de l'app --- */
   .ds-coin{
@@ -2060,15 +2064,17 @@ function showConfirm(message){
 }
 
 // ================= Programme de fidélité — les Dollars =================
-// Barème arrêté avec Massif, décrit dans CLAUDE.md. Le taux s'améliore avec la
-// patience ; les minimums d'achat empêchent qu'une remise dépasse ~15 % d'une
-// commande. Ne pas modifier sans mesurer ce que ça dévalue chez les clients.
+// Barème requalifié pour le gros, décrit dans CLAUDE.md. Il n'est pas fait pour
+// remercier un achat, mais pour avantager celui qui revient et qui commande
+// gros : le taux va de 4 % à 9 %, et le minimum d'achat de chaque coupon met
+// mécaniquement les gros paliers hors de portée d'un acheteur au détail.
+// Ne pas modifier sans mesurer ce que ça dévalue chez les clients.
 const LOYALTY_TIERS = [
-  { dollars:100,  value:5,   min:50   },
-  { dollars:300,  value:18,  min:120  },
-  { dollars:600,  value:42,  min:250  },
-  { dollars:1200, value:90,  min:600  },
-  { dollars:2500, value:200, min:1350 }
+  { dollars:400,  value:16,  min:300  },
+  { dollars:1000, value:55,  min:400  },
+  { dollars:2000, value:130, min:900  },
+  { dollars:3500, value:260, min:1800 },
+  { dollars:5000, value:450, min:3000 }
 ];
 
 // Le solde ne se stocke jamais : il se recalcule, donc il ne peut pas dériver.
@@ -2482,13 +2488,14 @@ function renderClients(){
         <div class="card-top">
           <div class="client">${escapeHtml(c.name)}</div>
           ${due > 0
-            ? `<div class="badge-due">${t('owesLabel')} ${fmtMoney(due)}</div>`
+            ? `<div class="badge-due private">${t('owesLabel')} ${fmtMoney(due)}</div>
+               <div class="badge only-discreet" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`
             : `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`}
         </div>
         <div class="card-mid">${escapeHtml(c.contact||t('noContact'))}</div>
         <div class="card-bottom">
           <div class="date">${c.address?escapeHtml(c.address):''}</div>
-          <div class="margin ${s.margin>=0?'pos':'neg'}">${s.margin>=0?'+':''}${fmtMoney(s.margin)}</div>
+          <div class="margin private ${s.margin>=0?'pos':'neg'}">${s.margin>=0?'+':''}${fmtMoney(s.margin)}</div>
         </div>
       </div>`;
   }).join('');
@@ -2548,7 +2555,7 @@ function couponRequestCard(r, name){
         <div class="card-mid" style="margin-top:6px;">
           <span class="coupon-chip">−${fmtMoney(value)} <span class="min">${t('couponMin').replace('{min}', fmtMoney(min))}</span></span>
         </div>
-        ${assez ? '' : `<div class="due-line" style="color:var(--danger);">${escapeHtml(t('exchangeTooPoor'))}</div>`}
+        ${assez ? '' : `<div class="card-mid" style="color:var(--danger); margin-top:6px;">${escapeHtml(t('exchangeTooPoor'))}</div>`}
         <div class="request-actions">
           <button type="button" class="req-reject" data-action="reject">${t('exchangeRefuse')}</button>
           <button type="button" class="req-validate" data-action="grant" ${assez ? '' : 'disabled style="opacity:.45;"'}>${t('exchangeGrant')}</button>
@@ -2557,16 +2564,23 @@ function couponRequestCard(r, name){
 }
 
 async function grantCoupon(req){
+  // Une demande déposée sous un barème précédent référence un palier qui
+  // n'existe plus. Plutôt que d'échouer sans rien dire, on honore ce que le
+  // client avait sous les yeux au moment de demander : la demande porte sa
+  // propre valeur et son propre minimum.
   const tier = tierFor(req.dollars);
-  if(!tier) return false;
-  if(clientDollars(req.clientId) < tier.dollars) return false;
+  const dollars = Number(req.dollars) || 0;
+  const value = tier ? tier.value : Number(req.value) || 0;
+  const min = tier ? tier.min : Number(req.min) || 0;
+  if(!dollars || !value) return false;
+  if(clientDollars(req.clientId) < dollars) return false;
   const c = clientById(req.clientId);
   if(!c) return false;
   const coupon = {
     id: genToken().slice(0,12),
-    dollars: tier.dollars,
-    value: tier.value,
-    min: tier.min,
+    dollars: dollars,
+    value: value,
+    min: min,
     createdAt: Date.now()
   };
   const list = (Array.isArray(c.coupons) ? c.coupons : []).concat([coupon]);

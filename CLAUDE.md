@@ -155,21 +155,40 @@ livraison estimée.
 
 Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
 des coupons de remise dans une boutique en libre-service de son espace.
-Barème arrêté le 3 septembre 2026, **à ne pas modifier à la légère** : dévaluer
-des Dollars déjà accumulés se voit et se paie en confiance.
 
-| Dollars | Coupon | Valable dès | Ce qu'on rend |
-|---|---|---|---|
-| 100 | 5 € | 50 € d'achat | 5 % |
-| 300 | 18 € | 120 € d'achat | 6 % |
-| 600 | 42 € | 250 € d'achat | 7 % |
-| 1 200 | 90 € | 600 € d'achat | 7,5 % |
-| 2 500 | 200 € | 1 350 € d'achat | 8 % |
+**Ce programme n'est pas un remerciement, c'est un tri.** Il sert à avantager
+les meilleurs clients et ceux qui commandent en gros, pas l'acheteur de passage.
+Barème requalifié le 3 septembre 2026 après un premier jet calibré pour du
+détail, **à ne pas modifier à la légère** : dévaluer des Dollars déjà accumulés
+se voit et se paie en confiance. La requalification a pu se faire sans dégât
+parce qu'il n'y avait encore que des clients de test — ce ne sera plus vrai.
 
-Le taux s'améliore avec la patience, pour pousser à accumuler. Les minimums des
-deux plus gros coupons sont calés pour qu'une remise ne dépasse jamais **15 % du
-total** de la commande où elle s'applique : sans ça, un coupon gagné sur une
-grosse commande viendrait ruiner la marge d'une petite.
+| Dollars | Coupon | Valable dès | Ce qu'on rend | Remise au minimum |
+|---|---|---|---|---|
+| 400 | 16 € | 300 € d'achat | 4 % | 5,3 % |
+| 1 000 | 55 € | 400 € d'achat | 5,5 % | 13,8 % |
+| 2 000 | 130 € | 900 € d'achat | 6,5 % | 14,4 % |
+| 3 500 | 260 € | 1 800 € d'achat | 7,4 % | 14,4 % |
+| 5 000 | 450 € | 3 000 € d'achat | 9 % | 15 % |
+
+**Deux leviers, et ils tirent dans le même sens.** Le taux passe de 4 % à 9 % :
+la patience rapporte plus du double. Et le minimum d'achat de chaque coupon met
+les gros paliers **hors de portée d'un acheteur au détail** — un client qui
+commande à 400 € n'utilisera jamais le coupon à 450 €, quoi qu'il accumule.
+Ce n'est pas un effet de bord, c'est le mécanisme.
+
+Aucune remise ne dépasse **15 % du total** de la commande où elle s'applique :
+sans ça, un coupon gagné sur une grosse commande viendrait ruiner la marge d'une
+petite. C'est cette règle qui fixe les minimums, et donc qui plafonne la valeur
+du plus gros coupon à ce qu'une commande réelle peut absorber. Le jour où les
+paniers montent, on peut ajouter un palier au-dessus ; **ajouter, jamais
+resserrer**.
+
+Un coupon **déjà accordé fige ses conditions** (`dollars`, `value`, `min` sont
+recopiés dans la fiche du client) : changer le barème ne dévalue rien
+rétroactivement. Une demande d'échange encore en attente, elle, référence un
+palier qui peut avoir disparu — `grantCoupon()` retombe alors sur la valeur
+portée par la demande, pour honorer ce que le client avait sous les yeux.
 
 **Les six règles :**
 
@@ -226,6 +245,16 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
   en dit déjà trop et attire l'œil : pour une vidéo, il faut que ça n'existe pas
   à l'écran. Choix mémorisé, bouton allumé tant que le mode est actif. Les noms,
   produits, statuts, dates et compteurs restent lisibles.
+
+  **Le piège du flou oublié** : la classe `.margin` (comme `.badge-due`) est
+  seulement *floutée* par défaut ; c'est le balisage `.private` posé à côté qui
+  la fait disparaître. Oublier le `.private` sur une occurrence donne un rendu
+  qui a l'air protégé et ne l'est pas — la liste des clients a vécu ça, elle
+  affichait la marge générée et le solde dû en flou. **À chaque nouvel affichage
+  d'un montant, vérifier lequel des deux niveaux s'applique**, et ne jamais se
+  fier au fait que « ça a l'air flouté ». Quand un élément `.private` laisse un
+  trou (le badge « doit X € » d'une fiche client), un `.only-discreet` prend sa
+  place : visible seulement en mode discret, il évite la carte nue.
 - Effet tactile « liquid glass » sur tout élément cliquable : enfoncement,
   onde depuis le point de contact, rebond au relâchement.
 - Finitions : bordures 0.5px, chiffres tabulaires, flou avec saturation,

@@ -462,7 +462,12 @@
   }
   .shop-info{ flex:1; min-width:0; }
   .shop-value{ font-family:var(--font-display); font-weight:700; font-size:17px; letter-spacing:-0.025em; }
-  .shop-min{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px; letter-spacing:-0.005em; }
+  /* Le minimum tient sur une ligne : sur les gros paliers (« dès 3 000 € de
+     commande ») il se coupait en deux et la boutique paraissait bâclée.
+     C'est le compteur « il te manque » qui cède la place, pas lui. */
+  .shop-min{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px;
+             letter-spacing:-0.005em; white-space:nowrap; }
+
   .shop-btn{
     flex-shrink:0; min-height:38px; padding:9px 15px; border-radius:12px; border:none;
     background:linear-gradient(162deg, var(--accent-bright), var(--accent) 72%);
@@ -472,7 +477,7 @@
     transition:transform .44s var(--spring);
   }
   .shop-btn.is-pressed{ transform:scale(.96); }
-  .shop-missing{ flex-shrink:0; font-size:12px; color:var(--text-ghost); letter-spacing:-0.005em; text-align:right; }
+  .shop-missing{ flex-shrink:1; min-width:0; font-size:12px; color:var(--text-ghost); letter-spacing:-0.005em; text-align:right; }
   .coupon-chip{
     display:inline-flex; align-items:center; gap:7px; margin:0 6px 6px 0;
     padding:7px 12px; border-radius:100px; font-size:13px; font-weight:600;
@@ -1418,11 +1423,11 @@ function listenOrders(){
 // des commandes livrées moins les coupons déjà accordés : rien n'est stocké,
 // donc rien ne peut dériver.
 const LOYALTY_TIERS = [
-  { dollars:100,  value:5,   min:50   },
-  { dollars:300,  value:18,  min:120  },
-  { dollars:600,  value:42,  min:250  },
-  { dollars:1200, value:90,  min:600  },
-  { dollars:2500, value:200, min:1350 }
+  { dollars:400,  value:16,  min:300  },
+  { dollars:1000, value:55,  min:400  },
+  { dollars:2000, value:130, min:900  },
+  { dollars:3500, value:260, min:1800 },
+  { dollars:5000, value:450, min:3000 }
 ];
 function orderDiscount(o){ return Number(o.discount) || 0; }
 function orderNetPrice(o){
