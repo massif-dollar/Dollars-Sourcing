@@ -1659,12 +1659,31 @@ async function init(){
 // Un écouteur qui échoue en silence laisse le client devant une page blanche :
 // on retient l'état de chaque flux et on le dit clairement à l'écran.
 let ordersLoaded = false, pendingLoaded = false, loadError = '';
+let clientUnsub = null;
 function noteError(err){
   loadError = (err && err.code === 'permission-denied') ? 'denied' : 'net';
   console.error('[portail client] lecture refusée :', err && err.code, err && err.message);
   renderHistory();
 }
+function listenClientDoc(){
+  if(clientUnsub) return;
+  // La fiche est lue une fois pour ouvrir la porte, mais elle bouge après : le
+  // vendeur accorde un coupon, et le solde doit baisser sans que le client ait
+  // à recharger la page. On l'écoute donc en direct une fois entré.
+  clientUnsub = db.collection('clients').doc(clientId).onSnapshot(doc=>{
+    if(!doc.exists) return;
+    clientData = Object.assign({id:doc.id}, doc.data());
+    updateGreeting();
+    // Seulement si l'onglet est ouvert : sinon le compteur du solde se
+    // consommerait ici et ne monterait plus quand le client y arrive.
+    if(currentTab === 'dollars') renderDollars();
+  }, err=>{
+    // Un écouteur muet laisse une page qui ment : au moins la console parle.
+    console.error('[portail client] fiche client :', err && err.code, err && err.message);
+  });
+}
 function listenOrders(){
+  listenClientDoc();
   if(ordersUnsub || pendingUnsub) return;   // jamais deux fois : enterApp peut être rappelé
   ordersUnsub = db.collection('orders').where('clientId','==',clientId).onSnapshot(snap=>{
     ordersLoaded = true; loadError = '';

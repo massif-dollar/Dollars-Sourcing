@@ -403,13 +403,24 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    message, pas d'erreur visible, juste du vide. Tout `onSnapshot` doit avoir
    son second argument, et l'écran doit distinguer trois états : en cours de
    chargement, vide, et accès refusé.
-10. **Le portail client n'est pas connecté à Firebase.** Il s'identifie avec le
+10. **Une lecture unique (`.get()`) n'est pas un écouteur.** La fiche du client
+   était lue une seule fois, à l'ouverture du portail, pour vérifier son lien.
+   Le vendeur accordait un coupon, Firestore était à jour, le côté vendeur
+   aussi — mais la page du client gardait la fiche d'avant : son solde ne
+   baissait pas et son coupon n'apparaissait pas tant qu'il ne rechargeait pas
+   tout. La fiche est désormais **écoutée en direct** après l'entrée
+   (`listenClientDoc()`), le `.get()` initial ne servant plus qu'à ouvrir la
+   porte. Règle : **toute donnée que l'autre côté peut modifier doit être
+   écoutée, jamais lue une fois.** Le rendu du solde n'est rappelé que si
+   l'onglet Dollars est ouvert, sinon le compteur se consommerait hors écran et
+   ne monterait plus quand le client y arrive.
+11. **Le portail client n'est pas connecté à Firebase.** Il s'identifie avec le
    lien (id + token) et le code à 6 chiffres, vérifiés dans le navigateur.
    Firestore le voit comme un visiteur anonyme : toute lecture dont il a besoin
    (`clients` par id, `orders`, `pendingOrders`) doit rester ouverte dans les
    règles, sinon le client ne voit plus ses commandes. Voir la note de sécurité
    en bas de `firestore-rules.txt`.
-11. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+12. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
