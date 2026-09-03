@@ -2089,9 +2089,11 @@ function clientCoupons(clientId){
   return (c && Array.isArray(c.coupons)) ? c.coupons : [];
 }
 // Un coupon est consommé dès qu'une commande le référence : rien à marquer,
-// rien à désynchroniser si on corrige une commande.
+// rien à désynchroniser si on corrige une commande. Une commande annulée fait
+// exception : le client n'a rien payé et n'a rien gagné, il serait injuste de
+// lui brûler son coupon au passage. Il repart dans sa réserve.
 function couponUsed(couponId){
-  return orders.some(o => o.couponId === couponId && !o.deletedAt);
+  return orders.some(o => o.couponId === couponId && !o.deletedAt && o.status !== 'annule');
 }
 function clientDollars(clientId){
   const gagnes = orders.filter(o => o.clientId === clientId).reduce((sum,o) => sum + dollarsEarned(o), 0);

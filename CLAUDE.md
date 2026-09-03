@@ -111,10 +111,16 @@ d'affichage, elle ne justifie pas d'ouvrir une écriture publique. Contrepartie
 assumée : depuis un autre appareil, son rangement ne le suit pas.
 
 À sa toute première visite, le client est accueilli par une carte qui explique
-l'espace : lien personnel protégé par son code, et proposition d'activer Face ID
-pour les fois suivantes (seulement si l'appareil le permet et que ce n'est pas
-déjà fait). Elle se ferme d'un bouton et ne revient plus (`ds_client_welcomed_<id>`
-en localStorage).
+l'espace : lien personnel protégé par son code, programme de fidélité (1 € = 1
+Dollar), et proposition d'activer Face ID pour les fois suivantes (seulement si
+l'appareil le permet et que ce n'est pas déjà fait). Elle se ferme d'un bouton et
+ne revient plus (`ds_client_welcomed_<id>` en localStorage).
+
+Les clients **déjà venus** n'ont jamais vu cet accueil parler des Dollars : ils
+reçoivent une annonce dédiée, une seule fois (`ds_client_dollars_intro_<id>`),
+avec un bouton qui les emmène directement dans la boutique. **Jamais deux cartes
+à la fois** : un nouveau client a l'annonce marquée comme vue d'avance, puisque
+sa carte de bienvenue en parle déjà.
 
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
@@ -193,7 +199,8 @@ portée par la demande, pour honorer ce que le client avait sous les yeux.
 **Les six règles :**
 
 1. **Un Dollar par euro réellement payé**, crédité au passage à « Livré ». Une
-   commande annulée ne rapporte rien.
+   commande annulée ne rapporte rien — et **rend le coupon** qu'elle portait :
+   le client n'a rien payé, il serait injuste de le lui brûler.
 2. **Les Dollars se gagnent sur le montant après remise** — sinon la cagnotte
    s'auto-alimenterait sur de l'argent jamais dépensé.
 3. **Un seul coupon par commande.**
@@ -204,6 +211,34 @@ portée par la demande, pour honorer ce que le client avait sous les yeux.
 6. **Le vendeur valide chaque échange.** Le client choisit librement dans la
    boutique, l'échange arrive dans l'onglet « Demandes », rien ne sort sans un
    geste du vendeur.
+
+### Ce que le programme coûte vraiment
+
+La question s'est posée : un client qui enchaîne les petites commandes pour
+encaisser le coupon d'entrée, est-ce une fuite ? **Non, et c'est l'inverse.**
+
+Le coût est **borné par construction**, pour trois raisons qui s'empilent : un
+coupon s'achète en Dollars, les Dollars ne viennent que d'argent réellement
+payé, et ils se gagnent **après** remise — la cagnotte ne se nourrit donc jamais
+d'elle-même. Un palier qui rend `r` ne peut pas coûter plus de `r / (1 + r)` du
+chiffre d'affaires brut, quoi que fasse le client :
+
+| Palier | Ce qu'on rend | Coût maximum du CA |
+|---|---|---|
+| 400 | 4 % | 3,85 % |
+| 1 000 | 5,5 % | 5,21 % |
+| 2 000 | 6,5 % | 6,10 % |
+| 3 500 | 7,4 % | 6,91 % |
+| 5 000 | 9 % | 8,26 % |
+
+Simulé sur 400 commandes avec un client rationnel (il prend à chaque fois le
+meilleur coupon qu'il peut utiliser) : **3,8 % du CA** pour celui qui commande à
+300 €, **8,2 %** pour celui qui commande à 3 000 € et thésaurise. Le « spammeur »
+de petites commandes est donc le client **le moins cher** du programme, et le
+gros client patient le plus cher — ce qui est exactement l'intention.
+
+**Il n'y a donc aucun plafond d'utilisation à ajouter** : le plafond est déjà là,
+il est mathématique. Le seul vrai levier reste le taux du haut du barème.
 
 **Le solde ne se stocke jamais** : il se recalcule à partir des commandes
 livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une

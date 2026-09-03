@@ -749,6 +749,10 @@
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
           <span data-i18n="cwPrivate">Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.</span>
         </div>
+        <div class="welcome-point">
+          <span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span>
+          <span data-i18n="cwDollars">Chaque euro dépensé te rapporte <b>1 Dollar</b>, à échanger contre des remises dans l'onglet « Mes Dollars ».</span>
+        </div>
         <div class="welcome-point" id="cwBioPoint" style="display:none;">
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg></span>
           <span data-i18n="cwBio">La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.</span>
@@ -757,6 +761,35 @@
       <div class="welcome-actions">
         <button type="button" class="btn-primary" id="cwBioBtn" style="display:none;" data-i18n="cwBioBtn">Activer Face ID</button>
         <button type="button" class="cw-dismiss" id="cwDismiss" data-i18n="cwOk">J'ai compris</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Les clients déjà venus n'ont jamais vu l'accueil parler des Dollars :
+       ils reçoivent l'annonce une fois, et une seule. -->
+  <div class="welcome" id="dollarsIntro" style="display:none;">
+    <div class="welcome-card">
+      <span class="welcome-orb"></span>
+      <div class="welcome-tile">$</div>
+      <h2 data-i18n="diTitle">Nouveau : les Dollars</h2>
+      <p class="welcome-lead" data-i18n="diLead">La maison a sa monnaie. Tu la cumules en commandant, et tu l'échanges quand tu veux contre une remise.</p>
+      <div class="welcome-points">
+        <div class="welcome-point">
+          <span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span>
+          <span data-i18n="diEarn"><b>1 € dépensé = 1 Dollar</b>, crédité dès que ta commande est livrée.</span>
+        </div>
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 11a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></span>
+          <span data-i18n="diSpend">Dans l'onglet <b>Mes Dollars</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.</span>
+        </div>
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg></span>
+          <span data-i18n="diKeep">Ils n'expirent jamais. Un coupon par commande.</span>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn-primary" id="diShopBtn" data-i18n="diBtn">Voir la boutique</button>
+        <button type="button" class="cw-dismiss" id="diDismiss" data-i18n="diLater">Plus tard</button>
       </div>
     </div>
   </div>
@@ -870,6 +903,13 @@ const I18N = {
     cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
     cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
     cwBioBtn:'Activer Face ID', cwOk:"J'ai compris", cwBioDone:'Face ID activé.',
+    cwDollars:'Chaque euro dépensé te rapporte <b>1 Dollar</b>, à échanger contre des remises dans l\u2019onglet « Mes Dollars ».',
+    diTitle:'Nouveau : les Dollars',
+    diLead:'La maison a sa monnaie. Tu la cumules en commandant, et tu l\u2019échanges quand tu veux contre une remise.',
+    diEarn:'<b>1 € dépensé = 1 Dollar</b>, crédité dès que ta commande est livrée.',
+    diSpend:'Dans l\u2019onglet <b>Mes Dollars</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.',
+    diKeep:'Ils n\u2019expirent jamais. Un coupon par commande.',
+    diBtn:'Voir la boutique', diLater:'Plus tard',
     loadingOrders:'Chargement de tes commandes...',
     errLoadTitle:"Tes commandes ne s'affichent pas",
     errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
@@ -931,6 +971,13 @@ const I18N = {
     cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
     cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
     cwBioBtn:'Turn on Face ID', cwOk:'Got it', cwBioDone:'Face ID is on.',
+    cwDollars:'Every euro you spend earns you <b>1 Dollar</b>, to trade for discounts in the “My Dollars” tab.',
+    diTitle:'New: Dollars',
+    diLead:'The house has its own currency. You build it up by ordering, and trade it for a discount whenever you like.',
+    diEarn:'<b>1 € spent = 1 Dollar</b>, credited as soon as your order is delivered.',
+    diSpend:'In the <b>My Dollars</b> tab, you pick your coupon. The longer you wait, the more it pays.',
+    diKeep:'They never expire. One coupon per order.',
+    diBtn:'See the shop', diLater:'Later',
     loadingOrders:'Loading your orders...',
     errLoadTitle:'Your orders are not showing',
     errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
@@ -996,7 +1043,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   $('#langCode').textContent = currentLang.toUpperCase();
-  if(clientData){ updateGreeting(); renderWelcome(); }
+  if(clientData){ updateGreeting(); renderWelcome(); renderDollarsIntro(); }
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
@@ -1298,6 +1345,29 @@ function dismissWelcome(){
   $('#clientWelcome').style.display = 'none';
 }
 $('#cwDismiss').addEventListener('click', dismissWelcome);
+
+// Annonce des Dollars : une seule fois, et jamais en même temps que l'accueil.
+// Un nouveau client apprend le programme dans la carte de bienvenue, qui en
+// parle déjà : l'annonce est donc marquée comme vue d'avance pour lui.
+function dollarsIntroKey(){ return 'ds_client_dollars_intro_' + clientId; }
+function dollarsIntroSeen(){
+  try{ return localStorage.getItem(dollarsIntroKey()) === '1'; }catch(e){ return false; }
+}
+function markDollarsIntroSeen(){
+  try{ localStorage.setItem(dollarsIntroKey(), '1'); }catch(e){}
+}
+function renderDollarsIntro(){
+  const box = $('#dollarsIntro');
+  if(!box) return;
+  if(!welcomeSeen()){ markDollarsIntroSeen(); box.style.display = 'none'; return; }
+  box.style.display = dollarsIntroSeen() ? 'none' : 'block';
+}
+function dismissDollarsIntro(){
+  markDollarsIntroSeen();
+  $('#dollarsIntro').style.display = 'none';
+}
+$('#diDismiss').addEventListener('click', dismissDollarsIntro);
+$('#diShopBtn').addEventListener('click', ()=>{ dismissDollarsIntro(); switchTab('dollars'); });
 $('#cwBioBtn').addEventListener('click', async ()=>{
   await registerClientBio();
   if(bioRegistered()){ showToast(t('cwBioDone')); dismissWelcome(); }
@@ -1309,6 +1379,7 @@ function enterApp(){
   $('#loadingScreen').style.display = 'none';
   $('#app').style.display = 'block';
   renderWelcome();
+  renderDollarsIntro();
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
 }
@@ -1436,7 +1507,8 @@ function orderNetPrice(o){
 function myCoupons(){
   return (clientData && Array.isArray(clientData.coupons)) ? clientData.coupons : [];
 }
-function couponUsed(id){ return myOrders.some(o => o.couponId === id); }
+// Une commande annulée rend son coupon : rien n'a été payé, rien n'est consommé.
+function couponUsed(id){ return myOrders.some(o => o.couponId === id && o.status !== 'annule'); }
 function myDollars(){
   const gagnes = myOrders.reduce((sum,o) =>
     sum + (o.status === 'livre' ? Math.max(0, Math.floor(orderNetPrice(o))) : 0), 0);
