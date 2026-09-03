@@ -18,7 +18,12 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `index.html` — application pro (Massif et ses invités)
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
-- `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
+- `functions/api/ai.js` — proxy serveur vers l'API Anthropic sur Cloudflare
+  Pages (garde la clé cachée). Répond à `/api/ai`, le chemin se déduit de
+  l'emplacement du fichier.
+- `netlify/functions/ai.js` — le même proxy, version Netlify, gardé en secours.
+  L'app choisit le bon chemin d'après le nom de domaine : `/.netlify/functions/ai`
+  sur `*.netlify.app`, `/api/ai` partout ailleurs.
 - `firestore-rules.txt` — règles de sécurité. On l'ouvre, on sélectionne tout,
   on colle dans la console Firebase (Firestore Database → Règles → Publier).
   Publier des règles ne coûte aucun déploiement Netlify, et la console garde
@@ -62,6 +67,12 @@ passage payant : recopier une version publique de chaque commande (produit,
 statut, prix client, acompte, expédition, photo) dans une collection à part, et
 refermer `orders` complètement. Une demi-journée.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
+- `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` —
+  ce qu'il faut pour qu'« Ajouter à l'écran d'accueil » installe une vraie app :
+  fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
+  volontairement pas de manifeste** : son lien porte l'identifiant et le jeton du
+  client, et une adresse de départ fixe les effacerait. Les balises iOS lui
+  suffisent.
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
@@ -71,7 +82,11 @@ déploiement est un choix assumé.
 
 - **Backend** : Firebase Firestore (projet `dollar-sourcing`)
 - **Auth** : Google Sign-In. Propriétaire = `dollars.sourcing@gmail.com`
-- **Hébergement** : Netlify, déploiement depuis GitHub
+- **Hébergement** : Cloudflare Pages, déploiement depuis GitHub.
+  Le plan gratuit y autorise 500 constructions par mois et l'usage commercial,
+  là où Netlify plafonnait à une vingtaine de mises en production — c'est ce
+  qui a motivé le déménagement. `netlify/functions/ai.js` et `netlify.toml`
+  sont conservés : le site Netlify reste servable en secours.
 - **IA** : API Anthropic via la fonction Netlify, modèle `claude-sonnet-5`
 
 ### Multi-utilisateur
