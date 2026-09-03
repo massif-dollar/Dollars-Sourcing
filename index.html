@@ -1633,7 +1633,7 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
     fieldNewClientName:'Nom du nouveau client', fieldContact:'Contact (réseau, tél...)', fieldNewClientAddress:'Adresse de livraison',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldStatus:'Statut',
-    shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
+    statusSaved:'Statut enregistré : {status}', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
     fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)',
@@ -1745,7 +1745,7 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
     fieldNewClientName:'New client name', fieldContact:'Contact (social, phone...)', fieldNewClientAddress:'Delivery address',
     fieldProduct:'Product', fieldQty:'Quantity', fieldStatus:'Status',
-    shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
+    statusSaved:'Status saved: {status}', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
     fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)',
@@ -2667,13 +2667,33 @@ function updateStepper(status){
   $('#stepNext').disabled = idx===-1 || idx>=STATUS_FLOW.length-1;
 }
 
+// Changer de statut est une action à part entière : la flèche enregistre.
+// Un court délai regroupe les taps successifs en une seule écriture, et si la
+// base refuse, on remet le statut réel à l'écran plutôt que de laisser croire
+// à un changement qui n'a pas eu lieu.
+let stepperSaveTimer = null;
+function stepTo(status){
+  updateStepper(status);
+  if(!editingId) return;               // commande pas encore créée : rien à enregistrer
+  const orderId = editingId;
+  clearTimeout(stepperSaveTimer);
+  stepperSaveTimer = setTimeout(async ()=>{
+    const ok = await updateOrderDoc(orderId, { status });
+    if(ok){
+      showToast(t('statusSaved').replace('{status}', t(STATUS_META[status].key)));
+      return;
+    }
+    const o = orders.find(x => x.id === orderId);
+    if(o && editingId === orderId) updateStepper(o.status);
+  }, 450);
+}
 $('#stepPrev').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
-  if(idx>0) updateStepper(STATUS_FLOW[idx-1]);
+  if(idx>0) stepTo(STATUS_FLOW[idx-1]);
 });
 $('#stepNext').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
-  if(idx<STATUS_FLOW.length-1) updateStepper(STATUS_FLOW[idx+1]);
+  if(idx<STATUS_FLOW.length-1) stepTo(STATUS_FLOW[idx+1]);
 });
 
 $('#f_clientSelect').addEventListener('change', ()=>{
