@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte() { return request.auth != null; }
+
+    // --- Clients ---------------------------------------------------------
+    // Le portail lit UNE fiche, par son identifiant, pour afficher le prénom
+    // et vérifier le code. La liste complète reste réservée à l'app pro.
+    match /clients/{clientId} {
+      allow get: if true;
+      allow list, create, update, delete: if connecte();
+    }
+
+    // --- Commandes -------------------------------------------------------
+    // Le portail doit pouvoir lire les commandes de son client, sinon le
+    // client ne voit rien. Écriture réservée à l'app pro.
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create, update, delete: if connecte();
+    }
+
+    // --- Demandes envoyées par les clients --------------------------------
+    // Le portail en crée et relit les siennes ; seul le vendeur les valide
+    // ou les supprime.
+    match /pendingOrders/{requestId} {
+      allow read, create: if true;
+      allow update, delete: if connecte();
+    }
+
+    // --- Fournisseurs ----------------------------------------------------
+    // Partagés entre les comptes autorisés, jamais visibles publiquement.
+    match /suppliers/{supplierId} {
+      allow read, write: if connecte();
+    }
+
+    // --- Réglages du propriétaire (accès invités, mémoire de l'assistant) --
+    match /settings/{document} {
+      allow read, write: if connecte();
+    }
+
+    // --- Verrou par utilisateur (code PIN) --------------------------------
+    // Chacun ne touche qu'au sien : c'est ce qui permet aux invités
+    // de créer leur propre code.
+    match /userSettings/{uid} {
+      allow read, write: if connecte() && request.auth.uid == uid;
+    }
+
+    // Tout le reste est fermé.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

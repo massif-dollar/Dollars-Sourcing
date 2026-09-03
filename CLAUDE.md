@@ -19,7 +19,27 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
 - `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
-- `firestore-rules.txt` — règles de sécurité à copier dans la console Firebase
+- `firestore-rules.txt` — règles de sécurité. Le fichier ne contient **que** les
+  règles : on l'ouvre, on sélectionne tout, on colle dans la console Firebase
+  (Firestore Database → Règles → Publier). Aucun commentaire d'explication ne
+  doit y être ajouté hors du langage de règles, sinon on ne sait plus quoi
+  copier. Publier des règles ne coûte aucun déploiement Netlify.
+
+### Ce que les règles autorisent, et ce que ça coûte
+
+Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
+lien (id + token) et son code à 6 chiffres, vérifiés dans le navigateur.
+Firestore le voit donc comme un visiteur anonyme, et les lectures dont il a
+besoin restent ouvertes : `clients` par identifiant, `orders`, `pendingOrders`.
+
+**Conséquence à connaître** : un document de commande brut contient le prix
+d'achat et la marge, et une fiche client contient son code d'accès et son
+adresse. L'interface ne les montre jamais au client, mais qui connaît la
+structure de la base peut les lire. Le correctif propre, à faire avant tout
+passage payant : recopier une version publique de chaque commande (produit,
+statut, prix client, acompte, expédition, photo) dans une collection à part, et
+refermer `orders` complètement. Une demi-journée.
+- `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
@@ -45,6 +65,12 @@ Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
 6 chiffres. Le client peut envoyer une demande avec photo ; elle arrive dans
 l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
+
+À sa toute première visite, le client est accueilli par une carte qui explique
+l'espace : lien personnel protégé par son code, et proposition d'activer Face ID
+pour les fois suivantes (seulement si l'appareil le permet et que ce n'est pas
+déjà fait). Elle se ferme d'un bouton et ne revient plus (`ds_client_welcomed_<id>`
+en localStorage).
 
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
@@ -123,11 +149,27 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    L'onde de contact est un `<i>` avec un sélecteur prioritaire.
 6. **Dans une rangée de boutons**, le bouton principal doit être `flex:1`,
    sinon il prend 100% et écrase le bouton « Annuler ».
-7. **Crédits Netlify** : chaque déploiement en consomme. Deux comptes ont déjà
-   été épuisés. **Regrouper les modifications**, ne déployer qu'une fois par session.
+7. **Crédits Netlify** : seul un **déploiement de production** en consomme
+   (~15 crédits sur les 300 mensuels du plan gratuit, soit une vingtaine de mises
+   en ligne par mois). Les **previews de PR et les déploiements de branche sont
+   gratuits** : c'est là qu'il faut tester avant de fusionner. Deux comptes ont
+   déjà été épuisés — **regrouper les modifications**, ne fusionner qu'une fois
+   prêt. `netlify.toml` annule le build quand un commit ne touche qu'à la
+   documentation.
 8. **Les URLs se déduisent toutes seules** (`location.origin`) : ne jamais
    réintroduire d'adresse en dur, on a déjà changé d'hébergeur deux fois.
-9. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+9. **Un écouteur Firestore sans gestion d'erreur laisse une page blanche.**
+   Le portail client n'affichait rien quand la base refusait la lecture : pas de
+   message, pas d'erreur visible, juste du vide. Tout `onSnapshot` doit avoir
+   son second argument, et l'écran doit distinguer trois états : en cours de
+   chargement, vide, et accès refusé.
+10. **Le portail client n'est pas connecté à Firebase.** Il s'identifie avec le
+   lien (id + token) et le code à 6 chiffres, vérifiés dans le navigateur.
+   Firestore le voit comme un visiteur anonyme : toute lecture dont il a besoin
+   (`clients` par id, `orders`, `pendingOrders`) doit rester ouverte dans les
+   règles, sinon le client ne voit plus ses commandes. Voir la note de sécurité
+   en bas de `firestore-rules.txt`.
+11. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —

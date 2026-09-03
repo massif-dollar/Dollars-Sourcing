@@ -346,6 +346,57 @@
     to{ opacity:1; transform:none; }
   }
 
+  /* --- Accueil de première visite --- */
+  .welcome{ margin-bottom:20px; animation:helloIn .7s var(--ease-out) .18s both; }
+  .welcome-card{
+    position:relative; overflow:hidden;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:22px;
+    padding:24px 19px 20px; box-shadow:var(--raise-lg);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .welcome-orb{
+    position:absolute; top:-70px; right:-60px; width:200px; height:200px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    pointer-events:none; filter:blur(4px);
+    animation:welcomeOrb 14s var(--ease-io) infinite alternate;
+  }
+  @keyframes welcomeOrb{ from{ transform:scale(1) translate(0,0); } to{ transform:scale(1.16) translate(-10px,10px); } }
+  .welcome-tile{
+    position:relative; width:48px; height:48px; border-radius:16px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--on-accent);
+    background:linear-gradient(162deg, var(--accent-bright), var(--accent) 74%);
+    box-shadow:0 8px 22px var(--accent-soft);
+  }
+  .welcome h2{
+    position:relative; font-family:var(--font-display); font-size:21px; font-weight:700;
+    margin:0 0 8px; letter-spacing:-0.03em;
+  }
+  .welcome-lead{
+    position:relative; margin:0 0 16px; font-size:14.5px; line-height:1.6;
+    color:var(--text-muted); letter-spacing:-0.01em;
+  }
+  .welcome-points{ position:relative; display:flex; flex-direction:column; gap:11px; margin-bottom:18px; }
+  .welcome-point{ display:flex; gap:11px; align-items:flex-start; font-size:13.5px; line-height:1.5; color:var(--text-muted); letter-spacing:-0.01em; }
+  .welcome-point .dot{
+    width:26px; height:26px; border-radius:9px; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; color:var(--accent);
+    background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  .welcome-point .dot svg{ width:14px; height:14px; }
+  .welcome-point b{ color:var(--text); font-weight:600; }
+  .welcome-actions{ position:relative; display:flex; flex-direction:column; gap:4px; }
+  .cw-dismiss{
+    width:100%; min-height:44px; background:none; border:none; color:var(--text-faint);
+    font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer;
+    letter-spacing:-0.01em; border-radius:13px;
+    transition:transform .44s var(--spring), color .3s var(--ease-io);
+  }
+  .cw-dismiss:active{ transform:scale(.98); color:var(--text); }
+
+  .state-error .state-title{ color:var(--danger); font-weight:600; margin-bottom:5px; }
+
   /* --- Frise de suivi --- */
   .track{ margin:15px 0 3px; }
   .track-rail{
@@ -574,6 +625,29 @@
     <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
   </header>
 
+  <div class="welcome" id="clientWelcome" style="display:none;">
+    <div class="welcome-card">
+      <span class="welcome-orb"></span>
+      <div class="welcome-tile">$</div>
+      <h2 id="clientWelcomeTitle">Bienvenue</h2>
+      <p class="welcome-lead" data-i18n="cwIntro">Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.</p>
+      <div class="welcome-points">
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
+          <span data-i18n="cwPrivate">Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.</span>
+        </div>
+        <div class="welcome-point" id="cwBioPoint" style="display:none;">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg></span>
+          <span data-i18n="cwBio">La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.</span>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn-primary" id="cwBioBtn" style="display:none;" data-i18n="cwBioBtn">Activer Face ID</button>
+        <button type="button" class="cw-dismiss" id="cwDismiss" data-i18n="cwOk">J'ai compris</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary" id="summary" style="display:none;">
     <div class="summary-tile accent"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
     <div class="summary-tile"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
@@ -674,6 +748,15 @@ const I18N = {
     langTitle:'Langue', themeTitle:'Thème', loading:'Chargement...',
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
+    cwTitle:'Bienvenue {name}', cwTitleNoName:'Bienvenue',
+    cwIntro:'Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.',
+    cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
+    cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
+    cwBioBtn:'Activer Face ID', cwOk:"J'ai compris", cwBioDone:'Face ID activé.',
+    loadingOrders:'Chargement de tes commandes...',
+    errLoadTitle:"Tes commandes ne s'affichent pas",
+    errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
+    errLoadNet:'Connexion perdue. Vérifie ton réseau, ça se remettra tout seul.',
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
     tabHistory:'Mes commandes', tabOrder:'Nouvelle demande',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photo du produit',
@@ -718,6 +801,15 @@ const I18N = {
     langTitle:'Language', themeTitle:'Theme', loading:'Loading...',
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
+    cwTitle:'Welcome {name}', cwTitleNoName:'Welcome',
+    cwIntro:'This is your own space: every order and where it stands, live.',
+    cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
+    cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
+    cwBioBtn:'Turn on Face ID', cwOk:'Got it', cwBioDone:'Face ID is on.',
+    loadingOrders:'Loading your orders...',
+    errLoadTitle:'Your orders are not showing',
+    errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
+    errLoadNet:'Connection lost. Check your network, it will come back on its own.',
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
     tabHistory:'My orders', tabOrder:'New request',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photo',
@@ -771,7 +863,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   $('#langCode').textContent = currentLang.toUpperCase();
-  if(clientData) updateGreeting();
+  if(clientData){ updateGreeting(); renderWelcome(); }
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
@@ -837,7 +929,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn';
+const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tapDown(el, cx, cy){
   el.classList.add('is-pressed');
@@ -1046,11 +1138,40 @@ function updateGreeting(){
   const hasOrders = myOrders.length > 0 || myPending.length > 0;
   $('#helloSub').textContent = hasOrders ? t('helloSubOrders') : t('helloSub');
 }
+// Accueil de première visite : on explique l'espace, une seule fois.
+function welcomeKey(){ return 'ds_client_welcomed_' + clientId; }
+function welcomeSeen(){
+  try{ return localStorage.getItem(welcomeKey()) === '1'; }catch(e){ return false; }
+}
+function renderWelcome(){
+  const box = $('#clientWelcome');
+  if(!box) return;
+  if(welcomeSeen()){ box.style.display = 'none'; return; }
+  const name = clientFirstName();
+  $('#clientWelcomeTitle').textContent = name ? t('cwTitle').replace('{name}', name) : t('cwTitleNoName');
+  // Face ID : proposé seulement s'il est possible ici et pas déjà activé.
+  const offerBio = bioAvailable() && !bioRegistered();
+  $('#cwBioPoint').style.display = offerBio ? 'flex' : 'none';
+  $('#cwBioBtn').style.display = offerBio ? 'block' : 'none';
+  box.style.display = 'block';
+}
+function dismissWelcome(){
+  try{ localStorage.setItem(welcomeKey(), '1'); }catch(e){}
+  $('#clientWelcome').style.display = 'none';
+}
+$('#cwDismiss').addEventListener('click', dismissWelcome);
+$('#cwBioBtn').addEventListener('click', async ()=>{
+  await registerClientBio();
+  if(bioRegistered()){ showToast(t('cwBioDone')); dismissWelcome(); }
+});
+
 function enterApp(){
   document.getElementById('codeScreen').classList.remove('show');
   updateGreeting();
   $('#loadingScreen').style.display = 'none';
   $('#app').style.display = 'block';
+  renderWelcome();
+  renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
 }
 function askCode(){
@@ -1131,19 +1252,30 @@ async function init(){
   }
 }
 
+// Un écouteur qui échoue en silence laisse le client devant une page blanche :
+// on retient l'état de chaque flux et on le dit clairement à l'écran.
+let ordersLoaded = false, pendingLoaded = false, loadError = '';
+function noteError(err){
+  loadError = (err && err.code === 'permission-denied') ? 'denied' : 'net';
+  console.error('[portail client] lecture refusée :', err && err.code, err && err.message);
+  renderHistory();
+}
 function listenOrders(){
+  if(ordersUnsub || pendingUnsub) return;   // jamais deux fois : enterApp peut être rappelé
   ordersUnsub = db.collection('orders').where('clientId','==',clientId).onSnapshot(snap=>{
+    ordersLoaded = true; loadError = '';
     myOrders = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
     applyDefaultTab();
-  });
+  }, (err)=>{ ordersLoaded = true; noteError(err); });
   pendingUnsub = db.collection('pendingOrders').where('clientId','==',clientId).onSnapshot(snap=>{
+    pendingLoaded = true;
     myPending = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
     applyDefaultTab();
-  });
+  }, (err)=>{ pendingLoaded = true; noteError(err); });
 }
 
 // ---- Frise de suivi : où en est la commande ----
@@ -1247,9 +1379,23 @@ function renderHistory(){
     </div>`;
   }).join('');
   const html = pendingCards + orderCards;
-  el.innerHTML = html || `<div class="empty">${escapeHtml(t('emptyTitle'))}<br>${escapeHtml(t('emptySub'))}</div>`;
+  el.innerHTML = html || stateHtml();
   renderSummary();
   revealCards();
+}
+
+// Ce qu'on affiche quand il n'y a aucune carte à montrer.
+function stateHtml(){
+  if(loadError){
+    return `<div class="empty state-error">
+        <div class="state-title">${escapeHtml(t('errLoadTitle'))}</div>
+        ${escapeHtml(loadError === 'denied' ? t('errLoadDenied') : t('errLoadNet'))}
+      </div>`;
+  }
+  if(!ordersLoaded || !pendingLoaded){
+    return `<div class="empty">${escapeHtml(t('loadingOrders'))}</div>`;
+  }
+  return `<div class="empty">${escapeHtml(t('emptyTitle'))}<br>${escapeHtml(t('emptySub'))}</div>`;
 }
 
 // Les cartes se révèlent en montant, puis la frise se remplit.
