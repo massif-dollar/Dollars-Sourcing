@@ -1410,7 +1410,7 @@ function orderCardHtml(o, archived){
          ${escapeHtml(t(archived ? 'unarchiveBtn' : 'archiveBtn'))}</button>`
     : '';
   return `
-    <div class="order-card reveal">
+    <div class="order-card${archived ? '' : ' reveal'}">
       <div class="card-top">
         <div class="product">${escapeHtml(o.product)} × ${o.qty}</div>
         <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>
@@ -1462,6 +1462,9 @@ function renderArchive(list){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     ${archiveOpen ? `<div class="list" style="margin-top:9px;">${list.map(o => orderCardHtml(o, true)).join('')}</div>` : ''}`;
+  // Ces cartes ne passent pas par la révélation au défilement : le client vient
+  // de cliquer pour les voir, elles doivent être là immédiatement, frise remplie.
+  if(archiveOpen) fillTracks(box);
 }
 
 $('#historyPanel').addEventListener('click', (e)=>{
