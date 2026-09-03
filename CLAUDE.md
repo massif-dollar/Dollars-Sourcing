@@ -19,28 +19,40 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
 - `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
-- `firestore-rules.txt` — règles de sécurité. Le fichier ne contient **que** les
-  règles : on l'ouvre, on sélectionne tout, on colle dans la console Firebase
-  (Firestore Database → Règles → Publier). Aucun commentaire d'explication ne
-  doit y être ajouté hors du langage de règles, sinon on ne sait plus quoi
-  copier. Publier des règles ne coûte aucun déploiement Netlify.
+- `firestore-rules.txt` — règles de sécurité. On l'ouvre, on sélectionne tout,
+  on colle dans la console Firebase (Firestore Database → Règles → Publier).
+  Publier des règles ne coûte aucun déploiement Netlify, et la console garde
+  l'historique des versions : on peut revenir en arrière en deux clics.
 
 ### Qui a le droit de quoi, dans les règles
 
 `request.auth != null` **ne suffit pas** : n'importe quel compte Google peut se
 connecter à Firebase. Les règles vérifient donc l'adresse — le propriétaire en
 dur, et les invités relus dans `settings/access`, la même liste que celle du
-bouton « Accès ». Sans ça, la liste d'invités ne serait qu'un contrôle
-d'interface, contournable en s'adressant directement à la base.
-Seul le propriétaire peut modifier cette liste, et la mémoire de l'assistant
+bouton « Accès ». Elles exigent en plus une adresse vérifiée.
+
+Le cloisonnement multi-utilisateur est appliqué **par la base, pas seulement par
+l'interface** : `isMine()` et `claimingMine()` imposent qu'on ne modifie que ses
+propres commandes et clients, et qu'on ne crée rien au nom d'un autre. Les
+fournisseurs sont partagés en lecture et en modification, mais seul leur
+créateur — ou le propriétaire — peut les supprimer. La création de demandes
+clients, seule écriture publique, est validée (produit non vide et borné,
+quantité entière et bornée) : c'est le garde-fou contre l'abus.
+
+Seul le propriétaire modifie la liste d'accès, et la mémoire de l'assistant
 lui est réservée.
 
 ### Ce que les règles autorisent, et ce que ça coûte
 
 Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
 lien (id + token) et son code à 6 chiffres, vérifiés dans le navigateur.
-Firestore le voit donc comme un visiteur anonyme, et les lectures dont il a
-besoin restent ouvertes : `clients` par identifiant, `orders`, `pendingOrders`.
+Firestore le voit donc comme un visiteur anonyme.
+
+**Le piège qui a coûté une soirée** : le portail ne demande pas une commande par
+son identifiant, il fait une **requête** (« toutes celles dont le clientId est le
+mien »). Une requête relève de `list`, jamais de `get`. Des règles qui ouvrent
+`get` mais réservent `list` à l'équipe donnent donc un portail vide, sans la
+moindre erreur visible. `orders` et `pendingOrders` ont besoin de `list` ouvert.
 
 **Conséquence à connaître** : un document de commande brut contient le prix
 d'achat et la marge, et une fiche client contient son code d'accès et son
