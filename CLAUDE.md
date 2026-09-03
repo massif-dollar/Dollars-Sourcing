@@ -333,6 +333,25 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   l'arrivée), cartes révélées en montant au défilement (`.reveal` +
   IntersectionObserver), passage d'un onglet à l'autre qui glisse (`.view-in`,
   la direction suit l'ordre des onglets), fond en dégradé qui respire sur 28 s.
+- **Le portail client est la zone la plus travaillée**, parce que c'est la
+  vitrine : c'est là que le client décide s'il reste. Compteurs du résumé et
+  solde en Dollars qui montent depuis zéro, cartes et paliers de la boutique en
+  cascade (`stagger()`, plafonnée à cinq éléments — au-delà un retard ne
+  s'admire plus, il se subit), frise qui se dessine point par point derrière la
+  ligne, halo du solde qui respire, reflet qui balaie la pièce.
+
+  Trois règles apprises en le construisant. **Un compteur ne se rejoue jamais**
+  (`summaryCounted`, `dollarsCounted`) : la première fois c'est un plaisir, la
+  dixième une attente. **La frise ne s'anime qu'au moment où la carte devient
+  visible** — déclenchée dans `fillTracks()`, pas au rendu, sinon elle se
+  dessine derrière l'écran et le client ne voit rien. Et **une seule chose
+  bouge en boucle par écran** : dans la boutique, seul le palier accessible
+  respire, ce qui envoie l'œil exactement là où on veut. Cinq pièces qui
+  brillent en même temps, ce n'est pas du luxe, c'est un sapin de Noël.
+
+  Piège technique : l'étape courante de la frise porte un `transform:scale(1.45)`
+  qu'une animation d'entrée écraserait. Le repos passe donc par une variable
+  (`--pop`) que le `to:` du keyframe réutilise.
 - **`prefers-reduced-motion` partout.** Attention : accélérer une animation
   infinie la fait clignoter — il faut la couper (`animation:none`), pas la
   raccourcir. Les blocs `@media (prefers-reduced-motion:reduce)` des deux

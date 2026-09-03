@@ -306,7 +306,8 @@
   .empty{ text-align:center; padding:44px 20px; color:var(--text-ghost); font-size:14px; line-height:1.6; letter-spacing:-0.01em; }
   .order-card{
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:17px; padding:14px 15px;
-    box-shadow:var(--raise); animation:cardIn .45s var(--ease-out) backwards;
+    box-shadow:var(--raise); animation:cardIn .5s var(--ease-out) backwards;
+    animation-delay:var(--d, 0ms);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
     transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
   }
@@ -325,11 +326,10 @@
   @keyframes helloIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
   .hello-sub{ margin:6px 0 0; font-size:13.5px; color:var(--text-faint); letter-spacing:-0.01em; }
 
-  .summary{
-    display:flex; gap:9px; margin-bottom:18px;
-    animation:helloIn .7s var(--ease-out) .22s both;
-  }
+  .summary{ display:flex; gap:9px; margin-bottom:18px; }
   .summary-tile{
+    animation:helloIn .7s var(--ease-out) both;
+    animation-delay:calc(220ms + var(--i,0) * 80ms);
     flex:1; text-align:center; padding:12px 8px; border-radius:15px;
     background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
@@ -345,6 +345,7 @@
   .reveal{
     opacity:0; transform:translateY(16px);
     transition:opacity .55s var(--ease-out), transform .6s var(--ease-out);
+    transition-delay:var(--d, 0ms);
   }
   .reveal.revealed{ opacity:1; transform:none; }
 
@@ -419,6 +420,14 @@
     content:''; position:absolute; inset:0; border-radius:30%; pointer-events:none;
     background:linear-gradient(160deg, rgba(255,255,255,.42), rgba(255,255,255,.05) 45%, transparent 70%);
   }
+  .balance-amount .ds-coin::before{
+    content:''; position:absolute; inset:0; border-radius:30%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,.7) 50%, transparent 60%);
+    background-size:280% 100%; background-position:180% 0;
+    animation:coinShine 5.2s var(--ease-io) 1.4s infinite;
+  }
+  @keyframes coinShine{ 0%{ background-position:180% 0; } 40%,100%{ background-position:-80% 0; } }
+
   .balance-card{
     position:relative; overflow:hidden; text-align:center;
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius);
@@ -429,6 +438,11 @@
     position:absolute; top:-80px; left:50%; margin-left:-110px; width:220px; height:220px;
     border-radius:50%; background:radial-gradient(circle, var(--accent-soft), transparent 66%);
     pointer-events:none; filter:blur(4px);
+    animation:balanceOrb 11s var(--ease-io) infinite alternate;
+  }
+  @keyframes balanceOrb{
+    from{ transform:scale(1) translate(0,0); opacity:.85; }
+    to{ transform:scale(1.18) translate(14px,8px); opacity:1; }
   }
   .balance-amount{
     position:relative; display:inline-flex; align-items:center; gap:.34em;
@@ -451,10 +465,21 @@
     display:flex; align-items:center; gap:13px; margin-bottom:9px; padding:14px 15px;
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius-sm);
     box-shadow:var(--raise);
+    animation:cardIn .5s var(--ease-out) backwards; animation-delay:var(--d, 0ms);
     transition:opacity .3s var(--ease-io), border-color .3s var(--ease-io);
   }
   .shop-item.locked{ opacity:.55; }
-  .shop-item.affordable{ border-color:var(--accent); }
+  /* Ce qu'il peut s'offrir respire ; ce qu'il ne peut pas reste immobile.
+     C'est la seule chose qui bouge dans la boutique, donc l'œil y va. */
+  .shop-item.affordable{
+    border-color:var(--accent);
+    animation:cardIn .5s var(--ease-out) backwards,
+              shopBreathe 3.6s var(--ease-io) 1s infinite alternate;
+  }
+  @keyframes shopBreathe{
+    from{ box-shadow:var(--raise), 0 0 0 0 var(--accent-soft); }
+    to{ box-shadow:var(--raise), 0 0 0 5px var(--accent-soft); }
+  }
   .shop-cost{
     display:inline-flex; align-items:center; gap:.32em; flex-shrink:0; min-width:78px;
     font-family:var(--font-display); font-weight:700; font-size:15px;
@@ -503,13 +528,29 @@
   .track-dot{
     position:relative; width:11px; height:11px; border-radius:50%; margin:-18px auto 7px;
     background:var(--bg-elevated); border:1.5px solid var(--hairline-strong);
-    display:block; transition:background .4s var(--ease-out), border-color .4s var(--ease-out), transform .5s var(--spring);
+    display:block; transform:scale(var(--pop,1));
+    transition:background .4s var(--ease-out), border-color .4s var(--ease-out), transform .5s var(--spring);
   }
   .track-step.done .track-dot{ background:var(--accent); border-color:var(--accent); }
   .track-step.current .track-dot{
-    background:var(--accent); border-color:var(--accent); transform:scale(1.45);
+    background:var(--accent); border-color:var(--accent); --pop:1.45;
     box-shadow:0 0 0 4px var(--accent-soft);
   }
+  /* .animate est posé au moment où la carte devient visible, pas au rendu :
+     sinon la frise se dessinerait derrière l'écran, avant qu'on l'ait vue. */
+  .track.animate .track-dot{
+    animation:dotIn .55s var(--spring) backwards;
+    animation-delay:calc(var(--i,0) * 90ms + 120ms);
+  }
+  @keyframes dotIn{
+    from{ opacity:0; transform:scale(.15); }
+    to{ opacity:1; transform:scale(var(--pop,1)); }
+  }
+  .track.animate .track-label{
+    animation:trackLabelIn .5s var(--ease-out) backwards;
+    animation-delay:calc(var(--i,0) * 90ms + 200ms);
+  }
+  @keyframes trackLabelIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
   .track-step.current .track-dot::after{
     content:''; position:absolute; inset:-5px; border-radius:50%;
     border:1.5px solid var(--accent); opacity:.5;
@@ -721,7 +762,10 @@
   @media (prefers-reduced-motion:reduce){
     *{ animation-duration:.01ms !important; transition-duration:.01ms !important;
        animation-iteration-count:1 !important; }
-    body::before, .track-step.current .track-dot::after{ animation:none !important; }
+    body::before, .track-step.current .track-dot::after,
+    .balance-amount .ds-coin::before, .balance-orb,
+    .shop-item.affordable, .track.animate .track-dot,
+    .track.animate .track-label{ animation:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
   }
@@ -795,9 +839,9 @@
   </div>
 
   <div class="summary" id="summary" style="display:none;">
-    <div class="summary-tile accent"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
-    <div class="summary-tile"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
-    <div class="summary-tile"><span class="n" id="sumWaiting">0</span><span class="l" data-i18n="sumWaiting">En attente</span></div>
+    <div class="summary-tile accent" style="--i:0"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
+    <div class="summary-tile" style="--i:1"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
+    <div class="summary-tile" style="--i:2"><span class="n" id="sumWaiting">0</span><span class="l" data-i18n="sumWaiting">En attente</span></div>
   </div>
 
   <div class="tabs">
@@ -1517,6 +1561,7 @@ function myDollars(){
 }
 function pendingExchange(){ return myPending.find(p => p.type === 'coupon') || null; }
 
+let dollarsCounted = false;
 function renderDollars(){
   const el = $('#dollarsPanel');
   if(!el) return;
@@ -1545,7 +1590,7 @@ function renderDollars(){
   el.innerHTML = `
     <div class="balance-card">
       <span class="balance-orb"></span>
-      <span class="balance-amount"><span class="ds-coin">$</span>${solde}</span>
+      <span class="balance-amount"><span class="ds-coin">$</span><span class="balance-n">0</span></span>
       <span class="balance-label">${escapeHtml(t('dollarsLabel'))}</span>
       ${next ? `<div class="balance-next">
         <div class="balance-bar"><i class="balance-fill" data-pct="${pct}"></i></div>
@@ -1560,7 +1605,13 @@ function renderDollars(){
     ${boutique}
     <p class="dollars-note">${escapeHtml(t('dollarsRules'))}</p>`;
 
-  // la barre se remplit après le rendu, sinon la transition ne se voit pas
+  stagger(el.querySelectorAll('.shop-item'), 60);
+  // Le solde monte, et la barre se remplit après le rendu — sinon ni l'un ni
+  // l'autre ne se verrait. Le compte ne se rejoue pas à chaque retour sur
+  // l'onglet : la première fois est un plaisir, la dixième une attente.
+  const duree = dollarsCounted ? 0 : 1100;
+  dollarsCounted = true;
+  countUp(el.querySelector('.balance-n'), solde, duree);
   requestAnimationFrame(()=>{
     const fill = el.querySelector('.balance-fill');
     if(fill) fill.style.width = (fill.dataset.pct || 0) + '%';
@@ -1600,7 +1651,7 @@ function trackHtml(status, order){
   const pct = TRACK_FLOW.length > 1 ? (done / (TRACK_FLOW.length - 1)) * 100 : 0;
   const steps = TRACK_FLOW.map((st,i)=>{
     const cls = cancelled ? '' : (i < idx ? 'done' : (i === idx ? 'current' : ''));
-    return `<div class="track-step ${cls}">
+    return `<div class="track-step ${cls}" style="--i:${i}">
         <span class="track-dot"></span>
         <span class="track-label">${escapeHtml(t(STATUS_META[st].short))}</span>
       </div>`;
@@ -1725,7 +1776,10 @@ function renderHistory(){
     </div>`).join('');
 
   const html = pendingCards + visibles.map(o => orderCardHtml(o, false)).join('');
+  // Le retard ne court que sur la première hauteur d'écran : au-delà il ne se
+  // verrait pas, il se subirait.
   el.innerHTML = html || (ranges.length ? '' : stateHtml());
+  stagger(el.querySelectorAll('.order-card'));
   renderArchive(ranges);
   renderSummary();
   revealCards();
@@ -1784,10 +1838,38 @@ function stateHtml(){
 // Les cartes se révèlent en montant, puis la frise se remplit.
 let revealObserver = null;
 function reduceMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+// Retard progressif sur une liste. Plafonné à cinq éléments : au-delà, un
+// retard n'embellit plus rien, il fait attendre.
+function stagger(nodes, pas){
+  const step = pas || 55;
+  Array.prototype.forEach.call(nodes, (n,i)=>{
+    n.style.setProperty('--d', Math.min(i, 5) * step + 'ms');
+  });
+}
+// Un chiffre qui monte depuis zéro. Une seule fois, à l'arrivée : le revoir
+// à chaque rendu deviendrait une attente.
+function countUp(el, to, duree){
+  if(!el) return;
+  const cible = Number(to) || 0;
+  if(reduceMotion() || !duree){ el.textContent = cible; return; }
+  const t0 = performance.now();
+  const pas = (now)=>{
+    const p = Math.min(1, (now - t0) / duree);
+    el.textContent = Math.round(cible * (1 - Math.pow(1 - p, 3)));
+    if(p < 1) requestAnimationFrame(pas);
+  };
+  requestAnimationFrame(pas);
+}
+
 function fillTracks(scope){
-  (scope || document).querySelectorAll('.track-fill').forEach(f=>{
+  const root = scope || document;
+  root.querySelectorAll('.track-fill').forEach(f=>{
     f.style.width = (f.dataset.progress || 0) + '%';
   });
+  // Les points se posent l'un après l'autre derrière la ligne qui avance.
+  // Déclenché ici, donc jamais joué hors de l'écran.
+  if(reduceMotion()) return;
+  root.querySelectorAll('.track').forEach(tr => tr.classList.add('animate'));
 }
 function revealCards(){
   const cards = document.querySelectorAll('#historyList .reveal');
@@ -1812,6 +1894,7 @@ function revealCards(){
   });
 }
 
+let summaryCounted = false;
 function renderSummary(){
   const box = $('#summary');
   if(!box) return;
@@ -1820,9 +1903,13 @@ function renderSummary(){
   const waiting = myPending.length;
   if(!active && !delivered && !waiting){ box.style.display = 'none'; return; }
   box.style.display = 'flex';
-  $('#sumActive').textContent = active;
-  $('#sumDelivered').textContent = delivered;
-  $('#sumWaiting').textContent = waiting;
+  // Les chiffres montent à l'arrivée seulement. Aux rendus suivants ils se
+  // posent net : un compteur qui repart à chaque mise à jour est une attente.
+  const duree = summaryCounted ? 0 : 950;
+  summaryCounted = true;
+  countUp($('#sumActive'), active, duree);
+  countUp($('#sumDelivered'), delivered, duree);
+  countUp($('#sumWaiting'), waiting, duree);
 }
 
 // ---- Photo du produit ----
