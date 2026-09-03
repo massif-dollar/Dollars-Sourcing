@@ -240,6 +240,28 @@ gros client patient le plus cher — ce qui est exactement l'intention.
 **Il n'y a donc aucun plafond d'utilisation à ajouter** : le plafond est déjà là,
 il est mathématique. Le seul vrai levier reste le taux du haut du barème.
 
+**Un Dollar ne coûte rien, un coupon coûte de vrais euros.** La confusion est
+facile et elle a été faite : émettre des Dollars, c'est écrire un nombre dans
+une base. La dépense arrive quand le coupon est *utilisé* — le client verse
+284 € au lieu de 300 €, et les 16 € manquants n'arrivent jamais sur le compte.
+La monnaie fictive, c'est le marketing ; le coupon, c'est la facture. C'est ce
+décalage qui fait la force du programme (annoncer « 2 000 Dollars » coûte 130 €),
+mais il ne rend pas le programme gratuit.
+
+À marge ×3 sur le prix d'usine, le programme se paie tout seul dès qu'il fait
+grossir le volume de **5 à 10 %**. Sur la pire commande possible (3 000 € avec
+le coupon de 450 €), il reste 77 % de la marge.
+
+**Le compteur de l'onglet Statistiques existe pour une raison précise** : le coût
+est visible et chiffré en euros, le bénéfice est invisible — on ne voit jamais
+le client qui est resté. Sans rapprochement, un programme rentable finit par
+être arrêté au ressenti. Le bloc met donc côte à côte les remises accordées, la
+dette (coupons dus + Dollars en circulation au meilleur taux du barème) et le
+rythme de commande des clients avec coupon face à ceux sans. Le rythme est
+**normalisé par l'ancienneté** — sinon un client arrivé la semaine dernière
+paraîtrait plus fidèle qu'un ancien — et **aucun verdict n'est affiché sous
+3 clients de chaque côté** : en dessous, l'écart n'est que du bruit.
+
 **Le solde ne se stocke jamais** : il se recalcule à partir des commandes
 livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une
 commande corrigée met le solde à jour toute seule. **Un coupon est consommé**
@@ -386,7 +408,8 @@ date estimée) avec lien de suivi côté client, dates de parcours par commande,
 historique par client dans sa fiche, archivage volontaire côté client,
 mode discret qui masque montants et marges, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
-commande).
+commande), annonce du programme aux clients, compteur de rentabilité de la
+fidélité dans les statistiques.
 
 ## À faire
 

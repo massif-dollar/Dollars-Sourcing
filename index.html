@@ -528,6 +528,31 @@
   .top3-margin{ font-family:var(--font-display); font-weight:700; font-size:13.5px; color:var(--accent); letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
 
   /* --- Graphique --- */
+  .loyalty-report{
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:16px;
+    padding:15px 16px; margin-bottom:14px; box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .loyalty-report h3{
+    margin:0 0 12px; font-family:var(--font-display); font-size:14px; font-weight:700;
+    letter-spacing:-0.02em; color:var(--text);
+  }
+  .loy-row{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:8px 0; border-top:0.5px solid var(--hairline);
+  }
+  .loy-row:first-of-type{ border-top:none; }
+  .loy-row .k{ font-size:12.5px; color:var(--text-faint); letter-spacing:-0.005em; }
+  .loy-row .v{
+    font-family:var(--font-display); font-weight:700; font-size:15px;
+    letter-spacing:-0.02em; font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .loy-row .v small{ display:block; font-weight:500; font-size:11px; color:var(--text-ghost); letter-spacing:0; }
+  .loy-verdict{
+    margin-top:11px; padding-top:11px; border-top:0.5px solid var(--hairline);
+    font-size:12.5px; line-height:1.5; color:var(--text-faint); letter-spacing:-0.005em;
+  }
+  .loy-verdict b{ color:var(--accent); }
   .chart-wrap{
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:16px;
     padding:15px 11px 9px; margin-bottom:14px; box-shadow:var(--raise);
@@ -1334,6 +1359,11 @@
         <span class="private"><i class="legend-dot" style="background:var(--gold);"></i><span data-i18n="legendMargin">Marge</span></span>
       </div>
     </div>
+    <!-- Le programme de fidélité se juge sur deux chiffres qu'on ne voit jamais
+         ensemble : ce qu'il coûte (visible, en euros) et ce qu'il retient
+         (invisible). Ce bloc les met côte à côte. Tout est .private : ce sont
+         des chiffres de marge. -->
+    <div class="loyalty-report reveal private" id="loyaltyReport" style="display:none;"></div>
   </div>
 
   <div id="requestsView" style="display:none;">
@@ -1719,6 +1749,14 @@ const I18N = {
     topClients:'Top clients',
     statRevenuePeriod:'CA (période)', statMarginPeriod:'Marge (période)', statAvgBasket:'Panier moyen', statAvgMargin:'Marge moyenne',
     legendRevenue:'Revenu', legendMargin:'Marge',
+    loyTitle:'Ce que la fidélité coûte, et ce qu\u2019elle retient',
+    loyDiscounts:'Remises accordées', loyOutstanding:'Dollars en circulation',
+    loyOwed:'{v} à honorer si tu arrêtes',
+    loyWith:'Clients ayant utilisé un coupon', loyWithout:'Clients sans coupon',
+    loyRate:'{n} cmd/mois', loyClients:'{n} clients',
+    loyVerdictUp:'Les clients fidélisés commandent {p} plus souvent. C\u2019est ce que le programme achète.',
+    loyVerdictDown:'Les clients fidélisés commandent {p} moins souvent. Si ça dure, le programme ne sert à rien.',
+    loySmall:'Trop peu de recul pour conclure : il faut au moins 3 clients de chaque côté. En dessous, l\u2019écart n\u2019est que du hasard.',
     range7:'7 jours', range30:'30 jours', range90:'90 jours', rangeAll:'Tout',
     sheetNewOrder:'Nouvelle commande', sheetEditOrder:'Modifier la commande',
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
@@ -1842,6 +1880,14 @@ const I18N = {
     topClients:'Top clients',
     statRevenuePeriod:'Revenue (period)', statMarginPeriod:'Margin (period)', statAvgBasket:'Average order', statAvgMargin:'Average margin',
     legendRevenue:'Revenue', legendMargin:'Margin',
+    loyTitle:'What loyalty costs, and what it keeps',
+    loyDiscounts:'Discounts granted', loyOutstanding:'Dollars outstanding',
+    loyOwed:'{v} to honour if you stop',
+    loyWith:'Clients who used a coupon', loyWithout:'Clients without',
+    loyRate:'{n} orders/mo', loyClients:'{n} clients',
+    loyVerdictUp:'Loyal clients order {p} more often. That is what the programme buys.',
+    loyVerdictDown:'Loyal clients order {p} less often. If that holds, the programme is pointless.',
+    loySmall:'Not enough history to conclude: you need at least 3 clients on each side. Below that, the gap is just noise.',
     range7:'7 days', range30:'30 days', range90:'90 days', rangeAll:'All',
     sheetNewOrder:'New order', sheetEditOrder:'Edit order',
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
@@ -2808,6 +2854,84 @@ function renderChart(buckets){
   container.innerHTML = svg;
 }
 
+// Rythme de commande d'un client, normalisé par son ancienneté : sans ça un
+// client arrivé la semaine dernière paraîtrait plus fidèle qu'un ancien.
+const MOIS = 30*24*3600*1000;
+function clientOrdersPerMonth(clientId){
+  const mine = orders.filter(o => o.clientId === clientId && !o.deletedAt);
+  if(!mine.length) return null;
+  const premier = Math.min.apply(null, mine.map(o => o.createdAt || Date.now()));
+  const mois = Math.max(1, (Date.now() - premier) / MOIS);
+  return mine.length / mois;
+}
+// Ce que le programme coûte (visible, en euros) face à ce qu'il retient
+// (invisible). Sans ce rapprochement, seul le coût se voit — et un programme
+// rentable finit par être arrêté au ressenti.
+function computeLoyaltyReport(){
+  const vivantes = orders.filter(o => !o.deletedAt);
+  const remises = vivantes.reduce((t,o) => t + orderDiscount(o), 0);
+
+  // Deux dettes distinctes : les coupons déjà accordés mais pas encore posés,
+  // et les Dollars pas encore échangés (au pire au meilleur taux du barème).
+  const meilleurTaux = LOYALTY_TIERS.reduce((m,t) => Math.max(m, t.value/t.dollars), 0);
+  let couponsDus = 0, dollarsDehors = 0;
+  clients.forEach(c => {
+    if(c.deletedAt) return;
+    couponsDus += availableCoupons(c.id).reduce((t,k) => t + (Number(k.value)||0), 0);
+    dollarsDehors += clientDollars(c.id);
+  });
+
+  // Un client est « fidélisé » dès qu'une de ses commandes porte un coupon.
+  const avecCoupon = new Set(vivantes.filter(o => o.couponId && o.status !== 'annule').map(o => o.clientId));
+  const groupes = { avec:[], sans:[] };
+  clients.forEach(c => {
+    if(c.deletedAt) return;
+    const r = clientOrdersPerMonth(c.id);
+    if(r === null) return;                       // jamais commandé : hors sujet
+    (avecCoupon.has(c.id) ? groupes.avec : groupes.sans).push(r);
+  });
+  const moyenne = a => a.length ? a.reduce((x,y)=>x+y,0) / a.length : 0;
+
+  return {
+    remises, couponsDus, dollarsDehors,
+    detteMax: couponsDus + dollarsDehors * meilleurTaux,
+    nAvec: groupes.avec.length, nSans: groupes.sans.length,
+    rythmeAvec: moyenne(groupes.avec), rythmeSans: moyenne(groupes.sans),
+    // Trois clients de chaque côté : en dessous, l'écart n'est que du bruit.
+    concluant: groupes.avec.length >= 3 && groupes.sans.length >= 3
+  };
+}
+function renderLoyaltyReport(){
+  const el = $('#loyaltyReport');
+  if(!el) return;
+  const r = computeLoyaltyReport();
+  // Rien à dire tant que le programme n'a pas servi.
+  if(!r.remises && !r.dollarsDehors && !r.couponsDus){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  let verdict;
+  if(!r.concluant){
+    verdict = escapeHtml(t('loySmall'));
+  } else {
+    const ecart = r.rythmeSans > 0 ? (r.rythmeAvec / r.rythmeSans - 1) * 100 : 0;
+    const pct = '<b>' + (ecart>=0?'+':'') + ecart.toFixed(0) + '\u00a0%</b>';
+    verdict = t(ecart >= 0 ? 'loyVerdictUp' : 'loyVerdictDown').replace('{p}', pct);
+  }
+  const ligne = (k,v,sub) => `
+      <div class="loy-row"><span class="k">${escapeHtml(k)}</span>
+        <span class="v">${escapeHtml(v)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span></div>`;
+  const rythme = n => t('loyRate').replace('{n}', n.toFixed(1).replace('.', ','));
+
+  el.innerHTML = `
+    <h3>${escapeHtml(t('loyTitle'))}</h3>
+    ${ligne(t('loyDiscounts'), fmtMoney(r.remises))}
+    ${ligne(t('loyOutstanding'), r.dollarsDehors + ' $',
+            t('loyOwed').replace('{v}', fmtMoney(Math.round(r.detteMax))))}
+    ${ligne(t('loyWith'),  rythme(r.rythmeAvec),  t('loyClients').replace('{n}', r.nAvec))}
+    ${ligne(t('loyWithout'), rythme(r.rythmeSans), t('loyClients').replace('{n}', r.nSans))}
+    <div class="loy-verdict">${verdict}</div>`;
+}
+
 function renderStats(){
   const s = computeStats();
   // Comptés une fois, à la première ouverture des stats ; ensuite instantané.
@@ -2818,6 +2942,7 @@ function renderStats(){
   countUp($('#statAvg'), s.avgBasket, countMoney, sd);
   countUp($('#statPct'), s.pctMargin, countPct, sd);
   renderChart(s.buckets);
+  renderLoyaltyReport();
 }
 
 // Le vendeur ne voit que les coupons réellement utilisables sur cette commande :
