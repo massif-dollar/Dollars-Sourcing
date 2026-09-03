@@ -88,6 +88,13 @@ Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
 l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
+Ses commandes terminées (livrées ou annulées) ne disparaissent jamais toutes
+seules : le client les range lui-même avec un bouton, et elles rejoignent un
+bloc « Historique » replié d'où il peut les ressortir. Ce tri vit dans son
+navigateur (`ds_client_archived_<id>`), pas dans la base : c'est une préférence
+d'affichage, elle ne justifie pas d'ouvrir une écriture publique. Contrepartie
+assumée : depuis un autre appareil, son rangement ne le suit pas.
+
 À sa toute première visite, le client est accueilli par une carte qui explique
 l'espace : lien personnel protégé par son code, et proposition d'activer Face ID
 pour les fois suivantes (seulement si l'appareil le permet et que ce n'est pas
@@ -115,6 +122,19 @@ Dès qu'un numéro de suivi existe, le client a un bouton « Suivre mon colis »
 ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart des
 transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
 en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
+
+### Dates de parcours
+
+Chaque commande porte une carte `statusAt` : une date par étape franchie
+(`statusAt.paye`, `statusAt.expedie`...), écrite à chaque changement de statut,
+d'où qu'il vienne — flèche du stepper, enregistrement de la fiche, annulation,
+assistant IA. L'écriture utilise un **chemin pointé** (`statusAt.expedie`) pour
+ne toucher que cette clé et préserver les autres dates.
+
+Les commandes créées avant n'ont pas d'historique : on n'invente aucune date,
+l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
+et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
+livraison estimée.
 
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
@@ -220,10 +240,13 @@ françaises, suivi des acomptes, photos au format d'origine avec ouverture en
 plein écran, écran d'ouverture animé, mouvement du tableau de bord, écran
 d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
-date estimée) avec lien de suivi côté client.
+date estimée) avec lien de suivi côté client, dates de parcours par commande,
+historique par client dans sa fiche, archivage volontaire côté client.
 
 ## À faire
 
+- Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
+  pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
