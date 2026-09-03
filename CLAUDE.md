@@ -15,8 +15,9 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 
 ## Fichiers
 
-- `suivi-commandes.html` — application pro (Massif et ses invités)
-- `client.html` — portail client, accessible par lien personnel
+- `index.html` — application pro (Massif et ses invités)
+- `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
+  langue détectée depuis le navigateur, bascule FR/EN mémorisée)
 - `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
 - `firestore-rules.txt` — règles de sécurité à copier dans la console Firebase
 
@@ -45,6 +46,28 @@ Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
 l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
+C'est un espace personnel, pas un formulaire : accueil par son prénom selon
+l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
+une frise des six étapes (demande reçue → devis → payé → commandé → expédié →
+livré) avec l'étape courante mise en valeur. Il y voit aussi son prix total
+(livraison incluse), ce qu'il a déjà réglé, ce qu'il reste à régler, ses
+photos, et le bloc expédition dès qu'une information existe.
+
+Le bloc expédition lit `carrier` / `forwarder`, `tracking` / `trackingNumber`,
+`eta` / `estimatedDelivery` sur la commande, saisis dans la fiche commande côté
+vendeur (section « Expédition », visible seulement sur une commande existante).
+Il apparaît dès qu'une de ces informations existe, et se complète tout seul.
+
+La date estimée est stockée en ISO (`AAAA-MM-JJ`) et affichée dans la langue du
+client ; une valeur libre (« mi-octobre ») reste affichée telle quelle. Elle est
+toujours accompagnée de la mention qu'il s'agit d'une estimation : **ne jamais
+la présenter comme une promesse.**
+
+Dès qu'un numéro de suivi existe, le client a un bouton « Suivre mon colis » qui
+ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart des
+transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
+en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
+
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
 bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
@@ -63,6 +86,25 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
   ombres en deux couches, respect des zones sûres (encoche).
 - Interface bilingue FR/EN via l'objet `I18N`. **Toute nouvelle chaîne doit
   exister dans les deux langues**, sinon l'app affiche la clé brute.
+  `client.html` a désormais son propre `I18N` : même règle.
+
+### Le mouvement
+
+Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
+
+- **Zones de travail = instantané.** Aucune animation d'entrée sur les listes
+  (commandes, clients, fournisseurs, demandes), les formulaires, le clavier de
+  code. On y vient pour agir, pas pour regarder.
+- **Zones de respiration = soignées.** Écran d'ouverture, accueil invité,
+  tableau de bord, portail client : c'est là qu'on peut se lâcher.
+- Le tableau de bord : chiffres qui comptent depuis zéro (une seule fois, à
+  l'arrivée), cartes révélées en montant au défilement (`.reveal` +
+  IntersectionObserver), passage d'un onglet à l'autre qui glisse (`.view-in`,
+  la direction suit l'ordre des onglets), fond en dégradé qui respire sur 28 s.
+- **`prefers-reduced-motion` partout.** Attention : accélérer une animation
+  infinie la fait clignoter — il faut la couper (`animation:none`), pas la
+  raccourcir. Les blocs `@media (prefers-reduced-motion:reduce)` des deux
+  fichiers listent nommément les animations infinies à neutraliser.
 
 ## Pièges déjà rencontrés — ne pas les refaire
 
@@ -85,6 +127,14 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
    été épuisés. **Regrouper les modifications**, ne déployer qu'une fois par session.
 8. **Les URLs se déduisent toutes seules** (`location.origin`) : ne jamais
    réintroduire d'adresse en dur, on a déjà changé d'hébergeur deux fois.
+9. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+   ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
+   un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
+   bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
+   mais si un client tape deux suivis à la suite depuis un navigateur intégré
+   (Snap, TikTok) qui réutilise le même onglet, il pourrait revoir le premier
+   colis. À vérifier en vrai ; le correctif serait de passer le numéro aussi en
+   paramètre de requête (`?nums=`) pour forcer une vraie navigation.
 
 ## Assistant IA
 
@@ -102,15 +152,17 @@ Commandes, clients, fournisseurs (avec marques et modèles), statistiques,
 demandes clients, thèmes clair/sombre, bilingue, connexion Google, verrou PIN
 et biométrie, multi-utilisateur, corbeille, mode hors ligne, assistant IA
 (texte, vocal, photo), portail client avec photo, autocomplétion d'adresses
-françaises, suivi des acomptes.
+françaises, suivi des acomptes, photos au format d'origine avec ouverture en
+plein écran, écran d'ouverture animé, mouvement du tableau de bord, écran
+d'accueil des comptes invités, portail client repensé (frise de suivi,
+montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
+date estimée) avec lien de suivi côté client.
 
 ## À faire
 
-- Suivi d'expédition structuré (transitaire, numéro de suivi, date estimée)
 - Photo dans la fiche fournisseur
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
-- Écran d'accueil pour les comptes invités
 - Plus tard : abonnement payant, inscription autonome
 
 ## Volontairement écarté
@@ -118,6 +170,13 @@ françaises, suivi des acomptes.
 Facturation légale, mentions obligatoires, numérotation de factures :
 Massif n'est pas encore immatriculé. **Ne rien construire là-dessus** tant
 qu'il n'a pas de SIRET.
+
+API de suivi automatique (17TRACK, TrackingMore, AfterShip) : écartée pour
+l'instant. À faible volume on paie le ticket d'entrée, pas les colis (~110 €/an
+chez 17TRACK, dont le quota expire à 12 mois), et rien ne garantit que le
+transitaire du moment soit couvert. Le lien 17TRACK donne déjà la position
+réelle au client sans dépendance ni clé. À rouvrir seulement si le volume le
+justifie, et après avoir testé la couverture avec les numéros gratuits.
 
 ## Méthode de travail
 
