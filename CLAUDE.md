@@ -151,6 +151,45 @@ l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
 et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
 livraison estimée.
 
+### Programme de fidélité — les Dollars (décidé, à construire)
+
+Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
+des coupons de remise dans une boutique en libre-service de son espace.
+Barème arrêté le 3 septembre 2026, **à ne pas modifier à la légère** : dévaluer
+des Dollars déjà accumulés se voit et se paie en confiance.
+
+| Dollars | Coupon | Valable dès | Ce qu'on rend |
+|---|---|---|---|
+| 100 | 5 € | 50 € d'achat | 5 % |
+| 300 | 18 € | 120 € d'achat | 6 % |
+| 600 | 42 € | 250 € d'achat | 7 % |
+| 1 200 | 90 € | 600 € d'achat | 7,5 % |
+| 2 500 | 200 € | 1 350 € d'achat | 8 % |
+
+Le taux s'améliore avec la patience, pour pousser à accumuler. Les minimums des
+deux plus gros coupons sont calés pour qu'une remise ne dépasse jamais **15 % du
+total** de la commande où elle s'applique : sans ça, un coupon gagné sur une
+grosse commande viendrait ruiner la marge d'une petite.
+
+**Les six règles :**
+
+1. **Un Dollar par euro réellement payé**, crédité au passage à « Livré ». Une
+   commande annulée ne rapporte rien.
+2. **Les Dollars se gagnent sur le montant après remise** — sinon la cagnotte
+   s'auto-alimenterait sur de l'argent jamais dépensé.
+3. **Un seul coupon par commande.**
+4. **Pas d'expiration.** Un client qui perd ses points ne retient que ça.
+5. **Ni transférable, ni convertible en euros** : uniquement une remise sur un
+   achat futur. C'est ce qui garde le programme du côté du geste commercial et
+   non de la monnaie électronique — décisif tant qu'il n'y a pas de SIRET.
+6. **Le vendeur valide chaque échange.** Le client choisit librement dans la
+   boutique, l'échange arrive dans l'onglet « Demandes », rien ne sort sans un
+   geste du vendeur.
+
+**Le solde ne se stocke jamais** : il se recalcule à partir des commandes
+livrées moins les coupons accordés. Rien à maintenir, rien qui dérive, et une
+commande corrigée met le solde à jour toute seule.
+
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
 bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
@@ -267,6 +306,8 @@ mode discret qui floute les montants.
 
 ## À faire
 
+- Programme de fidélité : boutique de coupons côté client, validation des
+  échanges côté vendeur, champ remise sur la commande (barème ci-dessus)
 - Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
   pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur
