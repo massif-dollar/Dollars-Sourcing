@@ -1,0 +1,15 @@
+# Netlify — configuration minimale.
+#
+# But unique de ce fichier : ne PAS reconstruire le site quand un commit ne
+# touche qu'à la documentation. Un déploiement de production consomme des
+# crédits ; un commit qui ne change que CLAUDE.md, le README ou les règles
+# Firestore n'a aucune raison d'en coûter.
+#
+# `ignore` est une commande shell : si elle sort en 0, le build est annulé.
+# `git diff --quiet` sort en 0 quand les fichiers listés n'ont pas bougé.
+# Le reste de la configuration (dossier publié, dossier des fonctions) reste
+# celui défini dans l'interface Netlify : on ne le redéclare pas ici pour ne
+# rien casser.
+
+[build]
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- index.html client.html netlify/"

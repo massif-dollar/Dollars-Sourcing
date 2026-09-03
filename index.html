@@ -518,6 +518,12 @@
   }
   #shippingZone .section-title{ margin-bottom:3px; }
   .field-hint{ margin:0 0 13px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; line-height:1.45; }
+  .order-trail{
+    display:flex; flex-wrap:wrap; align-items:center; gap:5px;
+    margin-top:7px; font-size:11.5px; color:var(--text-faint); letter-spacing:-0.005em;
+  }
+  .order-trail b{ color:var(--text-muted); font-weight:600; font-variant-numeric:tabular-nums; }
+  .order-trail i{ color:var(--text-ghost); font-style:normal; }
 
   /* --- Formulaires --- */
   .field{ margin-bottom:14px; }
@@ -1633,7 +1639,7 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choisir un client --', newClientOpt:'+ Nouveau client',
     fieldNewClientName:'Nom du nouveau client', fieldContact:'Contact (réseau, tél...)', fieldNewClientAddress:'Adresse de livraison',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldStatus:'Statut',
-    shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
+    statusSaved:'Statut enregistré : {status}', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
     fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)',
@@ -1745,7 +1751,7 @@ const I18N = {
     fieldClient:'Client', chooseClient:'-- Choose a client --', newClientOpt:'+ New client',
     fieldNewClientName:'New client name', fieldContact:'Contact (social, phone...)', fieldNewClientAddress:'Delivery address',
     fieldProduct:'Product', fieldQty:'Quantity', fieldStatus:'Status',
-    shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
+    statusSaved:'Status saved: {status}', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
     fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)',
@@ -2659,6 +2665,24 @@ function closeSheet(){
 }
 
 let stepperStatus = 'nouveau';
+// Chaque passage d'étape laisse sa date : c'est ce qui permet à la fiche client
+// de raconter le parcours d'une commande, et plus tard de calculer les délais réels.
+// Le chemin pointé (statusAt.expedie) ne touche que cette clé, pas toute la carte.
+function statusPatch(status){
+  const patch = { status };
+  patch['statusAt.' + status] = Date.now();
+  return patch;
+}
+function statusDates(o){
+  const map = o.statusAt || {};
+  return STATUS_FLOW.filter(st => map[st]).map(st => ({ status: st, at: map[st] }));
+}
+function fmtDayMonth(ts){
+  if(!ts) return '';
+  const loc = currentLang === 'fr' ? 'fr-FR' : 'en-GB';
+  return new Date(ts).toLocaleDateString(loc, { day:'numeric', month:'short' });
+}
+
 function updateStepper(status){
   stepperStatus = status;
   $('#stepLabel').textContent = t(STATUS_META[status].key);
@@ -2667,13 +2691,33 @@ function updateStepper(status){
   $('#stepNext').disabled = idx===-1 || idx>=STATUS_FLOW.length-1;
 }
 
+// Changer de statut est une action à part entière : la flèche enregistre.
+// Un court délai regroupe les taps successifs en une seule écriture, et si la
+// base refuse, on remet le statut réel à l'écran plutôt que de laisser croire
+// à un changement qui n'a pas eu lieu.
+let stepperSaveTimer = null;
+function stepTo(status){
+  updateStepper(status);
+  if(!editingId) return;               // commande pas encore créée : rien à enregistrer
+  const orderId = editingId;
+  clearTimeout(stepperSaveTimer);
+  stepperSaveTimer = setTimeout(async ()=>{
+    const ok = await updateOrderDoc(orderId, statusPatch(status));
+    if(ok){
+      showToast(t('statusSaved').replace('{status}', t(STATUS_META[status].key)));
+      return;
+    }
+    const o = orders.find(x => x.id === orderId);
+    if(o && editingId === orderId) updateStepper(o.status);
+  }, 450);
+}
 $('#stepPrev').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
-  if(idx>0) updateStepper(STATUS_FLOW[idx-1]);
+  if(idx>0) stepTo(STATUS_FLOW[idx-1]);
 });
 $('#stepNext').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
-  if(idx<STATUS_FLOW.length-1) updateStepper(STATUS_FLOW[idx+1]);
+  if(idx<STATUS_FLOW.length-1) stepTo(STATUS_FLOW[idx+1]);
 });
 
 $('#f_clientSelect').addEventListener('change', ()=>{
@@ -2782,9 +2826,10 @@ form.addEventListener('submit', async (e)=>{
                  eta:$('#f_eta').value || '' };
   if(pendingPhoto){ data.photo = pendingPhoto.data; data.photoType = pendingPhoto.type; }
   if(editingId){
-    await updateOrderDoc(editingId, Object.assign({status: stepperStatus}, data));
+    await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
   } else {
-    await createOrder(Object.assign({status: $('#f_status').value}, data));
+    const newStatus = $('#f_status').value;
+    await createOrder(Object.assign({ status:newStatus, statusAt:{ [newStatus]: Date.now() } }, data));
     if(pendingSourceId){
       await deletePendingOrderDoc(pendingSourceId);
       showToast(t('toastRequestValidated'));
@@ -2800,7 +2845,7 @@ $('#cancelOrderBtn').addEventListener('click', async ()=>{
   if(!editingId) return;
   const o = orders.find(x=>x.id===editingId);
   const newStatus = (o.status==='annule') ? 'nouveau' : 'annule';
-  await updateOrderDoc(editingId, {status:newStatus});
+  await updateOrderDoc(editingId, statusPatch(newStatus));
   closeSheet();
 });
 $('#deleteBtn').addEventListener('click', async ()=>{
@@ -2812,24 +2857,47 @@ $('#deleteBtn').addEventListener('click', async ()=>{
   showUndoToast(t('orderDeleted'), ()=>restoreDoc('orders', id));
 });
 
-function renderClientOrders(clientId){
-  const co = orders.filter(o=>o.clientId===clientId).sort((a,b)=>b.createdAt-a.createdAt);
-  const el = $('#clientOrdersList');
-  if(!co.length){ el.innerHTML = `<div class="empty" style="padding:16px;">${t('emptyClientOrders')}</div>`; return; }
-  el.innerHTML = co.map(o=>{
-    const meta = STATUS_META[o.status];
-    return `
+function clientOrderCard(o){
+  const meta = STATUS_META[o.status];
+  const dates = statusDates(o);
+  const trail = dates.length
+    ? `<div class="order-trail">${dates.map(d =>
+        `<span>${escapeHtml(t(STATUS_META[d.status].key))} <b>${escapeHtml(fmtDayMonth(d.at))}</b></span>`
+      ).join('<i>·</i>')}</div>`
+    : '';
+  return `
       <div class="order-card" style="margin-bottom:8px;" data-order-id="${o.id}">
         <div class="card-top">
           <div class="client" style="font-size:13.5px;">${escapeHtml(o.product)} × ${o.qty}</div>
           <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
         </div>
+        ${trail}
         <div class="card-bottom" style="margin-top:6px;">
           <div class="date">${t('clientSideLabel')} : ${fmtMoney(orderTotalPrice(o))}</div>
           <div class="margin ${orderMargin(o)>=0?'pos':'neg'}">${t('proSideLabel')} : ${orderMargin(o)>=0?'+':''}${fmtMoney(orderMargin(o))}</div>
         </div>
       </div>`;
-  }).join('');
+}
+
+// La fiche d'un client sépare ce qui tourne encore de ce qui est terminé :
+// on y suit le parcours de CE client, sans les commandes des autres.
+function renderClientOrders(clientId){
+  const co = orders.filter(o=>o.clientId===clientId).sort((a,b)=>b.createdAt-a.createdAt);
+  const el = $('#clientOrdersList');
+  if(!co.length){ el.innerHTML = `<div class="empty" style="padding:16px;">${t('emptyClientOrders')}</div>`; return; }
+  const done = o => o.status === 'livre' || o.status === 'annule';
+  const actifs = co.filter(o => !done(o));
+  const finis  = co.filter(done);
+  let html = '';
+  if(actifs.length){
+    html += finis.length ? `<p class="group-label">${escapeHtml(t('ordersActive'))}</p>` : '';
+    html += actifs.map(clientOrderCard).join('');
+  }
+  if(finis.length){
+    html += `<p class="group-label" style="margin-top:${actifs.length?'14px':'0'};">${escapeHtml(t('ordersDone'))} · ${finis.length}</p>`;
+    html += finis.map(clientOrderCard).join('');
+  }
+  el.innerHTML = html;
 }
 $('#clientOrdersList').addEventListener('click', (e)=>{
   const card = e.target.closest('.order-card');
@@ -3545,7 +3613,7 @@ async function executeAssistantAction(rawAction){
       const target = candidates.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))[0];
       const valid = STATUS_FLOW.includes(action.status) || action.status === 'annule';
       if(!valid) return t('actionNotRecognized');
-      await updateOrderDoc(target.id, { status: action.status });
+      await updateOrderDoc(target.id, statusPatch(action.status));
       return t('orderUpdatedMsg')
         .replace('{name}', client.name)
         .replace('{product}', target.product)

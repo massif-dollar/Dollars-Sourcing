@@ -346,6 +346,57 @@
     to{ opacity:1; transform:none; }
   }
 
+  /* --- Accueil de première visite --- */
+  .welcome{ margin-bottom:20px; animation:helloIn .7s var(--ease-out) .18s both; }
+  .welcome-card{
+    position:relative; overflow:hidden;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:22px;
+    padding:24px 19px 20px; box-shadow:var(--raise-lg);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .welcome-orb{
+    position:absolute; top:-70px; right:-60px; width:200px; height:200px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    pointer-events:none; filter:blur(4px);
+    animation:welcomeOrb 14s var(--ease-io) infinite alternate;
+  }
+  @keyframes welcomeOrb{ from{ transform:scale(1) translate(0,0); } to{ transform:scale(1.16) translate(-10px,10px); } }
+  .welcome-tile{
+    position:relative; width:48px; height:48px; border-radius:16px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--on-accent);
+    background:linear-gradient(162deg, var(--accent-bright), var(--accent) 74%);
+    box-shadow:0 8px 22px var(--accent-soft);
+  }
+  .welcome h2{
+    position:relative; font-family:var(--font-display); font-size:21px; font-weight:700;
+    margin:0 0 8px; letter-spacing:-0.03em;
+  }
+  .welcome-lead{
+    position:relative; margin:0 0 16px; font-size:14.5px; line-height:1.6;
+    color:var(--text-muted); letter-spacing:-0.01em;
+  }
+  .welcome-points{ position:relative; display:flex; flex-direction:column; gap:11px; margin-bottom:18px; }
+  .welcome-point{ display:flex; gap:11px; align-items:flex-start; font-size:13.5px; line-height:1.5; color:var(--text-muted); letter-spacing:-0.01em; }
+  .welcome-point .dot{
+    width:26px; height:26px; border-radius:9px; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; color:var(--accent);
+    background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  .welcome-point .dot svg{ width:14px; height:14px; }
+  .welcome-point b{ color:var(--text); font-weight:600; }
+  .welcome-actions{ position:relative; display:flex; flex-direction:column; gap:4px; }
+  .cw-dismiss{
+    width:100%; min-height:44px; background:none; border:none; color:var(--text-faint);
+    font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer;
+    letter-spacing:-0.01em; border-radius:13px;
+    transition:transform .44s var(--spring), color .3s var(--ease-io);
+  }
+  .cw-dismiss:active{ transform:scale(.98); color:var(--text); }
+
+  .state-error .state-title{ color:var(--danger); font-weight:600; margin-bottom:5px; }
+
   /* --- Frise de suivi --- */
   .track{ margin:15px 0 3px; }
   .track-rail{
@@ -431,6 +482,29 @@
   .ship-btn span{ position:relative; z-index:1; }
   .ship-btn.is-pressed{ transform:scale(.975); }
   .ship-note{ margin-top:9px; font-size:11.5px; color:var(--text-ghost); letter-spacing:-0.005em; }
+
+  .card-action{
+    width:100%; margin-top:12px; min-height:40px; padding:10px;
+    border-radius:12px; border:0.5px solid var(--hairline-strong); background:transparent;
+    color:var(--text-faint); font-family:var(--font-body); font-size:13px; font-weight:600;
+    cursor:pointer; letter-spacing:-0.01em;
+    transition:transform .44s var(--spring), color .3s var(--ease-io), border-color .3s var(--ease-io);
+  }
+  .card-action:active{ transform:scale(.98); color:var(--text); border-color:var(--accent); }
+
+  .archive-head{
+    width:100%; margin-top:14px; min-height:46px; padding:12px 15px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-radius:15px; border:0.5px solid var(--hairline); background:var(--fill);
+    color:var(--text-muted); font-family:var(--font-body); font-size:13.5px; font-weight:600;
+    cursor:pointer; letter-spacing:-0.01em;
+    transition:transform .44s var(--spring), background .3s var(--ease-io);
+  }
+  .archive-head:active{ transform:scale(.985); }
+  .archive-head svg{ width:16px; height:16px; flex-shrink:0; transition:transform .35s var(--ease-out); }
+  .archive-head.open svg{ transform:rotate(180deg); }
+
+  .track-date{ color:var(--text-ghost); }
 
   .card-note{
     margin-top:11px; padding:10px 12px; border-radius:12px;
@@ -574,6 +648,29 @@
     <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
   </header>
 
+  <div class="welcome" id="clientWelcome" style="display:none;">
+    <div class="welcome-card">
+      <span class="welcome-orb"></span>
+      <div class="welcome-tile">$</div>
+      <h2 id="clientWelcomeTitle">Bienvenue</h2>
+      <p class="welcome-lead" data-i18n="cwIntro">Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.</p>
+      <div class="welcome-points">
+        <div class="welcome-point">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
+          <span data-i18n="cwPrivate">Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.</span>
+        </div>
+        <div class="welcome-point" id="cwBioPoint" style="display:none;">
+          <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg></span>
+          <span data-i18n="cwBio">La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.</span>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn-primary" id="cwBioBtn" style="display:none;" data-i18n="cwBioBtn">Activer Face ID</button>
+        <button type="button" class="cw-dismiss" id="cwDismiss" data-i18n="cwOk">J'ai compris</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary" id="summary" style="display:none;">
     <div class="summary-tile accent"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
     <div class="summary-tile"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
@@ -623,6 +720,7 @@
 
   <div id="historyPanel" style="display:none;">
     <div class="list" id="historyList"></div>
+    <div id="archiveBlock"></div>
   </div>
 </div>
 
@@ -674,6 +772,15 @@ const I18N = {
     langTitle:'Langue', themeTitle:'Thème', loading:'Chargement...',
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
+    cwTitle:'Bienvenue {name}', cwTitleNoName:'Bienvenue',
+    cwIntro:'Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.',
+    cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
+    cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
+    cwBioBtn:'Activer Face ID', cwOk:"J'ai compris", cwBioDone:'Face ID activé.',
+    loadingOrders:'Chargement de tes commandes...',
+    errLoadTitle:"Tes commandes ne s'affichent pas",
+    errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
+    errLoadNet:'Connexion perdue. Vérifie ton réseau, ça se remettra tout seul.',
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
     tabHistory:'Mes commandes', tabOrder:'Nouvelle demande',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photo du produit',
@@ -711,13 +818,25 @@ const I18N = {
     amountNote:'Livraison incluse.',
     shipTitle:'Expédition', shipCarrier:'Transitaire', shipTracking:'Suivi',
     shipEta:'Livraison estimée', shipAddress:'Adresse',
-    trackParcel:'Voir le suivi transporteur', etaNote:'Date estimée, elle peut encore bouger.',
+    trackParcel:'Voir le suivi transporteur',
+    archiveBtn:'Ranger dans mon historique', unarchiveBtn:'Remettre dans mes commandes',
+    archiveTitle:'Historique', onDate:'le {date}',
+    toastArchived:'Rangée dans ton historique.', toastUnarchived:'Remise dans tes commandes.', etaNote:'Date estimée, elle peut encore bouger.',
     noteFromSeller:'Message de ton vendeur'
   },
   en:{
     langTitle:'Language', themeTitle:'Theme', loading:'Loading...',
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
+    cwTitle:'Welcome {name}', cwTitleNoName:'Welcome',
+    cwIntro:'This is your own space: every order and where it stands, live.',
+    cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
+    cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
+    cwBioBtn:'Turn on Face ID', cwOk:'Got it', cwBioDone:'Face ID is on.',
+    loadingOrders:'Loading your orders...',
+    errLoadTitle:'Your orders are not showing',
+    errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
+    errLoadNet:'Connection lost. Check your network, it will come back on its own.',
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
     tabHistory:'My orders', tabOrder:'New request',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photo',
@@ -755,7 +874,10 @@ const I18N = {
     amountNote:'Delivery included.',
     shipTitle:'Shipping', shipCarrier:'Carrier', shipTracking:'Tracking',
     shipEta:'Estimated delivery', shipAddress:'Address',
-    trackParcel:'View carrier tracking', etaNote:'This date is an estimate and may still change.',
+    trackParcel:'View carrier tracking',
+    archiveBtn:'Move to my history', unarchiveBtn:'Move back to my orders',
+    archiveTitle:'History', onDate:'on {date}',
+    toastArchived:'Moved to your history.', toastUnarchived:'Back in your orders.', etaNote:'This date is an estimate and may still change.',
     noteFromSeller:'Message from your seller'
   }
 };
@@ -771,7 +893,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   $('#langCode').textContent = currentLang.toUpperCase();
-  if(clientData) updateGreeting();
+  if(clientData){ updateGreeting(); renderWelcome(); }
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
@@ -837,7 +959,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn';
+const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tapDown(el, cx, cy){
   el.classList.add('is-pressed');
@@ -909,6 +1031,11 @@ function fmtEta(v){
   if(isNaN(d.getTime())) return v;
   return d.toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-GB',
     { weekday:'long', day:'numeric', month:'long' });
+}
+function fmtLongDate(ts){
+  if(!ts) return '';
+  return new Date(ts).toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-GB',
+    { day:'numeric', month:'long' });
 }
 function fmtMoney(n){
   const loc = currentLang === 'fr' ? 'fr-FR' : 'en-GB';
@@ -1046,11 +1173,40 @@ function updateGreeting(){
   const hasOrders = myOrders.length > 0 || myPending.length > 0;
   $('#helloSub').textContent = hasOrders ? t('helloSubOrders') : t('helloSub');
 }
+// Accueil de première visite : on explique l'espace, une seule fois.
+function welcomeKey(){ return 'ds_client_welcomed_' + clientId; }
+function welcomeSeen(){
+  try{ return localStorage.getItem(welcomeKey()) === '1'; }catch(e){ return false; }
+}
+function renderWelcome(){
+  const box = $('#clientWelcome');
+  if(!box) return;
+  if(welcomeSeen()){ box.style.display = 'none'; return; }
+  const name = clientFirstName();
+  $('#clientWelcomeTitle').textContent = name ? t('cwTitle').replace('{name}', name) : t('cwTitleNoName');
+  // Face ID : proposé seulement s'il est possible ici et pas déjà activé.
+  const offerBio = bioAvailable() && !bioRegistered();
+  $('#cwBioPoint').style.display = offerBio ? 'flex' : 'none';
+  $('#cwBioBtn').style.display = offerBio ? 'block' : 'none';
+  box.style.display = 'block';
+}
+function dismissWelcome(){
+  try{ localStorage.setItem(welcomeKey(), '1'); }catch(e){}
+  $('#clientWelcome').style.display = 'none';
+}
+$('#cwDismiss').addEventListener('click', dismissWelcome);
+$('#cwBioBtn').addEventListener('click', async ()=>{
+  await registerClientBio();
+  if(bioRegistered()){ showToast(t('cwBioDone')); dismissWelcome(); }
+});
+
 function enterApp(){
   document.getElementById('codeScreen').classList.remove('show');
   updateGreeting();
   $('#loadingScreen').style.display = 'none';
   $('#app').style.display = 'block';
+  renderWelcome();
+  renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
 }
 function askCode(){
@@ -1131,23 +1287,34 @@ async function init(){
   }
 }
 
+// Un écouteur qui échoue en silence laisse le client devant une page blanche :
+// on retient l'état de chaque flux et on le dit clairement à l'écran.
+let ordersLoaded = false, pendingLoaded = false, loadError = '';
+function noteError(err){
+  loadError = (err && err.code === 'permission-denied') ? 'denied' : 'net';
+  console.error('[portail client] lecture refusée :', err && err.code, err && err.message);
+  renderHistory();
+}
 function listenOrders(){
+  if(ordersUnsub || pendingUnsub) return;   // jamais deux fois : enterApp peut être rappelé
   ordersUnsub = db.collection('orders').where('clientId','==',clientId).onSnapshot(snap=>{
+    ordersLoaded = true; loadError = '';
     myOrders = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
     applyDefaultTab();
-  });
+  }, (err)=>{ ordersLoaded = true; noteError(err); });
   pendingUnsub = db.collection('pendingOrders').where('clientId','==',clientId).onSnapshot(snap=>{
+    pendingLoaded = true;
     myPending = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();
     updateGreeting();
     applyDefaultTab();
-  });
+  }, (err)=>{ pendingLoaded = true; noteError(err); });
 }
 
 // ---- Frise de suivi : où en est la commande ----
-function trackHtml(status){
+function trackHtml(status, order){
   const cancelled = status === 'annule';
   const idx = cancelled ? -1 : TRACK_FLOW.indexOf(status);
   const done = idx < 0 ? 0 : idx;
@@ -1159,11 +1326,13 @@ function trackHtml(status){
         <span class="track-label">${escapeHtml(t(STATUS_META[st].short))}</span>
       </div>`;
   }).join('');
+  const when = order && order.statusAt && order.statusAt[status];
+  const since = when ? ` <span class="track-date">${escapeHtml(t('onDate').replace('{date}', fmtLongDate(when)))}</span>` : '';
   const caption = cancelled
     ? `<div class="track-caption" style="color:var(--danger);">${escapeHtml(t('cancelled'))}</div>`
     : `<div class="track-caption">${t('stepOf')
         .replace('{n}', idx + 1).replace('{total}', TRACK_FLOW.length)
-        .replace('{label}', escapeHtml(t(STATUS_META[status] ? STATUS_META[status].key : 'stNouveau')))}</div>`;
+        .replace('{label}', escapeHtml(t(STATUS_META[status] ? STATUS_META[status].key : 'stNouveau')))}${since}</div>`;
   return `<div class="track ${cancelled ? 'cancelled' : ''}">
       <div class="track-rail"><i class="track-fill" data-progress="${cancelled ? 0 : pct}"></i></div>
       <div class="track-steps">${steps}</div>
@@ -1216,9 +1385,54 @@ function shippingHtml(o){
     </div>`;
 }
 
+// ---- Rangement personnel : le client décide ce qui part à l'historique ----
+// Choix assumé : ce tri vit dans son navigateur, pas dans la base. C'est une
+// préférence d'affichage, elle ne vaut pas d'ouvrir une écriture publique.
+function archiveKey(){ return 'ds_client_archived_' + clientId; }
+function archivedIds(){
+  try{
+    const raw = localStorage.getItem(archiveKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function setArchived(ids){
+  try{ localStorage.setItem(archiveKey(), JSON.stringify(ids)); }catch(e){}
+}
+function isFinished(o){ return o.status === 'livre' || o.status === 'annule'; }
+let archiveOpen = false;
+
+function orderCardHtml(o, archived){
+  const meta = STATUS_META[o.status] || STATUS_META.nouveau;
+  const finished = isFinished(o);
+  const action = finished
+    ? `<button type="button" class="card-action" data-${archived ? 'unarchive' : 'archive'}="${escapeHtml(o.id)}">
+         ${escapeHtml(t(archived ? 'unarchiveBtn' : 'archiveBtn'))}</button>`
+    : '';
+  return `
+    <div class="order-card reveal">
+      <div class="card-top">
+        <div class="product">${escapeHtml(o.product)} × ${o.qty}</div>
+        <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>
+      </div>
+      ${o.photo ? `<img class="card-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
+      ${trackHtml(o.status, o)}
+      ${amountsHtml(o)}
+      ${shippingHtml(o)}
+      ${o.note ? `<div class="card-note"><span class="k">${escapeHtml(t('noteFromSeller'))}</span>${escapeHtml(o.note)}</div>` : ''}
+      <div class="card-bottom">${fmtDate(o.createdAt)}</div>
+      ${action}
+    </div>`;
+}
+
 function renderHistory(){
   const el = $('#historyList');
   if(!el) return;
+  const archived = archivedIds();
+  const inArchive = o => isFinished(o) && archived.indexOf(o.id) !== -1;
+  const visibles = myOrders.filter(o => !inArchive(o));
+  const ranges = myOrders.filter(inArchive);
+
   const pendingCards = myPending.map(p=>`
     <div class="order-card reveal">
       <div class="card-top">
@@ -1226,30 +1440,63 @@ function renderHistory(){
         <div class="badge" style="background:var(--warn-soft); color:var(--warn);">${escapeHtml(t('stWaiting'))}</div>
       </div>
       ${p.photo ? `<img class="card-photo" src="data:${p.photoType||'image/jpeg'};base64,${p.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
-      ${trackHtml('nouveau')}
+      ${trackHtml('nouveau', p)}
       ${p.note ? `<div class="card-note"><span class="k">${escapeHtml(t('yourDetails'))}</span>${escapeHtml(p.note)}</div>` : ''}
       <div class="card-bottom">${fmtDate(p.createdAt)}</div>
     </div>`).join('');
-  const orderCards = myOrders.map(o=>{
-    const meta = STATUS_META[o.status] || STATUS_META.nouveau;
-    return `
-    <div class="order-card reveal">
-      <div class="card-top">
-        <div class="product">${escapeHtml(o.product)} × ${o.qty}</div>
-        <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>
-      </div>
-      ${o.photo ? `<img class="card-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
-      ${trackHtml(o.status)}
-      ${amountsHtml(o)}
-      ${shippingHtml(o)}
-      ${o.note ? `<div class="card-note"><span class="k">${escapeHtml(t('noteFromSeller'))}</span>${escapeHtml(o.note)}</div>` : ''}
-      <div class="card-bottom">${fmtDate(o.createdAt)}</div>
-    </div>`;
-  }).join('');
-  const html = pendingCards + orderCards;
-  el.innerHTML = html || `<div class="empty">${escapeHtml(t('emptyTitle'))}<br>${escapeHtml(t('emptySub'))}</div>`;
+
+  const html = pendingCards + visibles.map(o => orderCardHtml(o, false)).join('');
+  el.innerHTML = html || (ranges.length ? '' : stateHtml());
+  renderArchive(ranges);
   renderSummary();
   revealCards();
+}
+
+function renderArchive(list){
+  const box = $('#archiveBlock');
+  if(!box) return;
+  if(!list.length){ box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <button type="button" class="archive-head ${archiveOpen ? 'open' : ''}" id="archiveToggle">
+      <span>${escapeHtml(t('archiveTitle'))} · ${list.length}</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    ${archiveOpen ? `<div class="list" style="margin-top:9px;">${list.map(o => orderCardHtml(o, true)).join('')}</div>` : ''}`;
+}
+
+$('#historyPanel').addEventListener('click', (e)=>{
+  const toggle = e.target.closest('#archiveToggle');
+  if(toggle){ archiveOpen = !archiveOpen; renderHistory(); return; }
+  const add = e.target.closest('[data-archive]');
+  if(add){
+    const ids = archivedIds();
+    if(ids.indexOf(add.dataset.archive) === -1) ids.push(add.dataset.archive);
+    setArchived(ids);
+    archiveOpen = false;
+    renderHistory();
+    showToast(t('toastArchived'));
+    return;
+  }
+  const back = e.target.closest('[data-unarchive]');
+  if(back){
+    setArchived(archivedIds().filter(id => id !== back.dataset.unarchive));
+    renderHistory();
+    showToast(t('toastUnarchived'));
+  }
+});
+
+// Ce qu'on affiche quand il n'y a aucune carte à montrer.
+function stateHtml(){
+  if(loadError){
+    return `<div class="empty state-error">
+        <div class="state-title">${escapeHtml(t('errLoadTitle'))}</div>
+        ${escapeHtml(loadError === 'denied' ? t('errLoadDenied') : t('errLoadNet'))}
+      </div>`;
+  }
+  if(!ordersLoaded || !pendingLoaded){
+    return `<div class="empty">${escapeHtml(t('loadingOrders'))}</div>`;
+  }
+  return `<div class="empty">${escapeHtml(t('emptyTitle'))}<br>${escapeHtml(t('emptySub'))}</div>`;
 }
 
 // Les cartes se révèlent en montant, puis la frise se remplit.

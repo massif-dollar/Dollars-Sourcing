@@ -19,7 +19,49 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
 - `netlify/functions/ai.js` — proxy serveur vers l'API Anthropic (garde la clé cachée)
-- `firestore-rules.txt` — règles de sécurité à copier dans la console Firebase
+- `firestore-rules.txt` — règles de sécurité. On l'ouvre, on sélectionne tout,
+  on colle dans la console Firebase (Firestore Database → Règles → Publier).
+  Publier des règles ne coûte aucun déploiement Netlify, et la console garde
+  l'historique des versions : on peut revenir en arrière en deux clics.
+
+### Qui a le droit de quoi, dans les règles
+
+`request.auth != null` **ne suffit pas** : n'importe quel compte Google peut se
+connecter à Firebase. Les règles vérifient donc l'adresse — le propriétaire en
+dur, et les invités relus dans `settings/access`, la même liste que celle du
+bouton « Accès ». Elles exigent en plus une adresse vérifiée.
+
+Le cloisonnement multi-utilisateur est appliqué **par la base, pas seulement par
+l'interface** : `isMine()` et `claimingMine()` imposent qu'on ne modifie que ses
+propres commandes et clients, et qu'on ne crée rien au nom d'un autre. Les
+fournisseurs sont partagés en lecture et en modification, mais seul leur
+créateur — ou le propriétaire — peut les supprimer. La création de demandes
+clients, seule écriture publique, est validée (produit non vide et borné,
+quantité entière et bornée) : c'est le garde-fou contre l'abus.
+
+Seul le propriétaire modifie la liste d'accès, et la mémoire de l'assistant
+lui est réservée.
+
+### Ce que les règles autorisent, et ce que ça coûte
+
+Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
+lien (id + token) et son code à 6 chiffres, vérifiés dans le navigateur.
+Firestore le voit donc comme un visiteur anonyme.
+
+**Le piège qui a coûté une soirée** : le portail ne demande pas une commande par
+son identifiant, il fait une **requête** (« toutes celles dont le clientId est le
+mien »). Une requête relève de `list`, jamais de `get`. Des règles qui ouvrent
+`get` mais réservent `list` à l'équipe donnent donc un portail vide, sans la
+moindre erreur visible. `orders` et `pendingOrders` ont besoin de `list` ouvert.
+
+**Conséquence à connaître** : un document de commande brut contient le prix
+d'achat et la marge, et une fiche client contient son code d'accès et son
+adresse. L'interface ne les montre jamais au client, mais qui connaît la
+structure de la base peut les lire. Le correctif propre, à faire avant tout
+passage payant : recopier une version publique de chaque commande (produit,
+statut, prix client, acompte, expédition, photo) dans une collection à part, et
+refermer `orders` complètement. Une demi-journée.
+- `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
@@ -46,6 +88,19 @@ Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
 l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
+Ses commandes terminées (livrées ou annulées) ne disparaissent jamais toutes
+seules : le client les range lui-même avec un bouton, et elles rejoignent un
+bloc « Historique » replié d'où il peut les ressortir. Ce tri vit dans son
+navigateur (`ds_client_archived_<id>`), pas dans la base : c'est une préférence
+d'affichage, elle ne justifie pas d'ouvrir une écriture publique. Contrepartie
+assumée : depuis un autre appareil, son rangement ne le suit pas.
+
+À sa toute première visite, le client est accueilli par une carte qui explique
+l'espace : lien personnel protégé par son code, et proposition d'activer Face ID
+pour les fois suivantes (seulement si l'appareil le permet et que ce n'est pas
+déjà fait). Elle se ferme d'un bouton et ne revient plus (`ds_client_welcomed_<id>`
+en localStorage).
+
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
 une frise des six étapes (demande reçue → devis → payé → commandé → expédié →
@@ -67,6 +122,19 @@ Dès qu'un numéro de suivi existe, le client a un bouton « Suivre mon colis »
 ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart des
 transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
 en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
+
+### Dates de parcours
+
+Chaque commande porte une carte `statusAt` : une date par étape franchie
+(`statusAt.paye`, `statusAt.expedie`...), écrite à chaque changement de statut,
+d'où qu'il vienne — flèche du stepper, enregistrement de la fiche, annulation,
+assistant IA. L'écriture utilise un **chemin pointé** (`statusAt.expedie`) pour
+ne toucher que cette clé et préserver les autres dates.
+
+Les commandes créées avant n'ont pas d'historique : on n'invente aucune date,
+l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
+et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
+livraison estimée.
 
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
@@ -123,11 +191,27 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    L'onde de contact est un `<i>` avec un sélecteur prioritaire.
 6. **Dans une rangée de boutons**, le bouton principal doit être `flex:1`,
    sinon il prend 100% et écrase le bouton « Annuler ».
-7. **Crédits Netlify** : chaque déploiement en consomme. Deux comptes ont déjà
-   été épuisés. **Regrouper les modifications**, ne déployer qu'une fois par session.
+7. **Crédits Netlify** : seul un **déploiement de production** en consomme
+   (~15 crédits sur les 300 mensuels du plan gratuit, soit une vingtaine de mises
+   en ligne par mois). Les **previews de PR et les déploiements de branche sont
+   gratuits** : c'est là qu'il faut tester avant de fusionner. Deux comptes ont
+   déjà été épuisés — **regrouper les modifications**, ne fusionner qu'une fois
+   prêt. `netlify.toml` annule le build quand un commit ne touche qu'à la
+   documentation.
 8. **Les URLs se déduisent toutes seules** (`location.origin`) : ne jamais
    réintroduire d'adresse en dur, on a déjà changé d'hébergeur deux fois.
-9. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+9. **Un écouteur Firestore sans gestion d'erreur laisse une page blanche.**
+   Le portail client n'affichait rien quand la base refusait la lecture : pas de
+   message, pas d'erreur visible, juste du vide. Tout `onSnapshot` doit avoir
+   son second argument, et l'écran doit distinguer trois états : en cours de
+   chargement, vide, et accès refusé.
+10. **Le portail client n'est pas connecté à Firebase.** Il s'identifie avec le
+   lien (id + token) et le code à 6 chiffres, vérifiés dans le navigateur.
+   Firestore le voit comme un visiteur anonyme : toute lecture dont il a besoin
+   (`clients` par id, `orders`, `pendingOrders`) doit rester ouverte dans les
+   règles, sinon le client ne voit plus ses commandes. Voir la note de sécurité
+   en bas de `firestore-rules.txt`.
+11. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
@@ -156,10 +240,13 @@ françaises, suivi des acomptes, photos au format d'origine avec ouverture en
 plein écran, écran d'ouverture animé, mouvement du tableau de bord, écran
 d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
-date estimée) avec lien de suivi côté client.
+date estimée) avec lien de suivi côté client, dates de parcours par commande,
+historique par client dans sa fiche, archivage volontaire côté client.
 
 ## À faire
 
+- Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
+  pré-remplir la date de livraison estimée
 - Photo dans la fiche fournisseur
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours

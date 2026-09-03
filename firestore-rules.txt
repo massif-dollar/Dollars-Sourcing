@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Qui est qui ──
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function isOwner() {
+      return signedIn() && request.auth.token.email == 'dollars.sourcing@gmail.com';
+    }
+    // Un invité est autorisé si son email figure dans settings/access
+    function isTeam() {
+      return isOwner() || (
+        signedIn()
+        && exists(/databases/$(database)/documents/settings/access)
+        && request.auth.token.email in
+             get(/databases/$(database)/documents/settings/access).data.emails
+      );
+    }
+    function isMine() {
+      return signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+    function claimingMine() {
+      return signedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // ── CLIENTS ──
+    // Chacun ne voit que les siens dans l'app.
+    // La lecture d'une fiche isolée reste ouverte pour le portail client
+    // (le lien exige id + token, et aucune donnée financière n'y figure).
+    match /clients/{clientId} {
+      allow get: if true;
+      allow list: if isTeam();
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isTeam() && isMine();
+    }
+
+    // ── COMMANDES ── strictement privées à l'écriture
+    // ATTENTION, point délicat : le portail client ne demande pas une commande
+    // par son identifiant, il fait une REQUÊTE (« toutes celles dont clientId
+    // vaut le mien »). Une requête relève de `list`, pas de `get`. Tant que
+    // `list` était réservé à l'équipe, le client ne voyait aucune commande :
+    // c'était la cause du portail vide.
+    // Ouvrir `list` est le prix à payer pour un portail sans connexion ; voir
+    // la note en bas de fichier pour le correctif propre.
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isTeam() && isMine();
+    }
+
+    // ── DEMANDES CLIENTS ──
+    // Déposées sans compte depuis le portail, traitées seulement par leur
+    // destinataire. Même remarque que ci-dessus : le portail liste les siennes.
+    // La création reste validée, c'est la seule porte d'écriture publique.
+    match /pendingOrders/{reqId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if request.resource.data.product is string
+                    && request.resource.data.product.size() > 0
+                    && request.resource.data.product.size() < 200
+                    && request.resource.data.qty is int
+                    && request.resource.data.qty > 0
+                    && request.resource.data.qty < 100000;
+      allow update, delete: if isTeam() && isMine();
+    }
+
+    // ── FOURNISSEURS ── partagés par l'équipe
+    // Tout le monde lit et modifie ; seul le créateur (ou le propriétaire) supprime.
+    match /suppliers/{supplierId} {
+      allow read: if isTeam();
+      allow create: if isTeam() && claimingMine();
+      allow update: if isTeam();
+      allow delete: if isOwner() || isMine();
+    }
+
+    // ── RÉGLAGES ──
+    // La liste des accès : lisible par tout compte connecté (nécessaire pour qu'un
+    // invité vérifie sa propre autorisation), modifiable uniquement par le propriétaire.
+    match /settings/access {
+      allow read: if signedIn();
+      allow write: if isOwner();
+    }
+    // Mémoire de l'assistant : propriétaire uniquement.
+    match /settings/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // ── RÉGLAGES PERSONNELS ──
+    // Le code PIN de chacun, dans son propre espace : lui seul y accède.
+    match /userSettings/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ── Tout le reste : interdit ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// NOTE — pourquoi `list` est ouvert sur orders et pendingOrders
+//
+// Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
+// lien (id + token) et son code à 6 chiffres, vérifiés dans le navigateur.
+// Firestore ne peut donc pas savoir « qui » demande, et une requête filtrée sur
+// clientId reste, de son point de vue, une requête anonyme sur la collection.
+// Conséquence : qui connaît la structure de la base peut lister les commandes,
+// et un document de commande contient le prix d'achat et la marge.
+//
+// Le correctif propre, à faire avant tout passage payant : recopier au moment
+// de l'enregistrement une version publique de chaque commande — produit,
+// quantité, statut, prix client, acompte, expédition, photo — dans une
+// collection à part, que le portail lirait à la place. `orders` redeviendrait
+// alors entièrement fermé, coûts et marges compris. Une demi-journée.
+// ─────────────────────────────────────────────────────────────────────────
