@@ -530,6 +530,22 @@
   /* --- Graphique --- */
   /* Le solde du client, lisible au moment où on saisit sa commande : c'est là
      qu'on décide de lui proposer son coupon, pas dans sa fiche. */
+  /* Le profil vient d'être créé : on le dit, et on met le lien sous la main. */
+  .created-banner{
+    display:flex; align-items:flex-start; gap:12px; margin:16px 0 4px; padding:14px 15px;
+    background:var(--accent-soft); border:0.5px solid var(--accent); border-radius:14px;
+    animation:cardIn .5s var(--ease-out) both;
+  }
+  .created-tile{
+    flex-shrink:0; width:34px; height:34px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    color:var(--on-accent); font-family:var(--font-display); font-weight:800; font-size:17px;
+    box-shadow:0 2px 8px var(--accent-soft);
+  }
+  .created-title{ font-family:var(--font-display); font-weight:700; font-size:14.5px; letter-spacing:-0.02em; color:var(--accent-deep); }
+  .created-text{ margin-top:3px; font-size:12.5px; line-height:1.5; color:var(--text-faint); letter-spacing:-0.005em; }
+
   .coupon-balance{
     display:flex; align-items:center; gap:.4em; margin-bottom:9px;
     font-size:13px; color:var(--text-faint); letter-spacing:-0.005em;
@@ -1537,6 +1553,14 @@
     </form>
 
 
+    <div class="created-banner" id="clientCreatedBanner" style="display:none;">
+      <span class="created-tile">$</span>
+      <div>
+        <div class="created-title" data-i18n="clientCreatedTitle">Profil créé</div>
+        <div class="created-text" data-i18n="clientCreatedText">Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollars.</div>
+      </div>
+    </div>
+
     <div class="client-link-box" id="clientLinkBox" style="display:none;">
       <div class="link-label" data-i18n="clientLinkLabel">Lien personnel du client (à envoyer une seule fois)</div>
       <div class="link-row">
@@ -1838,7 +1862,9 @@ const I18N = {
     clientLinkLabel:'Lien personnel du client (à envoyer une seule fois)', copyLink:'Copier', sendWhatsapp:'Envoyer sur WhatsApp',
     clientCodeLabel:"Code d'accès du client", newCode:'Nouveau', toastCodeRegenerated:'Nouveau code généré',
     confirmRegenCode:"Générer un nouveau code ? L'ancien ne fonctionnera plus et le client devra ressaisir le nouveau.",
-    toastLinkCopied:'Lien copié', waLinkMessage:'Bonjour {name} ! Voici votre lien personnel pour passer vos commandes directement : {link}\n\nVotre code d\u2019accès : {code}',
+    toastLinkCopied:'Lien copié',
+    waLinkMessage:'Bienvenue chez DOLLAR$ SOURCING, {name} \ud83d\udc4b\n\nTon espace personnel est prêt. Tu y suis tes commandes en direct, tu envoies tes demandes et tu cumules des Dollars à chaque achat.\n\n\ud83d\udd17 Ton lien personnel :\n{link}\n\n\ud83d\udd11 Ton code d\u2019accès : {code}\n\n\ud83d\udcf2 Ajoute-le à ton écran d\u2019accueil pour l\u2019avoir comme une vraie application : ouvre le lien, appuie sur Partager, puis « Sur l\u2019écran d\u2019accueil ».\n\nCe lien est personnel, ne le partage pas.',
+    clientCreatedTitle:'Profil créé', clientCreatedText:'Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollars.',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
     requestQty:'Qté', requestNote:'Note client', validateRequest:'Valider', rejectRequest:'Refuser',
     confirmRejectRequest:'Refuser et supprimer cette demande ?', toastRequestRejected:'Demande refusée', toastRequestValidated:'Demande transformée en commande',
@@ -1970,7 +1996,9 @@ const I18N = {
     clientLinkLabel:'Client personal link (send it once)', copyLink:'Copy', sendWhatsapp:'Send on WhatsApp',
     clientCodeLabel:'Client access code', newCode:'New', toastCodeRegenerated:'New code generated',
     confirmRegenCode:'Generate a new code? The old one will stop working and the client will need to enter the new one.',
-    toastLinkCopied:'Link copied', waLinkMessage:'Hi {name}! Here is your personal link to place your orders directly: {link}\n\nYour access code: {code}',
+    toastLinkCopied:'Link copied',
+    waLinkMessage:'Welcome to DOLLAR$ SOURCING, {name} \ud83d\udc4b\n\nYour personal space is ready. Track your orders live, send your requests, and earn Dollars on every purchase.\n\n\ud83d\udd17 Your personal link:\n{link}\n\n\ud83d\udd11 Your access code: {code}\n\n\ud83d\udcf2 Add it to your home screen to use it like a real app: open the link, tap Share, then “Add to Home Screen”.\n\nThis link is personal, please do not share it.',
+    clientCreatedTitle:'Profile created', clientCreatedText:'Send them their link and code: they can follow their orders and collect their Dollars.',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
     requestQty:'Qty', requestNote:'Client note', validateRequest:'Validate', rejectRequest:'Reject',
     confirmRejectRequest:'Reject and delete this request?', toastRequestRejected:'Request rejected', toastRequestValidated:'Request turned into an order',
@@ -2001,13 +2029,13 @@ const ICONS = {
 };
 
 // ==== LIEN CLIENT ====
-// Remplace cette URL par celle de ton client.html une fois déployé (GitHub Pages / Netlify).
-// Exemple: "https://tonpseudo.github.io/dollar-sourcing/client.html"
-// L'adresse du portail client est déduite de l'endroit où tourne l'app :
-// plus rien à modifier si tu changes d'hébergeur.
+// L'adresse du portail client est déduite de l'endroit où tourne l'app : rien à
+// modifier si on change d'hébergeur, et c'est ce qui compte puisqu'on l'a déjà
+// fait deux fois. Le repli ne sert qu'aux ouvertures en file:// (tests hors
+// serveur) — il n'est jamais atteint en ligne.
 const CLIENT_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
   ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'client.html'
-  : "https://ddollars-sourcing.netlify.app/client.html";
+  : "https://dollars-sourcing.pages.dev/client.html";
 function emptyHtml(icon, text){ return `<div class="empty"><div class="empty-icon">${ICONS[icon]}</div>${text}</div>`; }
 
 let orders = [];
@@ -3424,8 +3452,9 @@ $('#waFormBtn').addEventListener('click', async ()=>{
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 });
 
-function openClientSheet(id){
+function openClientSheet(id, justeCree){
   editingClientId = id;
+  $('#clientCreatedBanner').style.display = justeCree ? 'block' : 'none';
   clearFormErrors($('#clientForm'));
   const c = id ? clientById(id) : null;
   $('#clientSheetTitle').textContent = c ? c.name : t('newClientTitle');
@@ -3522,11 +3551,22 @@ $('#clientForm').addEventListener('submit', async (e)=>{
   };
   if(editingClientId){
     await updateClientDoc(editingClientId, data);
-  } else {
-    await createClientDoc(data);
+    closeClientSheet();
+    showToast(t('toastClientSaved'));
+    return;
   }
+  const nouvelId = await createClientDoc(data);
   closeClientSheet();
+  if(!nouvelId){ return; }
   showToast(t('toastClientSaved'));
+  // La fiche se rouvre sur le profil qu'on vient de créer : son lien, son code
+  // et le bouton d'envoi sont sous la main tout de suite. Sans ça, il fallait
+  // ressortir de la liste et rouvrir le client pour les retrouver.
+  const attendre = (essais)=>{
+    if(clientById(nouvelId)){ openClientSheet(nouvelId, true); return; }
+    if(essais > 0) setTimeout(()=>attendre(essais-1), 120);   // le temps que l'écouteur le voie
+  };
+  attendre(20);
 });
 $('#deleteClientBtn').addEventListener('click', async ()=>{
   if(!editingClientId) return;

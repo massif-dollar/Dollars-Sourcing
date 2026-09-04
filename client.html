@@ -490,6 +490,21 @@
   }
   .welcome-point .dot svg{ width:14px; height:14px; }
   .welcome-point b{ color:var(--text); font-weight:600; }
+  /* Les étapes d'installation : numérotées, parce qu'on décrit un geste précis
+     dans une interface qui n'est pas la nôtre. */
+  .ins-step{ display:flex; align-items:flex-start; gap:11px; }
+  .ins-num{
+    flex-shrink:0; width:23px; height:23px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--accent); color:var(--on-accent);
+    font-family:var(--font-display); font-weight:700; font-size:12px;
+  }
+  .ins-step span:last-child{ padding-top:2px; }
+  .ins-ico{
+    display:inline-flex; vertical-align:-0.22em; margin:0 .18em;
+    width:1.05em; height:1.05em; color:var(--accent);
+  }
+
   .welcome-actions{ position:relative; display:flex; flex-direction:column; gap:4px; }
   .cw-dismiss{
     width:100%; min-height:44px; background:none; border:none; color:var(--text-faint);
@@ -1082,6 +1097,22 @@
     </div>
   </div>
 
+  <!-- Troisième et dernière carte de la file : elle n'apparaît qu'une fois les
+       deux autres vues, et jamais si l'app est déjà sur l'écran d'accueil. -->
+  <div class="welcome" id="installCard" style="display:none;">
+    <div class="welcome-card">
+      <span class="welcome-orb"></span>
+      <div class="welcome-tile">$</div>
+      <h2 data-i18n="insTitle">Mets-le sur ton écran d'accueil</h2>
+      <p class="welcome-lead" data-i18n="insLead">Ton espace devient une vraie application : une icône, plein écran, sans barre de navigateur. Rien à télécharger.</p>
+      <div class="welcome-points" id="insSteps"></div>
+      <div class="welcome-actions">
+        <button type="button" class="btn-primary" id="insDoBtn" style="display:none;" data-i18n="insDoBtn">Installer</button>
+        <button type="button" class="cw-dismiss" id="insDismiss" data-i18n="insLater">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary" id="summary" style="display:none;">
     <div class="summary-tile accent" style="--i:0"><span class="n" id="sumActive">0</span><span class="l" data-i18n="sumActive">En cours</span></div>
     <div class="summary-tile" style="--i:1"><span class="n" id="sumDelivered">0</span><span class="l" data-i18n="sumDelivered">Livrées</span></div>
@@ -1200,6 +1231,16 @@ const I18N = {
     diSpend:'Dans l\u2019onglet <b>Mes Dollars</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.',
     diKeep:'Ils n\u2019expirent jamais. Un coupon par commande.',
     diBtn:'Voir la boutique', diLater:'Plus tard',
+    insTitle:'Mets-le sur ton écran d\u2019accueil',
+    insLead:'Ton espace devient une vraie application : une icône, plein écran, sans barre de navigateur. Rien à télécharger.',
+    insAuto:'Ton téléphone peut l\u2019installer tout seul, en un appui.',
+    insIos1:'Appuie sur <b>Partager</b> {icon} en bas de ton écran.',
+    insIos2:'Fais défiler et choisis <b>« Sur l\u2019écran d\u2019accueil »</b>.',
+    insIos3:'Appuie sur <b>Ajouter</b>. C\u2019est fait.',
+    insAnd1:'Ouvre le menu {icon} en haut à droite.',
+    insAnd2:'Choisis <b>« Ajouter à l\u2019écran d\u2019accueil »</b>.',
+    insAnd3:'Confirme. C\u2019est fait.',
+    insDoBtn:'Installer', insLater:'Plus tard',
     loadingOrders:'Chargement de tes commandes...',
     errLoadTitle:"Tes commandes ne s'affichent pas",
     errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
@@ -1269,6 +1310,16 @@ const I18N = {
     diSpend:'In the <b>My Dollars</b> tab, you pick your coupon. The longer you wait, the more it pays.',
     diKeep:'They never expire. One coupon per order.',
     diBtn:'See the shop', diLater:'Later',
+    insTitle:'Put it on your home screen',
+    insLead:'Your space becomes a real app: an icon, full screen, no browser bar. Nothing to download.',
+    insAuto:'Your phone can install it on its own, in one tap.',
+    insIos1:'Tap <b>Share</b> {icon} at the bottom of your screen.',
+    insIos2:'Scroll and choose <b>“Add to Home Screen”</b>.',
+    insIos3:'Tap <b>Add</b>. Done.',
+    insAnd1:'Open the menu {icon} at the top right.',
+    insAnd2:'Choose <b>“Add to Home screen”</b>.',
+    insAnd3:'Confirm. Done.',
+    insDoBtn:'Install', insLater:'Later',
     loadingOrders:'Loading your orders...',
     errLoadTitle:'Your orders are not showing',
     errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
@@ -1639,6 +1690,8 @@ function renderWelcome(){
 function dismissWelcome(){
   try{ localStorage.setItem(welcomeKey(), '1'); }catch(e){}
   $('#clientWelcome').style.display = 'none';
+  renderDollarsIntro();
+  renderInstallCard();
 }
 $('#cwDismiss').addEventListener('click', dismissWelcome);
 
@@ -1661,8 +1714,70 @@ function renderDollarsIntro(){
 function dismissDollarsIntro(){
   markDollarsIntroSeen();
   $('#dollarsIntro').style.display = 'none';
+  renderInstallCard();   // la file avance : la suivante peut s'afficher
 }
 $('#diDismiss').addEventListener('click', dismissDollarsIntro);
+
+// ── « Ajoute-le à ton écran d'accueil » ──────────────────────────────────────
+// Trois cas, et ils ne se ressemblent pas : Android sait installer tout seul,
+// iOS oblige à décrire un geste dans une interface qui n'est pas la nôtre, et
+// une app déjà installée ne doit évidemment rien demander.
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstall = e;
+  renderInstallCard();
+});
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+function isIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function installKey(){ return 'ds_client_install_' + clientId; }
+function installSeen(){
+  try{ return localStorage.getItem(installKey()) === '1'; }catch(e){ return false; }
+}
+function dismissInstall(){
+  try{ localStorage.setItem(installKey(), '1'); }catch(e){}
+  $('#installCard').style.display = 'none';
+}
+const ICON_SHARE = '<svg class="ins-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+const ICON_MENU = '<svg class="ins-ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
+
+function renderInstallCard(){
+  const box = $('#installCard');
+  if(!box) return;
+  // Jamais deux cartes à la fois, et rien à proposer si c'est déjà fait.
+  const libre = welcomeSeen() && dollarsIntroSeen();
+  if(isStandalone() || installSeen() || !libre){ box.style.display = 'none'; return; }
+
+  const steps = $('#insSteps');
+  const bouton = $('#insDoBtn');
+  if(deferredInstall){
+    // Android : le navigateur sait le faire, on ne décrit rien.
+    steps.innerHTML = `<div class="welcome-point"><span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span><span>${t('insAuto')}</span></div>`;
+    bouton.style.display = 'block';
+  } else {
+    bouton.style.display = 'none';
+    const etapes = isIOS()
+      ? [ t('insIos1').replace('{icon}', ICON_SHARE), t('insIos2'), t('insIos3') ]
+      : [ t('insAnd1').replace('{icon}', ICON_MENU), t('insAnd2'), t('insAnd3') ];
+    steps.innerHTML = etapes.map((txt,i)=>
+      `<div class="ins-step"><span class="ins-num">${i+1}</span><span>${txt}</span></div>`).join('');
+  }
+  box.style.display = 'block';
+}
+$('#insDismiss').addEventListener('click', dismissInstall);
+$('#insDoBtn').addEventListener('click', async ()=>{
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  try{ await deferredInstall.userChoice; }catch(e){}
+  deferredInstall = null;
+  dismissInstall();
+});
 $('#diShopBtn').addEventListener('click', ()=>{ dismissDollarsIntro(); switchTab('dollars'); });
 $('#cwBioBtn').addEventListener('click', async ()=>{
   await registerClientBio();
@@ -1689,6 +1804,7 @@ function enterApp(){
   $('#app').style.display = 'block';
   renderWelcome();
   renderDollarsIntro();
+  renderInstallCard();
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
 
