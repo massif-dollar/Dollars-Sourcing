@@ -69,10 +69,28 @@ refermer `orders` complètement. Une demi-journée.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
 - `og-client.png` — la bannière 1200×630 que WhatsApp, iMessage et Snapchat
   affichent au-dessus du lien du client. **Un message WhatsApp est du texte
-  brut** : on ne peut pas y envoyer de HTML ni de gabarit. La seule surface
-  graphique est cet aperçu de lien, plus le balisage propre à WhatsApp
-  (`*gras*`, `_italique_`) dans le texte. Regénérable avec un rendu Chromium à
-  cette taille.
+  brut** : on ne peut pas y envoyer de HTML ni de gabarit, et **un aperçu de
+  lien ne s'anime jamais** — c'est une image fixe, en format large, pas en 9:16.
+  Les seules surfaces graphiques sont donc cet aperçu, le balisage propre à
+  WhatsApp (`*gras*`, `_italique_`) dans le texte, et l'affiche décrite plus
+  bas. Regénérable avec un rendu Chromium à cette taille ; les polices du
+  projet s'installent depuis npm (`@fontsource/space-grotesk`, `@fontsource/inter`)
+  et s'embarquent en base64, Google Fonts n'étant pas joignable partout.
+
+### L'affiche de bienvenue
+
+Le bouton « Image de bienvenue » de la fiche client dessine une **affiche 9:16**
+(1080×1920) sur un canvas, aux couleurs sombres de l'app, avec le prénom du
+client — sa taille se réduit toute seule s'il est long. Elle part par
+`navigator.share` quand l'appareil le permet, sinon elle se télécharge.
+
+**Le lien et le code restent dans le texte, jamais dans l'image** : ils doivent
+être cliquables et copiables, et un secret gravé dans une photo finit dans la
+pellicule des deux côtés. L'affiche renvoie donc au message.
+
+Piège : Safari annule `navigator.share` si un `await` s'intercale entre le clic
+et l'appel. Le dessin, l'encodage (`toDataURL` en JPEG) et la construction du
+`File` sont donc **tous synchrones**.
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` —
   ce qu'il faut pour qu'« Ajouter à l'écran d'accueil » installe une vraie app :
   fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
