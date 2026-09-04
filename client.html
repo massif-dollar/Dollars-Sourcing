@@ -9,6 +9,23 @@
 <!-- Pas de manifeste ici, volontairement : le lien du client contient son
      identifiant et son jeton, et un manifeste imposerait une adresse de départ
      fixe qui les effacerait. Les balises iOS suffisent pour l'écran d'accueil. -->
+<!-- Aperçu du lien dans WhatsApp, iMessage, Snapchat : ces robots ne lisent que
+     le HTML brut et n'exécutent aucun JavaScript. L'adresse de l'image doit
+     donc être absolue et écrite en dur — c'est la seule exception à la règle
+     « aucune URL en dur » avec le lien 17TRACK, et elle est à corriger si le
+     domaine change un jour. Une image relative ne s'afficherait pas.
+     Aucune donnée du client n'y figure : la carte est la même pour tous. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DOLLAR$ SOURCING">
+<meta property="og:title" content="Ton espace personnel — DOLLAR$ SOURCING">
+<meta property="og:description" content="Suis tes commandes en direct, envoie tes demandes et cumule des Dollars à chaque achat.">
+<meta property="og:image" content="https://dollars-sourcing.pages.dev/og-client.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ton espace personnel — DOLLAR$ SOURCING">
+<meta name="twitter:description" content="Suis tes commandes en direct, envoie tes demandes et cumule des Dollars à chaque achat.">
+<meta name="twitter:image" content="https://dollars-sourcing.pages.dev/og-client.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png" type="image/png">
 <meta name="apple-mobile-web-app-capable" content="yes">

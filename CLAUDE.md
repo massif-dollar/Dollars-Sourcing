@@ -67,6 +67,12 @@ passage payant : recopier une version publique de chaque commande (produit,
 statut, prix client, acompte, expédition, photo) dans une collection à part, et
 refermer `orders` complètement. Une demi-journée.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
+- `og-client.png` — la bannière 1200×630 que WhatsApp, iMessage et Snapchat
+  affichent au-dessus du lien du client. **Un message WhatsApp est du texte
+  brut** : on ne peut pas y envoyer de HTML ni de gabarit. La seule surface
+  graphique est cet aperçu de lien, plus le balisage propre à WhatsApp
+  (`*gras*`, `_italique_`) dans le texte. Regénérable avec un rendu Chromium à
+  cette taille.
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` —
   ce qu'il faut pour qu'« Ajouter à l'écran d'accueil » installe une vraie app :
   fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
@@ -431,6 +437,12 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    documentation.
 8. **Les URLs se déduisent toutes seules** (`location.origin`) : ne jamais
    réintroduire d'adresse en dur, on a déjà changé d'hébergeur deux fois.
+   **Deux exceptions assumées**, toutes deux documentées sur place : le lien
+   17TRACK, qui pointe un service tiers, et l'adresse de `og-client.png` dans
+   les balises d'aperçu de `client.html`. Cette dernière est inévitable : les
+   robots de WhatsApp et d'iMessage lisent le HTML brut sans exécuter le
+   moindre JavaScript, et une image relative ne s'afficherait pas. C'est la
+   ligne à corriger si le domaine change.
 9. **Un écouteur Firestore sans gestion d'erreur laisse une page blanche.**
    Le portail client n'affichait rien quand la base refusait la lecture : pas de
    message, pas d'erreur visible, juste du vide. Tout `onSnapshot` doit avoir
