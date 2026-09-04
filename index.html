@@ -1573,6 +1573,8 @@
         <button type="button" class="link-btn" id="regenCodeBtn" data-i18n="newCode">Nouveau</button>
       </div>
       <button type="button" class="link-btn wa" id="waClientLinkBtn" style="width:100%; margin-top:8px;" data-i18n="sendWhatsapp">Envoyer sur WhatsApp</button>
+      <button type="button" class="link-btn" id="posterBtn" style="width:100%; margin-top:8px;" data-i18n="posterBtn">Image de bienvenue</button>
+      <p class="field-hint" style="margin:7px 0 0;" data-i18n="posterHint">À joindre au message : une affiche 9:16 à ses couleurs, avec son prénom.</p>
     </div>
     <div id="clientOrdersSection" style="margin-top:18px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
@@ -1864,6 +1866,10 @@ const I18N = {
     confirmRegenCode:"Générer un nouveau code ? L'ancien ne fonctionnera plus et le client devra ressaisir le nouveau.",
     toastLinkCopied:'Lien copié',
     toastNoWaNumber:'Aucun numéro WhatsApp valide pour ce client : choisis le destinataire dans WhatsApp.',
+    posterBtn:'Image de bienvenue', posterHint:'À joindre au message : une affiche 9:16 à ses couleurs, avec son prénom.',
+    posterKicker:'ESPACE CLIENT', posterHello:'Bienvenue', posterF1:'Tes commandes suivies en direct',
+    posterF2:'Tes demandes envoyées en deux clics', posterF3:'1 € dépensé = 1 Dollar de fidélité',
+    posterFoot:'Ton lien et ton code sont dans le message', posterReady:'Image prête', posterFail:'Image impossible à générer ici.',
     waLinkMessage:'*Bienvenue chez DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nTon espace personnel est prêt : tes commandes suivies en direct, tes demandes envoyées en deux clics, et des Dollars cumulés à chaque achat.\n\n\ud83d\udd17 *Ton lien personnel*\n{link}\n\n\ud83d\udd11 *Ton code d\u2019accès* — {code}\n\n\ud83d\udcf2 *Mets-le sur ton écran d\u2019accueil*\nOuvre le lien, appuie sur _Partager_, puis _Sur l\u2019écran d\u2019accueil_. Tu l\u2019auras comme une vraie application.\n\n_Ce lien est personnel : ne le partage pas._',
     clientCreatedTitle:'Profil créé', clientCreatedText:'Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollars.',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
@@ -1999,6 +2005,10 @@ const I18N = {
     confirmRegenCode:'Generate a new code? The old one will stop working and the client will need to enter the new one.',
     toastLinkCopied:'Link copied',
     toastNoWaNumber:'No valid WhatsApp number for this client: pick the recipient in WhatsApp.',
+    posterBtn:'Welcome image', posterHint:'To attach to the message: a 9:16 poster in your colours, with their first name.',
+    posterKicker:'CLIENT SPACE', posterHello:'Welcome', posterF1:'Your orders tracked live',
+    posterF2:'Your requests sent in two taps', posterF3:'€1 spent = 1 loyalty Dollar',
+    posterFoot:'Your link and code are in the message', posterReady:'Image ready', posterFail:'Cannot generate the image here.',
     waLinkMessage:'*Welcome to DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nYour personal space is ready: orders tracked live, requests sent in two taps, and Dollars earned on every purchase.\n\n\ud83d\udd17 *Your personal link*\n{link}\n\n\ud83d\udd11 *Your access code* — {code}\n\n\ud83d\udcf2 *Put it on your home screen*\nOpen the link, tap _Share_, then _Add to Home Screen_. You will have it like a real app.\n\n_This link is personal: please do not share it._',
     clientCreatedTitle:'Profile created', clientCreatedText:'Send them their link and code: they can follow their orders and collect their Dollars.',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
@@ -3549,6 +3559,147 @@ $('#waClientLinkBtn').addEventListener('click', ()=>{
     : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
 });
+// ── L'affiche de bienvenue ───────────────────────────────────────────────────
+// Une image 9:16 aux couleurs de l'app, avec le prénom du client, à joindre au
+// message. Le lien et le code restent dans le texte : ils doivent être
+// cliquables et copiables, et un secret dans une photo finit dans la pellicule.
+const POSTER_W = 1080, POSTER_H = 1920;
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+// ctx.letterSpacing n'existe pas sur les Safari un peu anciens : on espace à la
+// main, sinon le petit titre en capitales se tasse.
+function tracked(ctx, text, cx, y, space){
+  const chars = text.split('');
+  const total = chars.reduce((w,c)=>w + ctx.measureText(c).width + space, -space);
+  let x = cx - total/2;
+  for(const c of chars){ ctx.fillText(c, x, y); x += ctx.measureText(c).width + space; }
+}
+
+function drawPoster(prenom){
+  const cv = document.createElement('canvas');
+  cv.width = POSTER_W; cv.height = POSTER_H;
+  const g = cv.getContext('2d');
+  const cx = POSTER_W / 2;
+
+  // Fond et masses de lumière : les mêmes que le portail, en version sombre.
+  g.fillStyle = '#0a0a0b'; g.fillRect(0, 0, POSTER_W, POSTER_H);
+  const halo = (x, y, r, couleur) => {
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, couleur); grd.addColorStop(1, 'rgba(255,122,26,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, POSTER_W, POSTER_H);
+  };
+  halo(210, 300, 760, 'rgba(255,122,26,0.34)');
+  halo(940, 1500, 720, 'rgba(255,122,26,0.20)');
+  halo(560, 980, 620, 'rgba(142,142,138,0.10)');
+
+  // Grille discrète, atténuée vers les bords
+  g.save();
+  g.globalAlpha = 0.055; g.strokeStyle = '#8e8e8a'; g.lineWidth = 2;
+  for(let x = 0; x <= POSTER_W; x += 90){ g.beginPath(); g.moveTo(x, 0); g.lineTo(x, POSTER_H); g.stroke(); }
+  for(let y = 0; y <= POSTER_H; y += 90){ g.beginPath(); g.moveTo(0, y); g.lineTo(POSTER_W, y); g.stroke(); }
+  g.restore();
+
+  // La pièce de l'app
+  const T = 300, tx = cx - T/2, ty = 300;
+  g.save();
+  g.shadowColor = 'rgba(255,122,26,0.42)'; g.shadowBlur = 90; g.shadowOffsetY = 30;
+  const tuile = g.createLinearGradient(tx, ty, tx + T, ty + T);
+  tuile.addColorStop(0, '#ffb066'); tuile.addColorStop(0.56, '#ff7a1a'); tuile.addColorStop(1, '#c9540a');
+  g.fillStyle = tuile; roundRect(g, tx, ty, T, T, 86); g.fill();
+  g.restore();
+  const reflet = g.createLinearGradient(tx, ty, tx + T*0.75, ty + T);
+  reflet.addColorStop(0, 'rgba(255,255,255,0.42)');
+  reflet.addColorStop(0.44, 'rgba(255,255,255,0.06)');
+  reflet.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = reflet; roundRect(g, tx, ty, T, T, 86); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '700 176px "Space Grotesk", sans-serif';
+  g.fillText('$', cx, ty + T/2 + 6);
+
+  g.textBaseline = 'alphabetic';
+
+  // Le petit titre, entre deux filets
+  g.fillStyle = '#ff7a1a'; g.font = '600 26px Inter, sans-serif'; g.textAlign = 'left';
+  const kicker = t('posterKicker');
+  tracked(g, kicker, cx, 726, 7);
+  g.strokeStyle = 'rgba(255,122,26,0.5)'; g.lineWidth = 3;
+  const demi = (g.measureText(kicker).width + kicker.length * 7) / 2;
+  [[cx - demi - 76, cx - demi - 22], [cx + demi + 22, cx + demi + 76]].forEach(([a, b])=>{
+    g.beginPath(); g.moveTo(a, 718); g.lineTo(b, 718); g.stroke();
+  });
+
+  // Bienvenue, puis son prénom
+  g.textAlign = 'center';
+  g.fillStyle = '#9a9a94'; g.font = '500 52px Inter, sans-serif';
+  g.fillText(t('posterHello'), cx, 830);
+  g.fillStyle = '#ffffff';
+  // Un prénom long ne doit pas déborder : on réduit jusqu'à ce qu'il tienne.
+  let taille = 128;
+  do { g.font = '700 ' + taille + 'px "Space Grotesk", sans-serif'; taille -= 4; }
+  while(taille > 56 && g.measureText(prenom).width > POSTER_W - 160);
+  g.fillText(prenom, cx, 962);
+
+  // Trois promesses, alignées à gauche d'un bloc centré
+  const lignes = [t('posterF1'), t('posterF2'), t('posterF3')];
+  let y = 1160;
+  lignes.forEach(txt=>{
+    g.textAlign = 'left';
+    g.fillStyle = '#ff7a1a';
+    g.beginPath(); g.arc(150, y - 12, 9, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e8e8e4'; g.font = '500 40px Inter, sans-serif';
+    g.fillText(txt, 190, y);
+    y += 96;
+  });
+
+  // Pied de page : le lien et le code sont dans le message, pas dans l'image.
+  g.textAlign = 'center';
+  g.strokeStyle = 'rgba(142,142,138,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(150, 1560); g.lineTo(POSTER_W - 150, 1560); g.stroke();
+  g.fillStyle = '#8e8e8a'; g.font = '500 36px Inter, sans-serif';
+  g.fillText(t('posterFoot'), cx, 1638);
+  g.fillStyle = '#ffffff'; g.font = '700 44px "Space Grotesk", sans-serif';
+  g.fillText('DOLLAR$ SOURCING', cx, 1760);
+  return cv;
+}
+
+// Tout est synchrone jusqu'au partage : Safari annule navigator.share si un
+// await s'intercale entre le clic et l'appel.
+function dataUrlToFile(url, nom){
+  const base64 = url.split(',')[1];
+  const bin = atob(base64);
+  const buf = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new File([buf], nom, { type: 'image/jpeg' });
+}
+$('#posterBtn').addEventListener('click', ()=>{
+  const c = editingClientId ? clientById(editingClientId) : null;
+  if(!c) return;
+  const prenom = (c.firstname || String(c.name || '').trim().split(/\s+/)[0] || '').trim();
+  let url;
+  try{
+    url = drawPoster(prenom || t('posterHello')).toDataURL('image/jpeg', 0.92);
+  }catch(e){ showToast(t('posterFail')); return; }
+  const nom = 'dollars-sourcing-' + (prenom || 'client').toLowerCase().replace(/[^a-z0-9]/g, '') + '.jpg';
+  const fichier = dataUrlToFile(url, nom);
+  if(navigator.canShare && navigator.canShare({ files: [fichier] })){
+    navigator.share({ files: [fichier] }).catch(()=>{});
+    return;
+  }
+  // Pas de partage natif (ordinateur) : on télécharge, il joindra le fichier.
+  const a = document.createElement('a');
+  a.href = url; a.download = nom;
+  document.body.appendChild(a); a.click(); a.remove();
+  showToast(t('posterReady'));
+});
+
 function closeClientSheet(){ $('#clientOverlay').classList.remove('open'); editingClientId = null; }
 $('#closeClientSheet').addEventListener('click', closeClientSheet);
 $('#clientOverlay').addEventListener('click', (e)=>{ if(e.target===$('#clientOverlay')) closeClientSheet(); });
