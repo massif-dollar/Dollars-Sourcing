@@ -1863,6 +1863,7 @@ const I18N = {
     clientCodeLabel:"Code d'accès du client", newCode:'Nouveau', toastCodeRegenerated:'Nouveau code généré',
     confirmRegenCode:"Générer un nouveau code ? L'ancien ne fonctionnera plus et le client devra ressaisir le nouveau.",
     toastLinkCopied:'Lien copié',
+    toastNoWaNumber:'Aucun numéro WhatsApp valide pour ce client : choisis le destinataire dans WhatsApp.',
     waLinkMessage:'*Bienvenue chez DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nTon espace personnel est prêt : tes commandes suivies en direct, tes demandes envoyées en deux clics, et des Dollars cumulés à chaque achat.\n\n\ud83d\udd17 *Ton lien personnel*\n{link}\n\n\ud83d\udd11 *Ton code d\u2019accès* — {code}\n\n\ud83d\udcf2 *Mets-le sur ton écran d\u2019accueil*\nOuvre le lien, appuie sur _Partager_, puis _Sur l\u2019écran d\u2019accueil_. Tu l\u2019auras comme une vraie application.\n\n_Ce lien est personnel : ne le partage pas._',
     clientCreatedTitle:'Profil créé', clientCreatedText:'Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollars.',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
@@ -1997,6 +1998,7 @@ const I18N = {
     clientCodeLabel:'Client access code', newCode:'New', toastCodeRegenerated:'New code generated',
     confirmRegenCode:'Generate a new code? The old one will stop working and the client will need to enter the new one.',
     toastLinkCopied:'Link copied',
+    toastNoWaNumber:'No valid WhatsApp number for this client: pick the recipient in WhatsApp.',
     waLinkMessage:'*Welcome to DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nYour personal space is ready: orders tracked live, requests sent in two taps, and Dollars earned on every purchase.\n\n\ud83d\udd17 *Your personal link*\n{link}\n\n\ud83d\udd11 *Your access code* — {code}\n\n\ud83d\udcf2 *Put it on your home screen*\nOpen the link, tap _Share_, then _Add to Home Screen_. You will have it like a real app.\n\n_This link is personal: please do not share it._',
     clientCreatedTitle:'Profile created', clientCreatedText:'Send them their link and code: they can follow their orders and collect their Dollars.',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
@@ -3515,6 +3517,23 @@ $('#copyClientLinkBtn').addEventListener('click', async ()=>{
   }
   showToast(t('toastLinkCopied'));
 });
+// Le numéro à composer pour WhatsApp. On lit d'abord les champs qui contiennent
+// vraiment un numéro : `contact` porte en priorité le pseudo réseau social, et
+// n'en garder que les chiffres donnait des horreurs — « massif13 » devenait le
+// numéro « +13 », que WhatsApp refusait évidemment.
+function waDigits(c){
+  if(!c) return '';
+  const brut = String(c.whatsapp || c.phone || c.contact || '').trim();
+  const international = /^\+/.test(brut);
+  let n = brut.replace(/\D/g, '');
+  if(!n) return '';
+  // Un 06 saisi en local n'est pas composable à l'international.
+  if(!international && n.length === 10 && n.charAt(0) === '0') n = '33' + n.slice(1);
+  // En dessous de 8 chiffres, ce n'est pas un numéro : c'est ce qu'il restait
+  // d'un pseudo. Mieux vaut laisser WhatsApp proposer le choix du contact que
+  // d'appeler un numéro inventé.
+  return n.length >= 8 ? n : '';
+}
 $('#waClientLinkBtn').addEventListener('click', ()=>{
   const c = editingClientId ? clientById(editingClientId) : null;
   if(!c) return;
@@ -3523,8 +3542,11 @@ $('#waClientLinkBtn').addEventListener('click', ()=>{
     .replace('{name}', c.name)
     .replace('{link}', clientLink(c))
     .replace('{code}', code);
-  const waNumber = (c.contact||'').replace(/[^0-9+]/g,'');
-  const waUrl = waNumber ? `https://wa.me/${waNumber.replace('+','')}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  const num = waDigits(c);
+  if(!num) showToast(t('toastNoWaNumber'));
+  const waUrl = num
+    ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
 });
 function closeClientSheet(){ $('#clientOverlay').classList.remove('open'); editingClientId = null; }
