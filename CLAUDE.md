@@ -99,7 +99,11 @@ L'assistant IA est **réservé au propriétaire** (c'est sa clé API qui paie).
 
 ### Portail client
 Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
-6 chiffres. Le client peut envoyer une demande avec photo ; elle arrive dans
+6 chiffres. **Créer un client rouvre aussitôt sa fiche** sur un bandeau
+« Profil créé », avec son lien, son code et le bouton WhatsApp sous la main —
+sans ça il fallait ressortir de la liste et rouvrir le client pour les
+retrouver. Le message d'invitation (`waLinkMessage`) accueille, donne le lien
+et le code, et explique comment ajouter l'espace à l'écran d'accueil. Le client peut envoyer une demande avec photo ; elle arrive dans
 l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
@@ -118,9 +122,19 @@ ne revient plus (`ds_client_welcomed_<id>` en localStorage).
 
 Les clients **déjà venus** n'ont jamais vu cet accueil parler des Dollars : ils
 reçoivent une annonce dédiée, une seule fois (`ds_client_dollars_intro_<id>`),
-avec un bouton qui les emmène directement dans la boutique. **Jamais deux cartes
-à la fois** : un nouveau client a l'annonce marquée comme vue d'avance, puisque
-sa carte de bienvenue en parle déjà.
+avec un bouton qui les emmène directement dans la boutique.
+
+Une troisième carte ferme la file : **« Mets-le sur ton écran d'accueil »**
+(`ds_client_install_<id>`). Elle explique le geste, parce qu'un client qui
+installe l'app la garde. Trois cas, et ils ne se ressemblent pas : Android
+propose un vrai bouton via `beforeinstallprompt`, iOS oblige à décrire un geste
+dans une interface qui n'est pas la nôtre (Partager → Sur l'écran d'accueil),
+et une app déjà lancée en `display-mode: standalone` ne demande évidemment rien.
+
+**Jamais deux cartes à la fois.** Chacune ne s'affiche que si les précédentes
+ont été vues, et fermer l'une déclenche le rendu de la suivante. Un nouveau
+client a l'annonce Dollars marquée comme vue d'avance, puisque sa carte de
+bienvenue en parle déjà : il voit donc bienvenue, puis installation.
 
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
