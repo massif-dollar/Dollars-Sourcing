@@ -465,7 +465,17 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    (`clients` par id, `orders`, `pendingOrders`) doit rester ouverte dans les
    règles, sinon le client ne voit plus ses commandes. Voir la note de sécurité
    en bas de `firestore-rules.txt`.
-12. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+12. **Le champ `contact` n'est pas un numéro.** Il porte en priorité le pseudo
+   réseau social (`social || phone || whatsapp`), parce qu'il sert d'abord à
+   l'affichage. Le bouton WhatsApp s'en servait en n'en gardant que les
+   chiffres : « massif13 » devenait le numéro « +13 », et WhatsApp répondait
+   que le numéro n'existe pas. `waDigits()` lit désormais `whatsapp` puis
+   `phone` avant `contact`, convertit un `06…` français en `336…` — WhatsApp
+   n'accepte que l'international — et **refuse tout ce qui fait moins de
+   8 chiffres**, ce qui n'est jamais un numéro mais le résidu d'un pseudo. Sans
+   numéro exploitable, on ouvre WhatsApp sans destinataire avec un message qui
+   l'explique, plutôt que d'appeler un numéro inventé.
+13. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
