@@ -4990,7 +4990,7 @@ function hideSplash(){
     setTimeout(()=>{ if(splash.parentNode) splash.remove(); }, 600);
   }, wait);
 }
-function showLogin(errorKey){
+function showLogin(errorKey, detail){
   hideSplash();
   document.getElementById('app').style.display = 'none';
   document.getElementById('fabAdd').style.display = 'none';
@@ -4998,7 +4998,13 @@ function showLogin(errorKey){
   if(af) af.style.display = 'none';
   document.getElementById('loginScreen').classList.add('show');
   const err = document.getElementById('loginError');
-  if(errorKey){ err.textContent = t(errorKey); err.classList.add('show'); }
+  if(errorKey){
+    // Le détail technique est affiché tel quel : sans lui, une connexion qui
+    // échoue ne dit rien et on ne peut que deviner. C'est court, c'est moche,
+    // mais ça se lit à voix haute au téléphone.
+    err.textContent = t(errorKey) + (detail ? '  [' + detail + ']' : '');
+    err.classList.add('show');
+  }
   else{ err.classList.remove('show'); }
 }
 function showApp(){
@@ -5026,30 +5032,43 @@ function runsStandalone(){
         || window.navigator.standalone === true;
   }catch(e){ return false; }
 }
+// Sur iPhone, la fenêtre de connexion est fragile partout : lancée depuis
+// l'écran d'accueil elle atterrit dans un navigateur intégré qui ne sait pas
+// répondre à la page qui l'a ouverte, et même dans Safari elle se fait bloquer
+// puis perd le fil. La redirection est une vraie navigation : rien à ouvrir,
+// rien à faire dialoguer. On la prend d'emblée sur tout appareil Apple.
+function isAppleMobile(){
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/i.test(ua)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
 
 document.getElementById('googleLoginBtn').addEventListener('click', async ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  if(runsStandalone()){
+  if(isAppleMobile() || runsStandalone()){
     try{ await auth.signInWithRedirect(provider); return; }
-    catch(e0){ /* la redirection a échoué : on tente quand même la fenêtre */ }
+    catch(e0){ showLogin('loginFailed', (e0 && e0.code) || 'redirect'); return; }
   }
 
   try{
     await auth.signInWithPopup(provider);
   }catch(e){
     if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')){
-      try{ await auth.signInWithRedirect(provider); return; }catch(e2){}
+      try{ await auth.signInWithRedirect(provider); return; }
+      catch(e2){ showLogin('loginFailed', (e2 && e2.code) || 'redirect'); return; }
     }
     if(e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')){
       return;
     }
-    showLogin('loginFailed');
+    showLogin('loginFailed', e && e.code);
   }
 });
 
-auth.getRedirectResult().catch(()=>{});
+auth.getRedirectResult().catch((e)=>{
+  if(e && e.code) showLogin('loginFailed', e.code);
+});
 
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   if(!(await showConfirm(t('confirmLogout')))) return;
