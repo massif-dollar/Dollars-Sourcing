@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light" style="background:#fbfcfa;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#ffffff">
+<title>Mes informations — DOLLAR$ SOURCING</title>
+<!-- Aperçu du lien dans WhatsApp, iMessage, Snapchat : ces robots ne lisent que
+     le HTML brut et n'exécutent aucun JavaScript. L'adresse de l'image doit
+     donc être absolue et écrite en dur — même exception assumée que dans
+     client.html, à corriger si le domaine change un jour.
+     Bannière distincte de celle du portail : le message n'annonce pas la même
+     chose, et deux liens qui affichent la même carte prêtent à confusion. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DOLLAR$ SOURCING">
+<meta property="og:title" content="Tes informations de livraison">
+<meta property="og:description" content="Une minute pour remplir, et ta commande part à la bonne adresse. Rien n'est envoyé sans toi : tu relis tout avant.">
+<meta property="og:image" content="https://dollars-sourcing.pages.dev/og-form.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tes informations de livraison">
+<meta name="twitter:description" content="Une minute pour remplir, et ta commande part à la bonne adresse. Rien n'est envoyé sans toi : tu relis tout avant.">
+<meta name="twitter:image" content="https://dollars-sourcing.pages.dev/og-form.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mes infos">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --danger:#e0293c;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    --spring:cubic-bezier(.34,1.4,.64,1);
+    --ease-out:cubic-bezier(.22,.7,.3,1);
+    --ease-io:cubic-bezier(.4,0,.2,1);
+    --radius:20px;
+  }
+
+  html[data-theme="light"]{
+    --bg:#fbfcfa;
+    --bg-elevated:#ffffff;
+    --tint-1:rgba(46,179,92,0.055);
+    --tint-2:rgba(142,142,138,0.09);
+    --aurora-1:rgba(46,179,92,0.16);
+    --aurora-2:rgba(142,142,138,0.15);
+    --aurora-3:rgba(46,179,92,0.09);
+
+    --accent:#2eb35c;
+    --accent-bright:#5fe08c;
+    --accent-deep:#1e8a44;
+    --accent-soft:rgba(46,179,92,0.14);
+
+    --text:#2b302c;
+    --text-muted:#5f645e;
+    --text-faint:#8d918a;
+    --text-ghost:#b3b7b0;
+
+    --fill:rgba(142,142,138,0.10);
+    --hairline:rgba(120,120,114,0.16);
+    --hairline-strong:rgba(120,120,114,0.28);
+    --mat-thick:rgba(255,255,255,0.94);
+
+    --raise:0 1px 1.5px rgba(70,74,68,0.05), 0 6px 16px rgba(70,74,68,0.06);
+    --raise-lg:0 2px 4px rgba(70,74,68,0.05), 0 20px 40px rgba(70,74,68,0.10);
+    --press:inset 0 3px 8px rgba(70,74,68,0.15), inset 0 1px 2px rgba(70,74,68,0.10);
+    --specular:linear-gradient(163deg, rgba(255,255,255,0.96), rgba(255,255,255,0.18) 40%, transparent 68%);
+    --ripple:rgba(46,179,92,0.26);
+    --sheen:rgba(255,255,255,0.92);
+    --on-accent:#ffffff;
+  }
+
+  html[data-theme="dark"]{
+    --bg:#0a0a0b;
+    --bg-elevated:#151516;
+    --tint-1:rgba(255,122,26,0.10);
+    --tint-2:rgba(142,142,138,0.07);
+    --aurora-1:rgba(255,122,26,0.20);
+    --aurora-2:rgba(142,142,138,0.13);
+    --aurora-3:rgba(255,122,26,0.11);
+
+    --accent:#ff7a1a;
+    --accent-bright:#ffb066;
+    --accent-deep:#d85f00;
+    --accent-soft:rgba(255,122,26,0.20);
+
+    --text:#f3f2ef;
+    --text-muted:#a9aaa4;
+    --text-faint:#7c7d76;
+    --text-ghost:#55564f;
+
+    --fill:rgba(142,142,138,0.12);
+    --hairline:rgba(142,142,138,0.20);
+    --hairline-strong:rgba(142,142,138,0.36);
+    --mat-thick:rgba(28,28,30,0.94);
+
+    --raise:0 1px 2px rgba(0,0,0,0.5), 0 8px 22px rgba(0,0,0,0.42);
+    --raise-lg:0 2px 6px rgba(0,0,0,0.55), 0 24px 48px rgba(0,0,0,0.5);
+    --press:inset 0 3px 9px rgba(0,0,0,0.62), inset 0 1px 2px rgba(0,0,0,0.5);
+    --specular:linear-gradient(163deg, rgba(255,255,255,0.15), rgba(255,255,255,0.03) 40%, transparent 68%);
+    --ripple:rgba(255,122,26,0.30);
+    --sheen:rgba(255,255,255,0.26);
+    --on-accent:#1c0d00;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--font-body);
+    font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
+    min-height:100vh; position:relative; overflow-x:hidden;
+    transition:background .45s var(--ease-io), color .45s var(--ease-io);
+  }
+  #bgfill{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:var(--bg); transition:background .45s var(--ease-io);
+  }
+  /* Trois masses de lumière, trois durées premières entre elles : des durées
+     égales donneraient un battement mécanique qu'on repère tout de suite. */
+  #aurora{
+    position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;
+    contain:strict;
+  }
+  #aurora i{
+    position:absolute; display:block; border-radius:50%;
+    filter:blur(48px); will-change:transform;
+  }
+  #aurora .a1{
+    width:62vw; height:62vw; max-width:520px; max-height:520px; top:-16vh; left:-18vw;
+    background:radial-gradient(circle, var(--aurora-1), transparent 68%);
+    animation:auroraA 34s var(--ease-io) infinite alternate;
+  }
+  #aurora .a2{
+    width:54vw; height:54vw; max-width:460px; max-height:460px; top:26vh; right:-22vw;
+    background:radial-gradient(circle, var(--aurora-2), transparent 68%);
+    animation:auroraB 46s var(--ease-io) infinite alternate;
+  }
+  #aurora .a3{
+    width:70vw; height:70vw; max-width:580px; max-height:580px; bottom:-24vh; left:6vw;
+    background:radial-gradient(circle, var(--aurora-3), transparent 70%);
+    animation:auroraC 58s var(--ease-io) infinite alternate;
+  }
+  @keyframes auroraA{ from{ transform:translate3d(0,0,0) scale(1); }   to{ transform:translate3d(16vw,12vh,0) scale(1.25); } }
+  @keyframes auroraB{ from{ transform:translate3d(0,0,0) scale(1.1); } to{ transform:translate3d(-14vw,-16vh,0) scale(.85); } }
+  @keyframes auroraC{ from{ transform:translate3d(0,0,0) scale(.9); }  to{ transform:translate3d(12vw,-14vh,0) scale(1.2); } }
+
+  .tnum{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+
+  /* ===== Surface tactile (liquid glass) ===== */
+  .tap{
+    position:relative; overflow:hidden; cursor:pointer;
+    -webkit-user-select:none; user-select:none; transform:translateZ(0);
+    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io),
+               background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .tap::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:var(--specular); opacity:.6;
+    transition:opacity .28s var(--ease-io), transform .44s var(--spring);
+  }
+  .tap.is-pressed{ transform:scale(.968); }
+  .tap.is-pressed::after{ opacity:.2; transform:translateY(2px); }
+  /* L'onde est un <i> : un sélecteur trop faible se ferait écraser (piège 5). */
+  .tap .ripple, .btn-primary .ripple, .lang-toggle .ripple, .theme-toggle .ripple{
+    position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
+    background:radial-gradient(circle, var(--ripple) 0%, transparent 66%);
+    transform:translate(-50%,-50%) scale(0);
+    animation:rippleOut .6s var(--ease-out) forwards;
+  }
+  @keyframes rippleOut{ to{ transform:translate(-50%,-50%) scale(1); opacity:0; } }
+
+  #app{
+    position:relative; z-index:1; max-width:520px; margin:0 auto;
+    padding:calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 54px);
+  }
+
+  /* ===== En-tête : la seule zone de respiration de la page ===== */
+  header{ text-align:center; margin-bottom:24px; position:relative; }
+  .hello-aura{
+    position:absolute; left:50%; top:-14px; width:230px; height:130px; z-index:-1;
+    transform:translateX(-50%); pointer-events:none;
+    background:radial-gradient(circle at 34% 42%, var(--accent-soft), transparent 62%),
+               radial-gradient(circle at 68% 58%, var(--aurora-2), transparent 60%);
+    filter:blur(26px); animation:helloDrift 26s var(--ease-io) infinite alternate;
+  }
+  @keyframes helloDrift{
+    from{ transform:translateX(-50%) translate3d(-10px,-6px,0) scale(1); }
+    to{ transform:translateX(-50%) translate3d(12px,8px,0) scale(1.15); }
+  }
+  .brand{
+    font-family:var(--font-display); font-size:11.5px; font-weight:700; letter-spacing:.1em;
+    color:var(--text-ghost); text-transform:uppercase;
+  }
+  .head-coin{
+    width:54px; height:54px; margin:12px auto 0; border-radius:16px;
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    color:var(--on-accent); font-family:var(--font-display); font-weight:800; font-size:27px;
+    box-shadow:0 5px 18px var(--accent-soft), var(--raise);
+  }
+  .head-coin::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(160deg, rgba(255,255,255,.42), rgba(255,255,255,.05) 45%, transparent 70%);
+  }
+  /* Un seul reflet en boucle sur la page : l'œil doit savoir où regarder. */
+  .head-coin::before{
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,.62) 50%, transparent 60%);
+    background-size:280% 100%; background-position:180% 0;
+    animation:coinShine 5.6s var(--ease-io) 1.2s infinite;
+  }
+  @keyframes coinShine{ 0%{ background-position:180% 0; } 40%,100%{ background-position:-80% 0; } }
+  header h1{
+    font-family:var(--font-display); font-size:25px; font-weight:700;
+    margin:14px 0 5px; letter-spacing:-0.03em;
+  }
+  header p{ margin:0; font-size:14px; color:var(--text-muted); letter-spacing:-0.01em; }
+
+  /* ===== Le formulaire : zone de travail, donc aucune animation d'entrée ===== */
+  .card{
+    background:var(--mat-thick); border:0.5px solid var(--hairline); border-radius:var(--radius);
+    padding:19px 17px; box-shadow:var(--raise); margin-bottom:15px;
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .card-title{
+    font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;
+  }
+  .field{ margin-bottom:14px; position:relative; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{
+    display:block; font-size:12.5px; color:var(--text-muted); margin-bottom:6px;
+    font-weight:500; letter-spacing:-0.01em;
+  }
+  .field label .req{ color:var(--accent); font-weight:700; }
+  .field input, .field textarea{
+    width:100%; background:var(--bg-elevated); border:0.5px solid var(--hairline); color:var(--text);
+    border-radius:12px; padding:12px 14px; font-family:var(--font-body); font-size:16px;
+    resize:vertical; letter-spacing:-0.01em;
+    transition:border-color .25s ease, background .45s var(--ease-io);
+  }
+  .field input:focus, .field textarea:focus{ border-color:var(--accent); outline:none; }
+  .field-hint{ margin:6px 0 0; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; }
+  .field-error{ display:none; color:var(--danger); font-size:12px; margin-top:6px; }
+  .field.invalid input, .field.invalid textarea{ border-color:var(--danger); }
+  .field.invalid .field-error{ display:block; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* Adresses officielles : gratuit, sans clé, et ça évite les fautes de frappe
+     qui coûtent un colis. */
+  .addr-suggestions{
+    position:absolute; left:0; right:0; top:100%; margin-top:5px; z-index:35;
+    background:var(--mat-thick); border:0.5px solid var(--hairline); border-radius:13px;
+    box-shadow:var(--raise-lg); overflow:hidden; display:none;
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    max-height:230px; overflow-y:auto;
+  }
+  .addr-suggestions.open{ display:block; animation:popIn .18s var(--ease-out); }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+  .addr-item{
+    padding:11px 14px; cursor:pointer; font-size:14px; color:var(--text);
+    letter-spacing:-0.01em; border-bottom:0.5px solid var(--hairline);
+  }
+  .addr-item:last-child{ border-bottom:none; }
+  .addr-item:hover, .addr-item.active{ background:var(--fill); }
+  .addr-item .addr-main{ font-weight:600; }
+  .addr-item .addr-sub{ font-size:12.5px; color:var(--text-faint); margin-top:1px; }
+
+  .privacy{
+    display:flex; gap:10px; align-items:flex-start;
+    margin:0 4px 17px; font-size:12.5px; color:var(--text-faint); letter-spacing:-0.005em;
+  }
+  .privacy svg{ width:15px; height:15px; flex-shrink:0; margin-top:1px; stroke:var(--accent); }
+
+  .btn-primary{
+    width:100%; min-height:52px; padding:15px; border-radius:15px; border:none;
+    color:var(--on-accent); font-family:var(--font-body); font-weight:700; font-size:16px;
+    cursor:pointer; letter-spacing:-0.015em;
+    background:linear-gradient(162deg, var(--accent-bright), var(--accent) 72%);
+    box-shadow:var(--raise), 0 8px 22px var(--accent-soft);
+    position:relative; overflow:hidden; -webkit-user-select:none; user-select:none;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io);
+  }
+  .btn-primary::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:var(--specular); opacity:.35; transition:opacity .28s var(--ease-io);
+  }
+  .btn-primary.is-pressed{ transform:scale(.98); box-shadow:var(--press); }
+  .btn-primary.is-pressed::after{ opacity:.12; }
+  .btn-primary svg{ width:19px; height:19px; position:relative; z-index:1; }
+  .btn-primary span{ position:relative; z-index:1; }
+  .btn-ghost{
+    width:100%; min-height:46px; margin-top:9px; padding:12px; border-radius:14px;
+    border:0.5px solid var(--hairline-strong); background:transparent; color:var(--text-muted);
+    font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer;
+    letter-spacing:-0.01em; position:relative; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    transition:transform .44s var(--spring), color .25s ease, border-color .25s ease;
+  }
+  .btn-ghost.is-pressed{ transform:scale(.98); color:var(--text); }
+
+  /* ===== L'écran de confirmation ===== */
+  #sent{ display:none; text-align:center; padding:26px 8px 6px; }
+  .sent-mark{
+    width:66px; height:66px; margin:0 auto 18px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--accent-soft); color:var(--accent);
+    animation:markPop .5s var(--spring) both;
+  }
+  .sent-mark svg{ width:30px; height:30px; }
+  @keyframes markPop{ from{ opacity:0; transform:scale(.6); } to{ opacity:1; transform:none; } }
+  #sent h2{ font-family:var(--font-display); font-size:21px; font-weight:700; margin:0 0 8px; letter-spacing:-0.02em; }
+  #sent p{ margin:0 0 20px; font-size:14px; color:var(--text-muted); letter-spacing:-0.01em; }
+
+  .lang-toggle{
+    position:fixed; top:calc(env(safe-area-inset-top) + 16px); right:62px; z-index:60;
+    min-width:38px; height:38px; padding:0 11px; border-radius:12px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:var(--text-muted);
+    background:var(--fill); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:.04em;
+    backdrop-filter:blur(18px) saturate(150%); -webkit-backdrop-filter:blur(18px) saturate(150%);
+    overflow:hidden; -webkit-user-select:none; user-select:none;
+    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), background .45s var(--ease-io);
+  }
+  .lang-toggle.is-pressed{ transform:scale(.93); box-shadow:var(--press); }
+  .theme-toggle{
+    position:fixed; top:calc(env(safe-area-inset-top) + 16px); right:16px; z-index:60;
+    width:38px; height:38px; border-radius:12px; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; color:var(--text-muted);
+    background:var(--fill); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(18px) saturate(150%); -webkit-backdrop-filter:blur(18px) saturate(150%);
+    overflow:hidden; -webkit-user-select:none; user-select:none;
+    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), background .45s var(--ease-io);
+  }
+  .theme-toggle.is-pressed{ transform:scale(.93); box-shadow:var(--press); }
+  .theme-toggle svg{ width:17px; height:17px; position:relative; z-index:1; }
+
+  .toast{
+    position:fixed; bottom:calc(env(safe-area-inset-bottom) + 22px); left:50%;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--mat-thick); border:0.5px solid var(--hairline); color:var(--text);
+    padding:12px 19px; border-radius:100px; font-size:14px; z-index:70; max-width:88vw; text-align:center;
+    letter-spacing:-0.01em; box-shadow:var(--raise-lg);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    opacity:0; transition:opacity .3s var(--ease-io), transform .35s var(--spring); pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .foot{
+    text-align:center; margin-top:20px;
+    font-family:var(--font-display); font-size:10.5px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--text-ghost);
+  }
+
+  @media (max-width:640px){
+    #app{ padding-left:15px; padding-right:15px; }
+    header h1{ font-size:22px; }
+  }
+  @media (min-width:700px){ #app{ max-width:560px; } }
+
+  /* Accélérer une animation infinie la fait clignoter : on la coupe. */
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.01ms !important; transition-duration:.01ms !important;
+       animation-iteration-count:1 !important; }
+    #aurora i, .hello-aura, .head-coin::before{ animation:none !important; }
+    .head-coin::before{ display:none !important; }
+  }
+</style>
+</head>
+<body style="background:#fbfcfa;">
+<div id="bgfill"></div>
+<div id="aurora" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+
+<button class="lang-toggle" id="langToggle" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
+<button class="theme-toggle" id="themeToggle" data-i18n-title="themeTitle" title="Thème"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+
+<div id="app">
+  <header>
+    <div class="hello-aura" aria-hidden="true"></div>
+    <div class="brand">DOLLAR$ SOURCING</div>
+    <div class="head-coin" aria-hidden="true">$</div>
+    <h1 data-i18n="pageTitle">Tes informations</h1>
+    <p data-i18n="pageLead">Une minute à remplir, et tes commandes partent à la bonne adresse.</p>
+  </header>
+
+  <form id="infoForm" novalidate>
+    <div class="card">
+      <p class="card-title" data-i18n="secIdentity">Qui es-tu</p>
+      <div class="row2">
+        <div class="field">
+          <label for="f_firstname" data-i18n="labFirstname">Prénom <span class="req">*</span></label>
+          <input type="text" id="f_firstname" autocomplete="given-name" enterkeyhint="next">
+          <div class="field-error"></div>
+        </div>
+        <div class="field">
+          <label for="f_lastname" data-i18n="labLastname">Nom <span class="req">*</span></label>
+          <input type="text" id="f_lastname" autocomplete="family-name" enterkeyhint="next">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f_social" data-i18n="labSocial">Pseudo Snap / Insta / TikTok</label>
+        <input type="text" id="f_social" autocapitalize="none" autocomplete="off" data-i18n-placeholder="phSocial" placeholder="@ton_pseudo">
+        <p class="field-hint" data-i18n="hintSocial">Celui sur lequel on se parle déjà.</p>
+        <div class="field-error"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title" data-i18n="secContact">Comment te joindre</p>
+      <div class="field">
+        <label for="f_phone" data-i18n="labPhone">Téléphone</label>
+        <input type="tel" id="f_phone" class="tnum" autocomplete="tel" inputmode="tel" data-i18n-placeholder="phPhone" placeholder="06 12 34 56 78">
+      </div>
+      <div class="field">
+        <label for="f_whatsapp" data-i18n="labWhatsapp">WhatsApp</label>
+        <input type="tel" id="f_whatsapp" class="tnum" inputmode="tel" autocomplete="off" data-i18n-placeholder="phWhatsapp" placeholder="Si différent du téléphone">
+        <p class="field-hint" data-i18n="hintWhatsapp">C'est là que tu recevras le suivi de tes colis.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title" data-i18n="secDelivery">Où livrer</p>
+      <div class="field">
+        <label for="f_address" data-i18n="labAddress">Adresse complète <span class="req">*</span></label>
+        <input type="text" id="f_address" autocomplete="street-address" data-i18n-placeholder="phAddress" placeholder="Numéro, rue, code postal, ville">
+        <div class="addr-suggestions" id="addrSuggestions"></div>
+        <p class="field-hint" data-i18n="hintAddress">Commence à taper : les adresses françaises se complètent toutes seules.</p>
+        <div class="field-error"></div>
+      </div>
+      <div class="field">
+        <label for="f_extra" data-i18n="labExtra">Étage, bâtiment, code d'entrée</label>
+        <textarea id="f_extra" rows="2" data-i18n-placeholder="phExtra" placeholder="Bât. B, 3e étage, code 1234A"></textarea>
+        <p class="field-hint" data-i18n="hintExtra">Ce qui évite au livreur de repartir avec le colis.</p>
+      </div>
+    </div>
+
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v5.5c0 4.4-3 8.2-7.5 9.5-4.5-1.3-7.5-5.1-7.5-9.5V6z"/><path d="M9.2 12.2l2 2 3.6-3.9"/></svg>
+      <span data-i18n="privacyNote">Ces informations servent uniquement à préparer et expédier tes commandes. Rien n'est envoyé sans toi : tu relis le message avant de l'envoyer.</span>
+    </p>
+
+    <button type="submit" class="btn-primary" id="sendBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 004.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.16c-.24.68-1.42 1.31-1.96 1.35-.5.04-.97.22-3.27-.68-2.76-1.09-4.5-3.9-4.64-4.08-.13-.18-1.1-1.47-1.1-2.8 0-1.33.7-1.98.94-2.25.25-.27.54-.34.72-.34.18 0 .36 0 .52.01.17.01.4-.06.62.48.24.57.8 1.97.87 2.11.07.14.12.31.02.49-.09.18-.14.29-.28.45-.14.16-.29.35-.41.47-.14.14-.28.28-.12.55.16.27.72 1.18 1.54 1.91 1.06.94 1.95 1.23 2.22 1.37.27.14.43.12.59-.07.16-.18.68-.79.86-1.06.18-.27.36-.22.61-.13.25.09 1.58.74 1.85.88.27.14.45.2.52.31.07.12.07.66-.17 1.34z"/></svg>
+      <span data-i18n="sendBtn">Envoyer sur WhatsApp</span>
+    </button>
+    <button type="button" class="btn-ghost" id="copyBtn" data-i18n="copyBtn">Copier mes informations</button>
+  </form>
+
+  <div id="sent">
+    <div class="sent-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.8l4.4 4.4L19 7.6"/></svg>
+    </div>
+    <h2 data-i18n="sentTitle">C'est parti</h2>
+    <p data-i18n="sentLead">WhatsApp s'est ouvert avec tes informations. Il ne te reste qu'à appuyer sur envoyer.</p>
+    <button type="button" class="btn-ghost" id="backBtn" data-i18n="backBtn">Corriger mes informations</button>
+  </div>
+
+  <div class="foot">DOLLAR$ SOURCING</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+
+// ================= Traductions =================
+// Toute chaîne doit exister dans les deux langues, sinon la page affiche la clé.
+const I18N = {
+  fr:{
+    langTitle:'Langue', themeTitle:'Thème',
+    pageTitle:'Tes informations',
+    pageLead:'Une minute à remplir, et tes commandes partent à la bonne adresse.',
+    secIdentity:'Qui es-tu', secContact:'Comment te joindre', secDelivery:'Où livrer',
+    labFirstname:'Prénom <span class="req">*</span>', labLastname:'Nom <span class="req">*</span>',
+    labSocial:'Pseudo Snap / Insta / TikTok', phSocial:'@ton_pseudo',
+    hintSocial:'Celui sur lequel on se parle déjà.',
+    labPhone:'Téléphone', phPhone:'06 12 34 56 78',
+    labWhatsapp:'WhatsApp', phWhatsapp:'Si différent du téléphone',
+    hintWhatsapp:'C’est là que tu recevras le suivi de tes colis.',
+    labAddress:'Adresse complète <span class="req">*</span>',
+    phAddress:'Numéro, rue, code postal, ville',
+    hintAddress:'Commence à taper : les adresses françaises se complètent toutes seules.',
+    labExtra:'Étage, bâtiment, code d’entrée', phExtra:'Bât. B, 3e étage, code 1234A',
+    hintExtra:'Ce qui évite au livreur de repartir avec le colis.',
+    privacyNote:'Ces informations servent uniquement à préparer et expédier tes commandes. Rien n’est envoyé sans toi : tu relis le message avant de l’envoyer.',
+    sendBtn:'Envoyer sur WhatsApp', copyBtn:'Copier mes informations',
+    sentTitle:'C’est parti',
+    sentLead:'WhatsApp s’est ouvert avec tes informations. Il ne te reste qu’à appuyer sur envoyer.',
+    backBtn:'Corriger mes informations',
+    errRequired:'À remplir.',
+    errNoContact:'Laisse au moins un moyen de te joindre : pseudo, téléphone ou WhatsApp.',
+    copied:'Informations copiées',
+    copyFail:'Copie impossible — sélectionne le texte à la main.',
+    msgIntro:'Voici mes informations pour mes commandes :',
+    msgSep:' : ',
+    msgFirstname:'Prénom', msgLastname:'Nom', msgSocial:'Pseudo',
+    msgPhone:'Téléphone', msgWhatsapp:'WhatsApp',
+    msgAddress:'Adresse', msgExtra:'Précisions'
+  },
+  en:{
+    langTitle:'Language', themeTitle:'Theme',
+    pageTitle:'Your details',
+    pageLead:'One minute to fill in, and your orders ship to the right address.',
+    secIdentity:'Who you are', secContact:'How to reach you', secDelivery:'Where to deliver',
+    labFirstname:'First name <span class="req">*</span>', labLastname:'Last name <span class="req">*</span>',
+    labSocial:'Snap / Insta / TikTok handle', phSocial:'@your_handle',
+    hintSocial:'The one we already talk on.',
+    labPhone:'Phone', phPhone:'+33 6 12 34 56 78',
+    labWhatsapp:'WhatsApp', phWhatsapp:'If different from your phone',
+    hintWhatsapp:'That’s where you’ll get your tracking.',
+    labAddress:'Full address <span class="req">*</span>',
+    phAddress:'Number, street, postcode, city',
+    hintAddress:'Start typing: French addresses complete themselves.',
+    labExtra:'Floor, building, door code', phExtra:'Bldg B, 3rd floor, code 1234A',
+    hintExtra:'What keeps the courier from leaving with your parcel.',
+    privacyNote:'These details are only used to prepare and ship your orders. Nothing is sent without you: you read the message before sending it.',
+    sendBtn:'Send on WhatsApp', copyBtn:'Copy my details',
+    sentTitle:'All set',
+    sentLead:'WhatsApp opened with your details. All that’s left is to hit send.',
+    backBtn:'Edit my details',
+    errRequired:'Required.',
+    errNoContact:'Leave at least one way to reach you: handle, phone or WhatsApp.',
+    copied:'Details copied',
+    copyFail:'Copy failed — select the text by hand.',
+    msgIntro:'Here are my details for my orders:',
+    msgSep:': ',
+    msgFirstname:'First name', msgLastname:'Last name', msgSocial:'Handle',
+    msgPhone:'Phone', msgWhatsapp:'WhatsApp',
+    msgAddress:'Address', msgExtra:'Notes'
+  }
+};
+
+let currentLang = (navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en';
+try{
+  const saved = localStorage.getItem('ds_form_lang');
+  if(saved && I18N[saved]) currentLang = saved;
+}catch(e){}
+
+function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
+function applyTranslations(){
+  document.documentElement.setAttribute('lang', currentLang);
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.innerHTML = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
+  $('#langCode').textContent = currentLang.toUpperCase();
+}
+$('#langToggle').addEventListener('click', ()=>{
+  currentLang = (currentLang === 'fr') ? 'en' : 'fr';
+  try{ localStorage.setItem('ds_form_lang', currentLang); }catch(e){}
+  applyTranslations();
+});
+
+// ================= Thème clair / sombre =================
+const THEME_ICONS = {
+  sun:  '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"/>',
+  moon: '<path d="M20 14.6A8.6 8.6 0 1 1 9.4 4a6.9 6.9 0 0 0 10.6 10.6z"/>'
+};
+function autoTheme(){
+  const h = new Date().getHours();
+  return (h >= 7 && h < 19) ? 'light' : 'dark';
+}
+// iOS force le mode sombre si on ne le lui interdit pas explicitement : d'où la
+// balise color-scheme réécrite et les styles posés sur html et body (piège 1).
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.querySelector('meta[name="color-scheme"]');
+  if(meta) meta.setAttribute('content', 'only ' + theme);
+  const bg = theme === 'light' ? '#fbfcfa' : '#0a0a0b';
+  document.documentElement.style.background = bg;
+  document.body.style.background = bg;
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if(tc) tc.setAttribute('content', bg);
+  const svg = theme === 'light' ? THEME_ICONS.moon : THEME_ICONS.sun;
+  document.querySelectorAll('.theme-icon').forEach(el => el.innerHTML = svg);
+}
+let savedTheme = null;
+try{ savedTheme = localStorage.getItem('ds_theme'); }catch(e){}
+let currentTheme = savedTheme || autoTheme();
+applyTheme(currentTheme);
+$('#themeToggle').addEventListener('click', ()=>{
+  currentTheme = (currentTheme === 'light') ? 'dark' : 'light';
+  applyTheme(currentTheme);
+  try{ localStorage.setItem('ds_theme', currentTheme); }catch(e){}
+});
+
+// ================= Surface tactile =================
+const TAP_SELECTOR = '.btn-primary, .btn-ghost, .theme-toggle, .lang-toggle';
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function tapDown(el, cx, cy){
+  el.classList.add('is-pressed');
+  if(!prefersReduced && navigator.vibrate){ try{ navigator.vibrate(8); }catch(e){} }
+  if(prefersReduced) return;
+  const rect = el.getBoundingClientRect();
+  const x = (cx == null ? rect.left + rect.width/2 : cx) - rect.left;
+  const y = (cy == null ? rect.top + rect.height/2 : cy) - rect.top;
+  const reach = Math.max(rect.width, rect.height) * 2.1;
+  const r = document.createElement('i');
+  r.className = 'ripple';
+  r.style.cssText = 'width:' + reach + 'px;height:' + reach + 'px;left:' + x + 'px;top:' + y + 'px;';
+  el.appendChild(r);
+  setTimeout(()=>r.remove(), 620);
+}
+function tapReleaseAll(){
+  document.querySelectorAll('.is-pressed').forEach(el => el.classList.remove('is-pressed'));
+}
+document.addEventListener('pointerdown', (e)=>{
+  const el = e.target.closest(TAP_SELECTOR);
+  if(!el || el.disabled) return;
+  tapDown(el, e.clientX, e.clientY);
+}, { passive:true });
+['pointerup','pointercancel'].forEach(evt=>{
+  document.addEventListener(evt, tapReleaseAll, { passive:true });
+});
+document.addEventListener('pointermove', (e)=>{
+  const pressed = document.querySelector('.is-pressed');
+  if(!pressed) return;
+  if(e.target.closest(TAP_SELECTOR) !== pressed) tapReleaseAll();
+}, { passive:true });
+document.addEventListener('keyup', tapReleaseAll);
+
+// ================= Petits outils =================
+function showToast(msg){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2600);
+}
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+function setFieldError(input, message){
+  const field = input.closest('.field');
+  field.classList.add('invalid');
+  const err = field.querySelector('.field-error');
+  if(err) err.textContent = message;
+}
+function clearFieldError(input){
+  const field = input.closest('.field');
+  if(field) field.classList.remove('invalid');
+}
+['#f_firstname','#f_lastname','#f_address'].forEach(sel=>{
+  $(sel).addEventListener('input', ()=>clearFieldError($(sel)));
+});
+// L'erreur « laisse un moyen de te joindre » est portée par le champ pseudo,
+// mais n'importe lequel des trois la lève.
+['#f_social','#f_phone','#f_whatsapp'].forEach(sel=>{
+  $(sel).addEventListener('input', ()=>clearFieldError($('#f_social')));
+});
+
+// ================= Adresses françaises =================
+// Base d'adresses officielle du gouvernement : gratuite, sans clé, très complète.
+let addrTimer = null;
+let addrResults = [];
+
+function hideAddrSuggestions(){ $('#addrSuggestions').classList.remove('open'); }
+function renderAddrSuggestions(){
+  const box = $('#addrSuggestions');
+  if(!addrResults.length){ hideAddrSuggestions(); return; }
+  box.innerHTML = addrResults.map((f, i)=>{
+    const p = f.properties || {};
+    return '<div class="addr-item" data-addr="' + i + '">' +
+      '<div class="addr-main">' + escapeHtml(p.name || '') + '</div>' +
+      '<div class="addr-sub">' + escapeHtml((p.postcode || '') + ' ' + (p.city || '')) + '</div>' +
+    '</div>';
+  }).join('');
+  box.classList.add('open');
+}
+async function searchAddress(query){
+  if(query.trim().length < 4){ addrResults = []; hideAddrSuggestions(); return; }
+  try{
+    const url = 'https://api-adresse.data.gouv.fr/search/?limit=5&q=' + encodeURIComponent(query);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('adresse');
+    const data = await res.json();
+    addrResults = data.features || [];
+    renderAddrSuggestions();
+  }catch(e){
+    addrResults = [];
+    hideAddrSuggestions();   // hors ligne ou service indisponible : saisie libre, sans blocage
+  }
+}
+$('#f_address').addEventListener('input', (e)=>{
+  clearTimeout(addrTimer);
+  const q = e.target.value;
+  addrTimer = setTimeout(()=>searchAddress(q), 320);
+});
+$('#f_address').addEventListener('blur', ()=>setTimeout(hideAddrSuggestions, 180));
+$('#addrSuggestions').addEventListener('click', (e)=>{
+  const item = e.target.closest('[data-addr]');
+  if(!item) return;
+  const f = addrResults[Number(item.dataset.addr)];
+  if(!f) return;
+  $('#f_address').value = (f.properties && f.properties.label) || '';
+  clearFieldError($('#f_address'));
+  hideAddrSuggestions();
+});
+
+// ================= Le message =================
+// Il est écrit pour être lu par l'assistant de l'app autant que par un humain :
+// une ligne par champ, un libellé, deux points. Les champs vides disparaissent.
+function collect(){
+  return {
+    firstname: $('#f_firstname').value.trim(),
+    lastname:  $('#f_lastname').value.trim(),
+    social:    $('#f_social').value.trim(),
+    phone:     $('#f_phone').value.trim(),
+    whatsapp:  $('#f_whatsapp').value.trim(),
+    address:   $('#f_address').value.trim(),
+    extra:     $('#f_extra').value.trim()
+  };
+}
+function buildMessage(d){
+  const lines = [t('msgIntro'), ''];
+  const add = (key, val)=>{ if(val) lines.push(t(key) + t('msgSep') + val); };
+  add('msgFirstname', d.firstname);
+  add('msgLastname',  d.lastname);
+  add('msgSocial',    d.social);
+  add('msgPhone',     d.phone);
+  add('msgWhatsapp',  d.whatsapp);
+  add('msgAddress',   d.address);
+  add('msgExtra',     d.extra);
+  return lines.join('\n');
+}
+function validate(d){
+  let ok = true;
+  if(!d.firstname){ setFieldError($('#f_firstname'), t('errRequired')); ok = false; }
+  if(!d.lastname){  setFieldError($('#f_lastname'),  t('errRequired')); ok = false; }
+  if(!d.address){   setFieldError($('#f_address'),   t('errRequired')); ok = false; }
+  // Un colis sans moyen de joindre son destinataire, c'est un colis perdu.
+  if(!d.social && !d.phone && !d.whatsapp){
+    setFieldError($('#f_social'), t('errNoContact'));
+    ok = false;
+  }
+  if(!ok){
+    const first = document.querySelector('.field.invalid');
+    if(first) first.scrollIntoView({ block:'center', behavior: prefersReduced ? 'auto' : 'smooth' });
+  }
+  return ok;
+}
+
+// Le destinataire peut être passé dans le lien (?to=33...). Sans lui, WhatsApp
+// s'ouvre sur le choix du contact, avec le message déjà écrit : la conversation
+// d'où vient le lien est en haut de la liste. Aucun numéro n'est écrit en dur.
+function waTarget(){
+  const to = new URLSearchParams(location.search).get('to') || '';
+  const digits = to.replace(/\D/g, '');
+  return digits.length >= 8 ? digits : '';
+}
+
+$('#infoForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const d = collect();
+  if(!validate(d)) return;
+  const msg = buildMessage(d);
+  const to = waTarget();
+  window.open('https://wa.me/' + to + '?text=' + encodeURIComponent(msg), '_blank');
+  $('#infoForm').style.display = 'none';
+  $('#sent').style.display = 'block';
+  window.scrollTo({ top:0, behavior: prefersReduced ? 'auto' : 'smooth' });
+});
+
+$('#copyBtn').addEventListener('click', async ()=>{
+  const d = collect();
+  if(!validate(d)) return;
+  const msg = buildMessage(d);
+  try{
+    await navigator.clipboard.writeText(msg);
+    showToast(t('copied'));
+  }catch(err){
+    showToast(t('copyFail'));
+  }
+});
+
+$('#backBtn').addEventListener('click', ()=>{
+  $('#sent').style.display = 'none';
+  $('#infoForm').style.display = 'block';
+  window.scrollTo({ top:0, behavior: prefersReduced ? 'auto' : 'smooth' });
+});
+
+applyTranslations();
+</script>
+</body>
+</html>

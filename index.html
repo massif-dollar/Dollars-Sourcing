@@ -1785,7 +1785,7 @@ const I18N = {
     askPaidRest:'Il reste {left} à régler. Le client a-t-il payé le solde ?',
     askPaidYes:'Oui, tout réglé', askPaidNo:'Pas encore',
     paidAllBtn:'Tout réglé',
-    clientFormTemplate:'Salut ! Pour enregistrer ta commande, réponds simplement à ce message en remplissant :\n\nPrénom :\nNom :\nPseudo (Snap / Insta / TikTok) :\nTéléphone :\nWhatsApp :\nAdresse de livraison complète :\n\nMerci !',
+    clientFormTemplate:'*DOLLAR$ SOURCING*\n\nSalut ! Avant de lancer ta commande, il me faut tes informations de livraison.\n\nTout se remplit ici, en une minute :\n{link}\n\nTu relis tout avant d\u2019envoyer, et ça me revient directement sur WhatsApp. À tout de suite \u{1F4E6}',
     undo:'Annuler', restored:'Restauré',
     orderDeleted:'Commande supprimée', clientDeleted:'Client supprimé', supplierDeleted:'Fournisseur supprimé',
     trashTitle:'Corbeille', trashHelp:'Les éléments supprimés restent ici 30 jours, puis disparaissent définitivement.',
@@ -1925,7 +1925,7 @@ const I18N = {
     askPaidRest:'{left} still due. Has the client settled the balance?',
     askPaidYes:'Yes, paid in full', askPaidNo:'Not yet',
     paidAllBtn:'Paid in full',
-    clientFormTemplate:'Hi! To register your order, just reply to this message filling in:\n\nFirst name:\nLast name:\nHandle (Snap / Insta / TikTok):\nPhone:\nWhatsApp:\nFull delivery address:\n\nThanks!',
+    clientFormTemplate:'*DOLLAR$ SOURCING*\n\nHi! Before I place your order, I need your delivery details.\n\nFill everything in here, takes a minute:\n{link}\n\nYou read it over before sending, and it comes straight back to me on WhatsApp. Talk in a moment \u{1F4E6}',
     undo:'Undo', restored:'Restored',
     orderDeleted:'Order deleted', clientDeleted:'Client deleted', supplierDeleted:'Supplier deleted',
     trashTitle:'Trash', trashHelp:'Deleted items stay here for 30 days, then disappear for good.',
@@ -2080,6 +2080,10 @@ const ICONS = {
 const CLIENT_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
   ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'client.html'
   : "https://dollars-sourcing.pages.dev/client.html";
+// Même déduction pour la page où le client remplit ses informations.
+const FORM_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
+  ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'formulaire.html'
+  : "https://dollars-sourcing.pages.dev/formulaire.html";
 function emptyHtml(icon, text){ return `<div class="empty"><div class="empty-icon">${ICONS[icon]}</div>${text}</div>`; }
 
 let orders = [];
@@ -3611,8 +3615,12 @@ $('#addrSuggestions').addEventListener('click', (e)=>{
 });
 
 // ================= FORMULAIRE À ENVOYER AU CLIENT =================
+// Un message WhatsApp est du texte brut : la seule mise en forme disponible est
+// le balisage maison (*gras*, _italique_) et l'aperçu du lien. C'est justement
+// le lien qui donne droit à la bannière — un message sans lien n'en aura jamais,
+// quoi qu'on écrive. D'où la page plutôt que la liste de champs à recopier.
 $('#waFormBtn').addEventListener('click', async ()=>{
-  const msg = t('clientFormTemplate');
+  const msg = t('clientFormTemplate').replace('{link}', FORM_APP_URL);
   try{
     await navigator.clipboard.writeText(msg);
     showToast(t('formCopied'));
