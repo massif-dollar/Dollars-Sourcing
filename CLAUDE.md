@@ -508,7 +508,22 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    8 chiffres**, ce qui n'est jamais un numéro mais le résidu d'un pseudo. Sans
    numéro exploitable, on ouvre WhatsApp sans destinataire avec un message qui
    l'explique, plutôt que d'appeler un numéro inventé.
-13. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+13. **`signInWithPopup` est cassé quand l'app tourne depuis l'écran d'accueil.**
+   En mode installé, iOS ouvre la fenêtre de connexion dans un navigateur
+   intégré qui ne sait pas répondre à la page qui l'a ouverte. L'utilisateur
+   voit la page Firebase « The requested action is invalid » sur
+   `dollar-sourcing.firebaseapp.com` et reste bloqué dehors — d'autant que
+   **le stockage d'une app installée sur iOS est séparé de celui de Safari** :
+   se connecter dans Safari ne connecte pas l'app. `runsStandalone()` détecte
+   le mode et bascule sur `signInWithRedirect`, une vraie navigation qui ne
+   dépend d'aucun dialogue entre deux fenêtres. La fenêtre reste utilisée
+   depuis un navigateur normal, où elle fonctionne.
+   Si la redirection venait à échouer elle aussi (Safari cloisonne le stockage
+   tiers, et `authDomain` est sur un autre domaine que l'app), le correctif
+   officiel est de servir `/__/auth/*` depuis notre propre domaine via une
+   fonction Cloudflare — une route étroite, pas un middleware devant tout le
+   site.
+14. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
