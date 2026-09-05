@@ -171,6 +171,32 @@ ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart de
 transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
 en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
 
+### Référence de commande
+
+Chaque commande porte une **référence de quatre signes** (`#A7F3`) : c'est ce
+qu'on écrit au marqueur sur le carton au moment de l'emballer. Le seul geste
+manuel demandé, et il règle le problème du volume — un colis en main, on lit le
+code, on le tape, on a le client, le produit et l'adresse.
+
+L'alphabet écarte tout ce qui se confond quand c'est écrit à la main :
+**ni O contre 0, ni I ou L contre 1**. Trente et un signes, quatre positions,
+soit près d'un million de combinaisons.
+
+`freshRef()` vérifie la référence contre **toutes celles déjà chargées**, y
+compris les dérivées. Les commandes antérieures n'ont rien de stocké : leur
+référence est **dérivée de leur identifiant** (`derivedRef`), donc stable à
+chaque affichage sans écrire une ligne dans la base. **La même fonction existe
+à l'identique dans `client.html`** — si l'une des deux change, le vendeur et le
+client ne parleraient plus du même colis.
+
+La **recherche des commandes couvre aussi la référence et le numéro de suivi** :
+c'est l'autre moitié du problème. Un reçu de la poste dans la main, on tape le
+numéro et on retrouve à qui on a envoyé.
+
+Astuce sans code, à rappeler : sur iPhone, un appui long dans un champ de texte
+propose « Scanner du texte » — le numéro de suivi se saisit à l'appareil photo
+depuis l'étiquette, sans faute de frappe.
+
 ### Dates de parcours
 
 Chaque commande porte une carte `statusAt` : une date par étape franchie
@@ -513,6 +539,8 @@ d'accueil des comptes invités, portail client repensé (frise de suivi,
 montants, expédition, bilingue), suivi d'expédition (transitaire, numéro,
 date estimée) avec lien de suivi côté client, dates de parcours par commande,
 historique par client dans sa fiche, archivage volontaire côté client,
+référence de commande à écrire sur le carton avec recherche par référence et
+par numéro de suivi,
 mode discret qui masque montants et marges, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la

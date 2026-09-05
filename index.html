@@ -546,6 +546,27 @@
   .created-title{ font-family:var(--font-display); font-weight:700; font-size:14.5px; letter-spacing:-0.02em; color:var(--accent-deep); }
   .created-text{ margin-top:3px; font-size:12.5px; line-height:1.5; color:var(--text-faint); letter-spacing:-0.005em; }
 
+  /* La référence qu'on écrit au marqueur : en chiffres tabulaires et bien
+     espacée, parce qu'elle se lit sur un carton à un mètre de distance. */
+  .order-ref{
+    display:inline-block; margin-right:9px; padding:2px 7px; border-radius:6px;
+    font-family:var(--font-display); font-weight:700; font-size:11.5px;
+    letter-spacing:.06em; font-variant-numeric:tabular-nums;
+    color:var(--text-muted); background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  .sheet-ref{
+    display:inline-flex; align-items:center; gap:.45em; margin:-4px 0 14px;
+    padding:7px 12px; border-radius:9px; cursor:pointer;
+    font-family:var(--font-display); font-weight:700; font-size:15px;
+    letter-spacing:.09em; color:var(--accent-deep);
+    background:var(--accent-soft); border:0.5px solid var(--accent);
+    -webkit-user-select:none; user-select:none;
+    transition:transform .44s var(--spring);
+  }
+  .sheet-ref.is-pressed{ transform:scale(.97); }
+  .sheet-ref small{ font-family:var(--font-body); font-weight:500; font-size:11px;
+    letter-spacing:0; color:var(--text-faint); }
+
   .coupon-balance{
     display:flex; align-items:center; gap:.4em; margin-bottom:9px;
     font-size:13px; color:var(--text-faint); letter-spacing:-0.005em;
@@ -1407,6 +1428,7 @@
   <div class="sheet">
     <button class="icon-btn close-x" id="closeSheet">✕</button>
     <h2 id="sheetTitle">Nouvelle commande</h2>
+    <div class="sheet-ref" id="sheetRef" style="display:none;" data-i18n-title="refCopyTitle" title="Copier"></div>
     <form id="orderForm" novalidate>
       <div class="field">
         <label data-i18n="fieldClient">Client</label>
@@ -1774,7 +1796,7 @@ const I18N = {
     welcomeShared:"Les <b>fournisseurs</b> sont partagés avec l'équipe : tu profites du carnet d'adresses commun.",
     welcomeActionClient:'Ajouter mon premier client', welcomeActionOrder:'Créer une commande',
     welcomeActionSuppliers:"Voir les fournisseurs de l'équipe",
-    searchOrders:'Rechercher un client ou un produit...', searchClients:'Rechercher un client...', searchSuppliers:'Rechercher un fournisseur...',
+    searchOrders:'Client, produit, réf. ou n° de suivi...', searchClients:'Rechercher un client...', searchSuppliers:'Rechercher un fournisseur...',
     tabAll:'Tous',
     statusNouveau:'Nouvelle demande', statusDevis:'Devis envoyé', statusPaye:'Payé', statusCommande:'Commandé', statusExpedie:'Expédié', statusLivre:'Livré', statusAnnule:'Annulé',
     emptyOrders:"Pas encore de commande ici.<br>Ajoute-la avec le bouton + en bas.",
@@ -1864,6 +1886,7 @@ const I18N = {
     confirmRegenCode:"Générer un nouveau code ? L'ancien ne fonctionnera plus et le client devra ressaisir le nouveau.",
     toastLinkCopied:'Lien copié',
     toastNoWaNumber:'Aucun numéro WhatsApp valide pour ce client : choisis le destinataire dans WhatsApp.',
+    refOnBox:'à écrire sur le colis', refCopied:'Référence copiée', refCopyTitle:'Copier la référence',
     waLinkMessage:'*Bienvenue chez DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nTon espace personnel est prêt : tes commandes suivies en direct, tes demandes envoyées en deux clics, et des Dollars cumulés à chaque achat.\n\n\ud83d\udd17 *Ton lien personnel*\n{link}\n\n\ud83d\udd11 *Ton code d\u2019accès* — {code}\n\n\ud83d\udcf2 *Mets-le sur ton écran d\u2019accueil*\nOuvre le lien, appuie sur _Partager_, puis _Sur l\u2019écran d\u2019accueil_. Tu l\u2019auras comme une vraie application.\n\n_Ce lien est personnel : ne le partage pas._',
     clientCreatedTitle:'Profil créé', clientCreatedText:'Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollars.',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
@@ -1909,7 +1932,7 @@ const I18N = {
     welcomeShared:'<b>Suppliers</b> are shared with the team: you get the common address book.',
     welcomeActionClient:'Add my first client', welcomeActionOrder:'Create an order',
     welcomeActionSuppliers:'See the team suppliers',
-    searchOrders:'Search a client or product...', searchClients:'Search a client...', searchSuppliers:'Search a supplier...',
+    searchOrders:'Client, product, ref. or tracking no...', searchClients:'Search a client...', searchSuppliers:'Search a supplier...',
     tabAll:'All',
     statusNouveau:'New request', statusDevis:'Quote sent', statusPaye:'Paid', statusCommande:'Ordered', statusExpedie:'Shipped', statusLivre:'Delivered', statusAnnule:'Cancelled',
     emptyOrders:'No orders yet.<br>Add one with the + button below.',
@@ -1999,6 +2022,7 @@ const I18N = {
     confirmRegenCode:'Generate a new code? The old one will stop working and the client will need to enter the new one.',
     toastLinkCopied:'Link copied',
     toastNoWaNumber:'No valid WhatsApp number for this client: pick the recipient in WhatsApp.',
+    refOnBox:'to write on the parcel', refCopied:'Reference copied', refCopyTitle:'Copy the reference',
     waLinkMessage:'*Welcome to DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nYour personal space is ready: orders tracked live, requests sent in two taps, and Dollars earned on every purchase.\n\n\ud83d\udd17 *Your personal link*\n{link}\n\n\ud83d\udd11 *Your access code* — {code}\n\n\ud83d\udcf2 *Put it on your home screen*\nOpen the link, tap _Share_, then _Add to Home Screen_. You will have it like a real app.\n\n_This link is personal: please do not share it._',
     clientCreatedTitle:'Profile created', clientCreatedText:'Send them their link and code: they can follow their orders and collect their Dollars.',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
@@ -2195,6 +2219,38 @@ function availableCoupons(clientId){
 }
 function tierFor(dollars){ return LOYALTY_TIERS.find(t => t.dollars === Number(dollars)) || null; }
 
+// ================= Référence de commande =================
+// Quatre signes qu'on écrit au marqueur sur le carton, et qu'on retape dans la
+// recherche pour retrouver le colis. L'alphabet écarte tout ce qui se confond
+// à la main : pas de O contre 0, pas de I ni de L contre 1.
+const REF_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+function randomRef(){
+  const a = crypto.getRandomValues(new Uint32Array(4));
+  let out = '';
+  for(let i = 0; i < 4; i++) out += REF_ALPHABET[a[i] % REF_ALPHABET.length];
+  return out;
+}
+// Les commandes créées avant cette fonctionnalité n'ont pas de référence
+// stockée. Plutôt que de réécrire toute la base, on en dérive une de leur
+// identifiant : toujours la même à chaque affichage, et rien à migrer.
+function derivedRef(id){
+  const str = String(id || '');
+  let h = 2166136261;
+  for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  let out = '';
+  for(let i = 0; i < 4; i++){ out += REF_ALPHABET[h % REF_ALPHABET.length]; h = Math.floor(h / REF_ALPHABET.length) + 1; }
+  return out;
+}
+function orderRef(o){ return (o && o.ref) ? o.ref : derivedRef(o && o.id); }
+// Une nouvelle référence, vérifiée contre toutes celles déjà à l'écran —
+// les stockées comme les dérivées. Deux colis avec le même code au marqueur,
+// c'est exactement le problème qu'on cherche à supprimer.
+function freshRef(){
+  const pris = new Set(orders.map(orderRef));
+  for(let i = 0; i < 60; i++){ const r = randomRef(); if(!pris.has(r)) return r; }
+  return randomRef();
+}
+
 function orderTotalCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1); }
 function orderTotalPrice(o){ return (Number(o.unitPrice)||0) * (Number(o.qty)||1); }
 // Ce que le client paie réellement : une remise fidélité sort de ta poche,
@@ -2319,7 +2375,7 @@ async function deletePendingOrderDoc(id){
 }
 
 async function createOrder(data){
-  try{ await db.collection('orders').add(Object.assign({createdAt:Date.now(), ownerId:currentUid}, data)); return true; }
+  try{ await db.collection('orders').add(Object.assign({createdAt:Date.now(), ownerId:currentUid, ref:freshRef()}, data)); return true; }
   catch(e){ showToast(t('toastSaveError')); return false; }
 }
 async function updateOrderDoc(id, data){
@@ -2516,7 +2572,13 @@ function renderList(){
   if(currentTab!=='tous') filtered = filtered.filter(o=>o.status===currentTab);
   if(searchTerm){
     const s = searchTerm.toLowerCase();
-    filtered = filtered.filter(o=> clientName(o).toLowerCase().includes(s) || o.product.toLowerCase().includes(s));
+    // Un colis en main, un reçu de la poste : on doit retrouver la commande à
+    // partir de ce qu'on a sous les yeux, pas seulement du nom du client.
+    filtered = filtered.filter(o =>
+      clientName(o).toLowerCase().includes(s)
+      || o.product.toLowerCase().includes(s)
+      || orderRef(o).toLowerCase().includes(s)
+      || String(o.tracking || o.trackingNumber || '').toLowerCase().includes(s));
   }
   if(filtered.length===0){
     listEl.innerHTML = emptyHtml('orders', t('emptyOrders'));
@@ -2537,7 +2599,7 @@ function renderList(){
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
           ? `<div class="due-line private">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
-          <div class="date">${fmtDate(o.createdAt)}</div>
+          <div class="date"><span class="order-ref">#${escapeHtml(orderRef(o))}</span>${fmtDate(o.createdAt)}</div>
           <div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
         </div>
       </div>`;
@@ -3065,6 +3127,17 @@ function openSheet(order, presetClientId, prefill){
   editingId = order ? order.id : null;
   clearFormErrors(form);
   $('#sheetTitle').textContent = order ? t('sheetEditOrder') : t('sheetNewOrder');
+  // La référence n'existe qu'une fois la commande enregistrée : sur une
+  // nouvelle, il n'y a encore rien à écrire sur un carton.
+  const refBox = $('#sheetRef');
+  if(order){
+    refBox.style.display = 'inline-flex';
+    refBox.innerHTML = '#' + escapeHtml(orderRef(order)) + ' <small>' + escapeHtml(t('refOnBox')) + '</small>';
+    refBox.dataset.ref = orderRef(order);
+  } else {
+    refBox.style.display = 'none';
+    refBox.dataset.ref = '';
+  }
   buildClientSelect(order ? order.clientId : (presetClientId||''));
   $('#newClientFields').style.display = 'none';
   $('#f_newClientName').value=''; $('#f_newClientContact').value=''; $('#f_newClientAddress').value='';
@@ -3154,6 +3227,15 @@ $('#stepPrev').addEventListener('click', ()=>{
 $('#stepNext').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
   if(idx<STATUS_FLOW.length-1) stepTo(STATUS_FLOW[idx+1]);
+});
+
+// Un appui copie la référence : pratique quand on la dicte ou qu'on la colle
+// dans une conversation avec le transitaire.
+$('#sheetRef').addEventListener('click', async ()=>{
+  const r = $('#sheetRef').dataset.ref;
+  if(!r) return;
+  try{ await navigator.clipboard.writeText(r); showToast(t('refCopied')); }
+  catch(e){ showToast(t('refCopied')); }
 });
 
 $('#f_clientSelect').addEventListener('change', ()=>{
@@ -4847,7 +4929,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button';
+const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button, .sheet-ref';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function tapDown(el, cx, cy){
