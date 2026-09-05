@@ -1204,30 +1204,71 @@
   .chip:active{ transform:scale(.95); background:var(--fill-2); color:var(--text); }
   .mic-btn.listening{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); animation:pulseAccent 1.1s var(--ease-io) infinite; }
 
-  /* ===== Adaptation téléphone (n'affecte pas tablette ni ordinateur) ===== */
+  /* ===== Adaptation téléphone (n'affecte pas tablette ni ordinateur) =====
+     L'app se consulte d'abord sur un iPhone, et sur un iPhone la première carte
+     de commande arrivait à 60 % de la hauteur de l'écran : trois commandes
+     visibles, tout le reste étant de l'en-tête. Cette section resserre les
+     espacements et les tailles — elle ne masque aucune fonction, tout reste
+     atteignable au même endroit. */
   @media (max-width:640px){
-    #app{ padding-left:15px; padding-right:15px; }
+    #app{
+      padding-left:15px; padding-right:15px;
+      padding-top:calc(env(safe-area-inset-top) + 16px);
+    }
     header{
-      flex-direction:column; align-items:stretch; gap:15px; margin-bottom:20px;
+      flex-direction:column; align-items:stretch; gap:10px; margin-bottom:14px;
     }
-    header h1{ font-size:23px; }
-    .header-actions{
-      display:grid; grid-template-columns:repeat(7, 1fr); gap:7px; width:100%;
-    }
-    .header-actions .icon-btn{ width:100%; height:42px; }
-    .lang-wrap{ width:100%; }
+    header h1{ font-size:21px; }
+    /* La baseline coûte une ligne entière et ne dit rien qu'on ne sache déjà. */
+    header p{ display:none; }
+    /* Les sept actions gardent leur place, en rangée souple plutôt qu'en grille
+       étirée : elles passent de 42 px de haut à 34, sans rien perdre. */
+    .header-actions{ display:flex; gap:7px; width:100%; }
+    .header-actions .icon-btn{ flex:1; width:auto; height:34px; border-radius:11px; }
+    .header-actions .icon-btn svg{ width:17px; height:17px; }
+    .lang-wrap{ flex:1; display:flex; }
     .lang-wrap .icon-btn{ width:100%; }
     .lang-menu{ right:auto; left:0; }
 
-    .kpi .value{ font-size:21px; }
-    .view-switch button{ padding:9px 13px 9px 11px; font-size:13px; }
+    .view-switch{ gap:7px; margin-bottom:13px; }
+    .view-switch button{ padding:8px 12px 8px 10px; font-size:12.5px; border-radius:11px; }
+    .nav-icon{ width:14px; height:14px; }
+
+    /* Les quatre chiffres du haut passent en ligne — libellé à gauche, montant à
+       droite — au lieu de quatre demi-cartes empilées : deux rangées basses au
+       lieu de deux hautes, et les quatre restent visibles d'un coup d'œil.
+       Le montant ne se coupe jamais ; c'est le libellé qui cède s'il le faut. */
+    .kpis{ gap:8px; margin-bottom:13px; }
+    .kpi{ padding:9px 12px; border-radius:13px; }
+    .kpi .value{ font-size:18px; white-space:nowrap; }
+    #kpisMain .kpi{ display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
+    #kpisMain .kpi .label{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #kpisMain .kpi .value{ margin-top:0; }
+
+    .search{ margin-bottom:9px; }
+    .search input{ padding:10px 14px; border-radius:13px; }
+    .tabs{ gap:6px; margin-bottom:10px; }
+    .tab{ padding:7px 12px; font-size:12.5px; }
+
+    /* Les cartes : moins de vide autour du texte, pas moins de texte. */
+    .list{ gap:7px; }
+    .order-card, .request-card{ padding:11px 13px; border-radius:15px; }
+    .card-mid{ margin-top:3px; }
+    .card-bottom{ margin-top:7px; }
+
+    /* La fiche reste confortable au doigt : on ne touche pas à la hauteur des
+       champs, seulement à l'espace perdu entre eux. */
     .sheet{ padding-left:16px; padding-right:16px; }
+    .sheet h2{ font-size:18px; margin-bottom:14px; }
+    .field{ margin-bottom:11px; }
+    .field label{ margin-bottom:5px; }
     .fab{ width:56px; height:56px; }
     .fab-assistant{ right:86px; }
   }
   /* Écrans très étroits : les actions passent sur deux rangées */
   @media (max-width:380px){
-    .header-actions{ grid-template-columns:repeat(4, 1fr); }
+    .header-actions{ flex-wrap:wrap; }
+    .header-actions .icon-btn{ flex:1 1 calc(25% - 6px); }
     .row2{ grid-template-columns:1fr; }
   }
 

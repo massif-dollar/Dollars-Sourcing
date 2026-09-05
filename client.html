@@ -1012,9 +1012,28 @@
   .theme-toggle.is-pressed{ transform:scale(.93); box-shadow:var(--press); }
   .theme-toggle svg{ width:17px; height:17px; position:relative; z-index:1; }
 
+  /* ===== Adaptation téléphone =====
+     C'est la vitrine, donc on ne la dépouille pas : l'accueil au prénom, les
+     compteurs et le mouvement restent. On reprend seulement le vide entre les
+     blocs, pour que la première commande arrive plus haut dans l'écran. */
   @media (max-width:640px){
-    #app{ padding-left:15px; padding-right:15px; }
-    header h1{ font-size:23px; }
+    #app{
+      padding-left:15px; padding-right:15px;
+      padding-top:calc(env(safe-area-inset-top) + 58px);
+    }
+    header{ margin-bottom:17px; }
+    header h1{ font-size:23px; margin:6px 0 2px; }
+    header p{ font-size:12.5px; }
+
+    .summary{ gap:8px; margin-bottom:13px; }
+    .summary-tile{ padding:9px 6px; border-radius:13px; }
+    .summary-tile .n{ font-size:19px; }
+
+    .tabs{ gap:7px; margin-bottom:13px; }
+    .tab{ padding:9px 6px; font-size:12.5px; }
+
+    .order-card{ padding:12px 13px; border-radius:15px; }
+
     .row2{ grid-template-columns:1fr; }
     .code-pad{ max-width:270px; }
   }
