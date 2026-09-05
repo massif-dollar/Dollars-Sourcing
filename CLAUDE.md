@@ -18,9 +18,16 @@ Objectif à terme : en faire un SaaS payant par abonnement.
 - `index.html` — application pro (Massif et ses invités)
 - `client.html` — portail client, accessible par lien personnel (bilingue lui aussi,
   langue détectée depuis le navigateur, bascule FR/EN mémorisée)
-- `formulaire.html` — la page où un client remplit ses informations (identité,
-  moyen de contact, adresse) avant sa première commande. Bilingue, thèmes,
-  autocomplétion d'adresses françaises. **Elle n'écrit rien dans la base** : elle
+- `formulaire.html` — la page où un client remplit ses informations avant sa
+  première commande. **Cinq lignes, et ce sont exactement celles qu'on recopie
+  sur le colis** : nom, adresse, code postal & ville, pays, téléphone. Ni plus —
+  une ligne de trop, c'est un client qui abandonne — ni moins : une ligne qui
+  manque, c'est un colis qui revient. Le pays est pré-rempli à France et reste
+  le seul champ facultatif. Le pseudo réseau social et le WhatsApp n'y sont plus
+  demandés : Massif les a déjà, c'est par là qu'il envoie le lien.
+  Choisir une suggestion d'adresse remplit **la rue et la ligne code postal +
+  ville d'un coup** : c'est tout l'intérêt d'avoir séparé les deux champs.
+  Bilingue, thèmes, autocomplétion d'adresses françaises. **Elle n'écrit rien dans la base** : elle
   fabrique un message WhatsApp propre que le client envoie lui-même, et que
   l'assistant de l'app sait lire ligne par ligne. C'est ce qui la rend sans
   risque — ouvrir une écriture publique sur `clients` aurait demandé un tout
@@ -694,7 +701,11 @@ commandes, fournisseurs, changement de statut.
 Il reçoit un instantané des données réelles et une mémoire persistante
 (`settings/assistantMemory`) qu'il enrichit via un champ `remember`.
 Il sait lire une photo, une conversation WhatsApp collée, et un formulaire
-client rempli ligne par ligne.
+client rempli ligne par ligne. **Son invite décrit le format exact de
+`formulaire.html`** (Nom / Adresse / Code postal & Ville / Pays / Téléphone) et
+lui demande de regrouper les trois lignes d'adresse en une seule chaîne : c'est
+elle qui sera recopiée sur le colis. Changer les champs du formulaire sans
+changer cette invite, c'est se retrouver avec des fiches clients amputées.
 
 ## Fait
 
