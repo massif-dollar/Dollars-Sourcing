@@ -168,8 +168,12 @@ et une app déjà lancée en `display-mode: standalone` ne demande évidemment r
 
 **Jamais deux cartes à la fois.** Chacune ne s'affiche que si les précédentes
 ont été vues, et fermer l'une déclenche le rendu de la suivante. Un nouveau
-client a l'annonce Dollars marquée comme vue d'avance, puisque sa carte de
-bienvenue en parle déjà : il voit donc bienvenue, puis installation.
+client voit donc **bienvenue, puis Dollars, puis installation**.
+
+Piège corrigé : `renderDollarsIntro()` marquait l'annonce comme vue tant que
+l'accueil était à l'écran, pour éviter la superposition. Résultat, un nouveau
+client la perdait **définitivement** — alors que la carte de bienvenue ne dit
+qu'une ligne sur le programme. On la masque désormais sans la consommer.
 
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
@@ -276,6 +280,13 @@ portée par la demande, pour honorer ce que le client avait sous les yeux.
 1. **Un Dollar par euro réellement payé**, crédité au passage à « Livré ». Une
    commande annulée ne rapporte rien — et **rend le coupon** qu'elle portait :
    le client n'a rien payé, il serait injuste de le lui brûler.
+
+   **La règle disait « réellement payé », le code créditait le prix affiché.**
+   Une commande livrée mais impayée rapportait donc des Dollars sur de l'argent
+   jamais reçu. `dollarsEarned()` plafonne désormais à
+   `min(paidAmount, orderNetPrice)` : un trop-perçu ne fabrique pas de points,
+   et un solde réglé plus tard fait remonter le compte tout seul puisque le
+   solde se recalcule. Même formule dans `client.html`.
 2. **Les Dollars se gagnent sur le montant après remise** — sinon la cagnotte
    s'auto-alimenterait sur de l'argent jamais dépensé.
 3. **Un seul coupon par commande.**

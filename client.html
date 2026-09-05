@@ -1733,7 +1733,11 @@ function markDollarsIntroSeen(){
 function renderDollarsIntro(){
   const box = $('#dollarsIntro');
   if(!box) return;
-  if(!welcomeSeen()){ markDollarsIntroSeen(); box.style.display = 'none'; return; }
+  // Tant que l'accueil est à l'écran, on attend : jamais deux cartes à la fois.
+  // Mais on ne la marque plus comme vue — c'était l'erreur : un nouveau client
+  // perdait définitivement l'explication du programme, alors que la carte de
+  // bienvenue n'en dit qu'une ligne. Il la verra après avoir fermé l'accueil.
+  if(!welcomeSeen()){ box.style.display = 'none'; return; }
   box.style.display = dollarsIntroSeen() ? 'none' : 'block';
 }
 function dismissDollarsIntro(){
@@ -1997,8 +2001,12 @@ function myCoupons(){
 // Une commande annulée rend son coupon : rien n'a été payé, rien n'est consommé.
 function couponUsed(id){ return myOrders.some(o => o.couponId === id && o.status !== 'annule'); }
 function myDollars(){
+  // Même règle que côté vendeur : les Dollars se gagnent sur ce qui a été
+  // réellement versé, pas sur le prix affiché.
   const gagnes = myOrders.reduce((sum,o) =>
-    sum + (o.status === 'livre' ? Math.max(0, Math.floor(orderNetPrice(o))) : 0), 0);
+    sum + (o.status === 'livre'
+      ? Math.max(0, Math.floor(Math.min(Number(o.paidAmount)||0, orderNetPrice(o))))
+      : 0), 0);
   const depenses = myCoupons().reduce((sum,c) => sum + (Number(c.dollars)||0), 0);
   return Math.max(0, gagnes - depenses);
 }
