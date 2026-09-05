@@ -667,6 +667,12 @@
   }
   #shippingZone .section-title{ margin-bottom:3px; }
   .field-hint{ margin:0 0 13px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; line-height:1.45; }
+  /* Le champ garde la largeur, le raccourci ne prend que sa place (piège 6). */
+  .paid-row{ display:flex; gap:8px; align-items:stretch; }
+  .paid-row input{ flex:1; min-width:0; }
+  /* .btn-secondary est rouge par défaut (il sert surtout à annuler) : ici ce
+     n'est pas une action dangereuse, elle reprend donc l'accent. */
+  .paid-row button{ flex:0 0 auto; width:auto; padding:0 14px; white-space:nowrap; font-size:13px; color:var(--accent); }
   .order-trail{
     display:flex; flex-wrap:wrap; align-items:center; gap:5px;
     margin-top:7px; font-size:11.5px; color:var(--text-faint); letter-spacing:-0.005em;
@@ -1487,7 +1493,11 @@
       </div>
       <div class="field">
         <label data-i18n="fieldPaid">Déjà reçu (€)</label>
-        <input type="number" id="f_paid" min="0" step="0.01" data-i18n-placeholder="paidPlaceholder" placeholder="0 = rien encaissé">
+        <div class="paid-row">
+          <input type="number" id="f_paid" min="0" step="0.01" data-i18n-placeholder="paidPlaceholder" placeholder="0 = rien encaissé">
+          <!-- Le libellé ne porte pas le montant : il resterait lisible en mode discret. -->
+          <button type="button" class="btn-secondary" id="paidAllBtn" data-i18n="paidAllBtn">Tout réglé</button>
+        </div>
       </div>
       <div class="margin-preview private" id="marginPreview">Marge : 0€</div>
       <div class="field">
@@ -1771,7 +1781,11 @@ const I18N = {
     placeholderAddress:'Commence à taper, les suggestions arrivent',
     sendFormWhatsapp:'Envoyer un formulaire à remplir',
     formCopied:'Formulaire copié — colle-le dans WhatsApp',
-    clientFormTemplate:'Salut ! Pour enregistrer ta commande, réponds simplement à ce message en remplissant :\n\nPrénom :\nNom :\nPseudo (Snap / Insta / TikTok) :\nTéléphone :\nWhatsApp :\nAdresse de livraison complète :\n\nMerci !',
+    askPaidAll:'Le client a-t-il réglé la totalité ({total}) ?',
+    askPaidRest:'Il reste {left} à régler. Le client a-t-il payé le solde ?',
+    askPaidYes:'Oui, tout réglé', askPaidNo:'Pas encore',
+    paidAllBtn:'Tout réglé',
+    clientFormTemplate:'*DOLLAR$ SOURCING*\n\nSalut ! Avant de lancer ta commande, il me faut tes informations de livraison.\n\nTout se remplit ici, en une minute :\n{link}\n\nTu relis tout avant d\u2019envoyer, et ça me revient directement sur WhatsApp. À tout de suite \u{1F4E6}',
     undo:'Annuler', restored:'Restauré',
     orderDeleted:'Commande supprimée', clientDeleted:'Client supprimé', supplierDeleted:'Fournisseur supprimé',
     trashTitle:'Corbeille', trashHelp:'Les éléments supprimés restent ici 30 jours, puis disparaissent définitivement.',
@@ -1907,7 +1921,11 @@ const I18N = {
     placeholderAddress:'Start typing, suggestions will appear',
     sendFormWhatsapp:'Send a form to fill in',
     formCopied:'Form copied — paste it into WhatsApp',
-    clientFormTemplate:'Hi! To register your order, just reply to this message filling in:\n\nFirst name:\nLast name:\nHandle (Snap / Insta / TikTok):\nPhone:\nWhatsApp:\nFull delivery address:\n\nThanks!',
+    askPaidAll:'Has the client paid in full ({total})?',
+    askPaidRest:'{left} still due. Has the client settled the balance?',
+    askPaidYes:'Yes, paid in full', askPaidNo:'Not yet',
+    paidAllBtn:'Paid in full',
+    clientFormTemplate:'*DOLLAR$ SOURCING*\n\nHi! Before I place your order, I need your delivery details.\n\nFill everything in here, takes a minute:\n{link}\n\nYou read it over before sending, and it comes straight back to me on WhatsApp. Talk in a moment \u{1F4E6}',
     undo:'Undo', restored:'Restored',
     orderDeleted:'Order deleted', clientDeleted:'Client deleted', supplierDeleted:'Supplier deleted',
     trashTitle:'Trash', trashHelp:'Deleted items stay here for 30 days, then disappear for good.',
@@ -2062,6 +2080,10 @@ const ICONS = {
 const CLIENT_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
   ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'client.html'
   : "https://dollars-sourcing.pages.dev/client.html";
+// Même déduction pour la page où le client remplit ses informations.
+const FORM_APP_URL = (location.protocol === 'http:' || location.protocol === 'https:')
+  ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'formulaire.html'
+  : "https://dollars-sourcing.pages.dev/formulaire.html";
 function emptyHtml(icon, text){ return `<div class="empty"><div class="empty-icon">${ICONS[icon]}</div>${text}</div>`; }
 
 let orders = [];
@@ -2161,9 +2183,21 @@ function clearFormErrors(formEl){
   formEl.querySelectorAll('.field.invalid').forEach(f=>f.classList.remove('invalid'));
 }
 
-function showConfirm(message){
+// Le même dialogue sert à confirmer une suppression et à poser une question
+// neutre. Les libellés reviennent d'eux-mêmes à leur clé de traduction quand on
+// n'en passe pas : sans ça, un appel par défaut hériterait du texte du précédent.
+function confirmLabel(el, label, key){
+  if(label){ el.removeAttribute('data-i18n'); el.textContent = label; }
+  else { el.setAttribute('data-i18n', key); el.textContent = t(key); }
+}
+function showConfirm(message, opts){
+  const o = opts || {};
   return new Promise(resolve=>{
     $('#confirmMessage').textContent = message;
+    confirmLabel($('#confirmOkBtn'), o.okLabel, 'confirmBtn');
+    confirmLabel($('#confirmCancelBtn'), o.cancelLabel, 'cancelBtn');
+    // Le rouge est réservé au danger : une question neutre prend l'accent.
+    $('#confirmOkBtn').style.background = o.danger === false ? 'var(--accent)' : 'var(--danger)';
     $('#confirmOverlay').classList.add('open');
     function onOk(){ cleanup(); resolve(true); }
     function onCancel(){ cleanup(); resolve(false); }
@@ -3181,6 +3215,30 @@ function closeSheet(){
   pendingPhoto = null;
 }
 
+// ===== « Il a payé ? » =====
+// Dans le flux réel, le client règle AVANT que la commande soit passée : une
+// commande arrivée à « Payé » ou au-delà est donc encaissée. L'app, elle, ne
+// connaissait que le champ « Déjà reçu » — jamais rempli quand on avance avec
+// la flèche. Résultat : une commande livrée laissait une dette fantôme dans la
+// fiche du client, et ne rapportait aucun Dollar (ils suivent l'argent reçu).
+// On ne devine rien pour autant : on pose la question au seul moment où elle a
+// du sens, et c'est la réponse qui est écrite.
+function paidStatusReached(status){
+  return STATUS_FLOW.indexOf(status) >= STATUS_FLOW.indexOf('paye');
+}
+async function askFullyPaid(status, net, already){
+  if(!paidStatusReached(status)) return null;
+  const left = net - already;
+  if(net <= 0 || left <= 0.009) return null;   // déjà soldée : pas de question
+  const msg = already > 0
+    ? t('askPaidRest').replace('{left}', fmtMoney(left))
+    : t('askPaidAll').replace('{total}', fmtMoney(net));
+  const yes = await showConfirm(msg, {
+    okLabel: t('askPaidYes'), cancelLabel: t('askPaidNo'), danger: false
+  });
+  return yes ? net : null;
+}
+
 let stepperStatus = 'nouveau';
 // Chaque passage d'étape laisse sa date : c'est ce qui permet à la fiche client
 // de raconter le parcours d'une commande, et plus tard de calculer les délais réels.
@@ -3219,13 +3277,25 @@ function stepTo(status){
   const orderId = editingId;
   clearTimeout(stepperSaveTimer);
   stepperSaveTimer = setTimeout(async ()=>{
-    const ok = await updateOrderDoc(orderId, statusPatch(status));
+    const patch = statusPatch(status);
+    const o = orders.find(x => x.id === orderId);
+    if(o){
+      const paid = await askFullyPaid(status, orderNetPrice(o), orderPaid(o));
+      if(paid !== null){
+        patch.paidAmount = paid;
+        // La fiche est ouverte : son champ doit suivre, sinon l'enregistrer
+        // ensuite réécrirait l'ancien montant par-dessus.
+        if(editingId === orderId){ $('#f_paid').value = paid; updateMarginPreview(); }
+      }
+    }
+    const ok = await updateOrderDoc(orderId, patch);
     if(ok){
       showToast(t('statusSaved').replace('{status}', t(STATUS_META[status].key)));
       return;
     }
-    const o = orders.find(x => x.id === orderId);
-    if(o && editingId === orderId) updateStepper(o.status);
+    // Relu après coup : la commande a pu changer pendant la question.
+    const current = orders.find(x => x.id === orderId);
+    if(current && editingId === orderId) updateStepper(current.status);
   }, 450);
 }
 $('#stepPrev').addEventListener('click', ()=>{
@@ -3293,6 +3363,15 @@ $('#f_qty').addEventListener('input', updateMarginPreview);
 $('#f_unitCost').addEventListener('input', updateMarginPreview);
 $('#f_unitPrice').addEventListener('input', updateMarginPreview);
 $('#f_paid').addEventListener('input', updateMarginPreview);
+// Raccourci pour solder une commande en un geste — y compris les anciennes,
+// créées avant que la question soit posée au passage à « Payé ».
+$('#paidAllBtn').addEventListener('click', ()=>{
+  const qty = parseInt($('#f_qty').value)||1;
+  const up = parseFloat($('#f_unitPrice').value)||0;
+  const net = Math.max(0, up*qty - selectedCouponValue());
+  $('#f_paid').value = net > 0 ? net : '';
+  updateMarginPreview();
+});
 $('#f_coupon').addEventListener('change', updateMarginPreview);
 ['#f_unitPrice','#f_qty'].forEach(sel => $(sel).addEventListener('input', ()=>{
   buildCouponSelect(editingId ? orders.find(o=>o.id===editingId) : null);
@@ -3366,6 +3445,10 @@ form.addEventListener('submit', async (e)=>{
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
   } else {
     const newStatus = $('#f_status').value;
+    // Une commande créée directement à « Payé » ou plus loin pose la même
+    // question que la flèche : sans ça elle naîtrait avec une dette fantôme.
+    const paidNow = await askFullyPaid(newStatus, Math.max(0, upVal*qtyVal - selectedCouponValue()), data.paidAmount);
+    if(paidNow !== null) data.paidAmount = paidNow;
     await createOrder(Object.assign({ status:newStatus, statusAt:{ [newStatus]: Date.now() } }, data));
     if(pendingSourceId){
       await deletePendingOrderDoc(pendingSourceId);
@@ -3532,8 +3615,12 @@ $('#addrSuggestions').addEventListener('click', (e)=>{
 });
 
 // ================= FORMULAIRE À ENVOYER AU CLIENT =================
+// Un message WhatsApp est du texte brut : la seule mise en forme disponible est
+// le balisage maison (*gras*, _italique_) et l'aperçu du lien. C'est justement
+// le lien qui donne droit à la bannière — un message sans lien n'en aura jamais,
+// quoi qu'on écrive. D'où la page plutôt que la liste de champs à recopier.
 $('#waFormBtn').addEventListener('click', async ()=>{
-  const msg = t('clientFormTemplate');
+  const msg = t('clientFormTemplate').replace('{link}', FORM_APP_URL);
   try{
     await navigator.clipboard.writeText(msg);
     showToast(t('formCopied'));
