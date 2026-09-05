@@ -5014,9 +5014,28 @@ function showApp(){
 
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
+// Lancée depuis l'écran d'accueil, l'app tourne dans son propre contexte : une
+// fenêtre ouverte par signInWithPopup y atterrit dans un navigateur intégré
+// incapable de répondre à la page qui l'a ouverte. Résultat visible côté
+// utilisateur : la page Firebase « The requested action is invalid ».
+// Dans ce mode on part donc directement sur la redirection, qui est une vraie
+// navigation et ne dépend d'aucun dialogue entre deux fenêtres.
+function runsStandalone(){
+  try{
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+  }catch(e){ return false; }
+}
+
 document.getElementById('googleLoginBtn').addEventListener('click', async ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+
+  if(runsStandalone()){
+    try{ await auth.signInWithRedirect(provider); return; }
+    catch(e0){ /* la redirection a échoué : on tente quand même la fenêtre */ }
+  }
+
   try{
     await auth.signInWithPopup(provider);
   }catch(e){
