@@ -411,6 +411,10 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
   fier au fait que « ça a l'air flouté ». Quand un élément `.private` laisse un
   trou (le badge « doit X € » d'une fiche client), un `.only-discreet` prend sa
   place : visible seulement en mode discret, il évite la carte nue.
+- **`.btn-secondary` est rouge par défaut** (`color:var(--danger)`) : il sert
+  d'abord à annuler et à supprimer. Le réutiliser pour une action anodine —
+  « Tout réglé » à côté du champ « Déjà reçu » — impose donc de lui redonner
+  `var(--accent)`, sinon le rouge ment sur ce que fait le bouton.
 - Effet tactile « liquid glass » sur tout élément cliquable : enfoncement,
   onde depuis le point de contact, rebond au relâchement.
 - Finitions : bordures 0.5px, chiffres tabulaires, flou avec saturation,
@@ -584,7 +588,34 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    est de servir `/__/auth/*` depuis notre propre domaine via une fonction
    Cloudflare, et de passer `authDomain` sur ce domaine — ce qui exige aussi
    d'ajouter l'URI de redirection dans la console Google Cloud.
-14. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
+14. **Un statut n'est pas un encaissement — mais dans ce métier, presque.**
+   Le flux réel veut que le client paie *avant* que la commande soit passée :
+   une commande arrivée à « Payé » ou au-delà est donc encaissée. L'app, elle,
+   ne connaissait que le champ « Déjà reçu », jamais rempli quand on avance
+   avec la flèche du stepper. Une commande livrée laissait donc une **dette
+   fantôme** dans la fiche du client (« doit 750 € »), et ne rapportait
+   **aucun Dollar** — ils suivent l'argent reçu depuis la correction de la
+   règle 1. Les deux symptômes, une seule cause.
+
+   On ne devine rien pour autant : **déduire le paiement du statut serait pire
+   que le bug**, parce qu'un vrai solde impayé disparaîtrait en silence. C'est
+   la question qui est posée — une seule fois, au passage à « Payé » ou au-delà,
+   et seulement s'il reste quelque chose à encaisser (`askFullyPaid()`). C'est
+   la réponse qui est écrite, jamais une hypothèse.
+
+   Deux détails qui comptent : la question est posée **dans le délai groupé du
+   stepper**, pas à chaque tap, sinon trois appuis rapides donneraient trois
+   dialogues ; et quand la fiche est ouverte, le champ « Déjà reçu » doit être
+   mis à jour **dans le DOM aussi**, sinon l'enregistrement suivant réécrirait
+   l'ancien montant par-dessus. Un bouton **« Tout réglé »** à côté du champ
+   solde une commande en un geste — c'est aussi le seul moyen de rattraper
+   celles d'avant, qui ne repasseront jamais par la question.
+
+   `showConfirm()` accepte désormais des libellés et perd son rouge sur demande :
+   **le rouge est réservé au danger**, une question neutre prend l'accent. Les
+   libellés reviennent d'eux-mêmes à leur clé de traduction quand on n'en passe
+   pas, sinon un appel par défaut hériterait du texte du précédent.
+15. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le
    bouton du portail ouvre un nouvel onglet, donc pas de souci en usage normal —
