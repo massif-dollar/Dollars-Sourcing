@@ -393,54 +393,43 @@
   </header>
 
   <form id="infoForm" novalidate>
+    <!-- Cinq lignes, et ce sont exactement celles qu'on recopie sur le colis :
+         nom, rue, code postal et ville, pays, téléphone. Ni plus (une ligne de
+         plus, c'est un client qui abandonne), ni moins (une ligne qui manque,
+         c'est un colis qui revient). -->
     <div class="card">
-      <p class="card-title" data-i18n="secIdentity">Qui es-tu</p>
-      <div class="row2">
-        <div class="field">
-          <label for="f_firstname" data-i18n="labFirstname">Prénom <span class="req">*</span></label>
-          <input type="text" id="f_firstname" autocomplete="given-name" enterkeyhint="next">
-          <div class="field-error"></div>
-        </div>
-        <div class="field">
-          <label for="f_lastname" data-i18n="labLastname">Nom <span class="req">*</span></label>
-          <input type="text" id="f_lastname" autocomplete="family-name" enterkeyhint="next">
-          <div class="field-error"></div>
-        </div>
-      </div>
+      <p class="card-title" data-i18n="secDelivery">Mes informations</p>
+
       <div class="field">
-        <label for="f_social" data-i18n="labSocial">Pseudo Snap / Insta / TikTok</label>
-        <input type="text" id="f_social" autocapitalize="none" autocomplete="off" data-i18n-placeholder="phSocial" placeholder="@ton_pseudo">
-        <p class="field-hint" data-i18n="hintSocial">Celui sur lequel on se parle déjà.</p>
+        <label for="f_name" data-i18n="labName">Nom <span class="req">*</span></label>
+        <input type="text" id="f_name" autocomplete="name" enterkeyhint="next" data-i18n-placeholder="phName" placeholder="Prénom et nom">
         <div class="field-error"></div>
       </div>
-    </div>
 
-    <div class="card">
-      <p class="card-title" data-i18n="secContact">Comment te joindre</p>
       <div class="field">
-        <label for="f_phone" data-i18n="labPhone">Téléphone</label>
-        <input type="tel" id="f_phone" class="tnum" autocomplete="tel" inputmode="tel" data-i18n-placeholder="phPhone" placeholder="06 12 34 56 78">
-      </div>
-      <div class="field">
-        <label for="f_whatsapp" data-i18n="labWhatsapp">WhatsApp</label>
-        <input type="tel" id="f_whatsapp" class="tnum" inputmode="tel" autocomplete="off" data-i18n-placeholder="phWhatsapp" placeholder="Si différent du téléphone">
-        <p class="field-hint" data-i18n="hintWhatsapp">C'est là que tu recevras le suivi de tes colis.</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <p class="card-title" data-i18n="secDelivery">Où livrer</p>
-      <div class="field">
-        <label for="f_address" data-i18n="labAddress">Adresse complète <span class="req">*</span></label>
-        <input type="text" id="f_address" autocomplete="street-address" data-i18n-placeholder="phAddress" placeholder="Numéro, rue, code postal, ville">
+        <label for="f_address" data-i18n="labAddress">Adresse <span class="req">*</span></label>
+        <input type="text" id="f_address" autocomplete="street-address" data-i18n-placeholder="phAddress" placeholder="Numéro et rue">
         <div class="addr-suggestions" id="addrSuggestions"></div>
-        <p class="field-hint" data-i18n="hintAddress">Commence à taper : les adresses françaises se complètent toutes seules.</p>
+        <p class="field-hint" data-i18n="hintAddress">Commence à taper : les adresses françaises se complètent toutes seules, code postal et ville compris.</p>
         <div class="field-error"></div>
       </div>
+
       <div class="field">
-        <label for="f_extra" data-i18n="labExtra">Étage, bâtiment, code d'entrée</label>
-        <textarea id="f_extra" rows="2" data-i18n-placeholder="phExtra" placeholder="Bât. B, 3e étage, code 1234A"></textarea>
-        <p class="field-hint" data-i18n="hintExtra">Ce qui évite au livreur de repartir avec le colis.</p>
+        <label for="f_zipcity" data-i18n="labZipCity">Code postal &amp; Ville <span class="req">*</span></label>
+        <input type="text" id="f_zipcity" autocomplete="postal-code" data-i18n-placeholder="phZipCity" placeholder="75011 Paris">
+        <div class="field-error"></div>
+      </div>
+
+      <div class="field">
+        <label for="f_country" data-i18n="labCountry">Pays</label>
+        <input type="text" id="f_country" autocomplete="country-name" value="France">
+      </div>
+
+      <div class="field">
+        <label for="f_phone" data-i18n="labPhone">Téléphone <span class="req">*</span></label>
+        <input type="tel" id="f_phone" class="tnum" autocomplete="tel" inputmode="tel" data-i18n-placeholder="phPhone" placeholder="06 12 34 56 78">
+        <p class="field-hint" data-i18n="hintPhone">Le transporteur en a besoin pour te livrer.</p>
+        <div class="field-error"></div>
       </div>
     </div>
 
@@ -480,63 +469,51 @@ const I18N = {
     langTitle:'Langue', themeTitle:'Thème',
     pageTitle:'Tes informations',
     pageLead:'Une minute à remplir, et tes commandes partent à la bonne adresse.',
-    secIdentity:'Qui es-tu', secContact:'Comment te joindre', secDelivery:'Où livrer',
-    labFirstname:'Prénom <span class="req">*</span>', labLastname:'Nom <span class="req">*</span>',
-    labSocial:'Pseudo Snap / Insta / TikTok', phSocial:'@ton_pseudo',
-    hintSocial:'Celui sur lequel on se parle déjà.',
-    labPhone:'Téléphone', phPhone:'06 12 34 56 78',
-    labWhatsapp:'WhatsApp', phWhatsapp:'Si différent du téléphone',
-    hintWhatsapp:'C’est là que tu recevras le suivi de tes colis.',
-    labAddress:'Adresse complète <span class="req">*</span>',
-    phAddress:'Numéro, rue, code postal, ville',
-    hintAddress:'Commence à taper : les adresses françaises se complètent toutes seules.',
-    labExtra:'Étage, bâtiment, code d’entrée', phExtra:'Bât. B, 3e étage, code 1234A',
-    hintExtra:'Ce qui évite au livreur de repartir avec le colis.',
+    secDelivery:'Mes informations',
+    labName:'Nom <span class="req">*</span>', phName:'Prénom et nom',
+    labAddress:'Adresse <span class="req">*</span>', phAddress:'Numéro et rue',
+    hintAddress:'Commence à taper : les adresses françaises se complètent toutes seules, code postal et ville compris.',
+    labZipCity:'Code postal &amp; Ville <span class="req">*</span>', phZipCity:'75011 Paris',
+    labCountry:'Pays',
+    labPhone:'Téléphone <span class="req">*</span>', phPhone:'06 12 34 56 78',
+    hintPhone:'Le transporteur en a besoin pour te livrer.',
     privacyNote:'Ces informations servent uniquement à préparer et expédier tes commandes. Rien n’est envoyé sans toi : tu relis le message avant de l’envoyer.',
     sendBtn:'Envoyer sur WhatsApp', copyBtn:'Copier mes informations',
     sentTitle:'C’est parti',
     sentLead:'WhatsApp s’est ouvert avec tes informations. Il ne te reste qu’à appuyer sur envoyer.',
     backBtn:'Corriger mes informations',
     errRequired:'À remplir.',
-    errNoContact:'Laisse au moins un moyen de te joindre : pseudo, téléphone ou WhatsApp.',
     copied:'Informations copiées',
     copyFail:'Copie impossible — sélectionne le texte à la main.',
     msgIntro:'Voici mes informations pour mes commandes :',
     msgSep:' : ',
-    msgFirstname:'Prénom', msgLastname:'Nom', msgSocial:'Pseudo',
-    msgPhone:'Téléphone', msgWhatsapp:'WhatsApp',
-    msgAddress:'Adresse', msgExtra:'Précisions'
+    msgName:'Nom', msgAddress:'Adresse', msgZipCity:'Code postal & Ville',
+    msgCountry:'Pays', msgPhone:'Téléphone'
   },
   en:{
     langTitle:'Language', themeTitle:'Theme',
     pageTitle:'Your details',
     pageLead:'One minute to fill in, and your orders ship to the right address.',
-    secIdentity:'Who you are', secContact:'How to reach you', secDelivery:'Where to deliver',
-    labFirstname:'First name <span class="req">*</span>', labLastname:'Last name <span class="req">*</span>',
-    labSocial:'Snap / Insta / TikTok handle', phSocial:'@your_handle',
-    hintSocial:'The one we already talk on.',
-    labPhone:'Phone', phPhone:'+33 6 12 34 56 78',
-    labWhatsapp:'WhatsApp', phWhatsapp:'If different from your phone',
-    hintWhatsapp:'That’s where you’ll get your tracking.',
-    labAddress:'Full address <span class="req">*</span>',
-    phAddress:'Number, street, postcode, city',
-    hintAddress:'Start typing: French addresses complete themselves.',
-    labExtra:'Floor, building, door code', phExtra:'Bldg B, 3rd floor, code 1234A',
-    hintExtra:'What keeps the courier from leaving with your parcel.',
+    secDelivery:'My details',
+    labName:'Name <span class="req">*</span>', phName:'First and last name',
+    labAddress:'Address <span class="req">*</span>', phAddress:'Number and street',
+    hintAddress:'Start typing: French addresses complete themselves, postcode and city included.',
+    labZipCity:'Postcode &amp; City <span class="req">*</span>', phZipCity:'75011 Paris',
+    labCountry:'Country',
+    labPhone:'Phone <span class="req">*</span>', phPhone:'+33 6 12 34 56 78',
+    hintPhone:'The courier needs it to deliver to you.',
     privacyNote:'These details are only used to prepare and ship your orders. Nothing is sent without you: you read the message before sending it.',
     sendBtn:'Send on WhatsApp', copyBtn:'Copy my details',
     sentTitle:'All set',
     sentLead:'WhatsApp opened with your details. All that’s left is to hit send.',
     backBtn:'Edit my details',
     errRequired:'Required.',
-    errNoContact:'Leave at least one way to reach you: handle, phone or WhatsApp.',
     copied:'Details copied',
     copyFail:'Copy failed — select the text by hand.',
     msgIntro:'Here are my details for my orders:',
     msgSep:': ',
-    msgFirstname:'First name', msgLastname:'Last name', msgSocial:'Handle',
-    msgPhone:'Phone', msgWhatsapp:'WhatsApp',
-    msgAddress:'Address', msgExtra:'Notes'
+    msgName:'Name', msgAddress:'Address', msgZipCity:'Postcode & City',
+    msgCountry:'Country', msgPhone:'Phone'
   }
 };
 
@@ -650,13 +627,8 @@ function clearFieldError(input){
   const field = input.closest('.field');
   if(field) field.classList.remove('invalid');
 }
-['#f_firstname','#f_lastname','#f_address'].forEach(sel=>{
+['#f_name','#f_address','#f_zipcity','#f_phone'].forEach(sel=>{
   $(sel).addEventListener('input', ()=>clearFieldError($(sel)));
-});
-// L'erreur « laisse un moyen de te joindre » est portée par le champ pseudo,
-// mais n'importe lequel des trois la lève.
-['#f_social','#f_phone','#f_whatsapp'].forEach(sel=>{
-  $(sel).addEventListener('input', ()=>clearFieldError($('#f_social')));
 });
 
 // ================= Adresses françaises =================
@@ -697,13 +669,20 @@ $('#f_address').addEventListener('input', (e)=>{
   addrTimer = setTimeout(()=>searchAddress(q), 320);
 });
 $('#f_address').addEventListener('blur', ()=>setTimeout(hideAddrSuggestions, 180));
+// Choisir une suggestion remplit la rue ET la ligne code postal + ville : c'est
+// tout l'intérêt d'avoir séparé les deux champs.
 $('#addrSuggestions').addEventListener('click', (e)=>{
   const item = e.target.closest('[data-addr]');
   if(!item) return;
   const f = addrResults[Number(item.dataset.addr)];
   if(!f) return;
-  $('#f_address').value = (f.properties && f.properties.label) || '';
+  const pr = f.properties || {};
+  $('#f_address').value = pr.name || pr.label || '';
+  const cp = ((pr.postcode || '') + ' ' + (pr.city || '')).trim();
+  if(cp) $('#f_zipcity').value = cp;
+  if(!$('#f_country').value.trim()) $('#f_country').value = 'France';
   clearFieldError($('#f_address'));
+  clearFieldError($('#f_zipcity'));
   hideAddrSuggestions();
 });
 
@@ -712,37 +691,32 @@ $('#addrSuggestions').addEventListener('click', (e)=>{
 // une ligne par champ, un libellé, deux points. Les champs vides disparaissent.
 function collect(){
   return {
-    firstname: $('#f_firstname').value.trim(),
-    lastname:  $('#f_lastname').value.trim(),
-    social:    $('#f_social').value.trim(),
-    phone:     $('#f_phone').value.trim(),
-    whatsapp:  $('#f_whatsapp').value.trim(),
-    address:   $('#f_address').value.trim(),
-    extra:     $('#f_extra').value.trim()
+    name:    $('#f_name').value.trim(),
+    address: $('#f_address').value.trim(),
+    zipcity: $('#f_zipcity').value.trim(),
+    country: $('#f_country').value.trim(),
+    phone:   $('#f_phone').value.trim()
   };
 }
 function buildMessage(d){
   const lines = [t('msgIntro'), ''];
   const add = (key, val)=>{ if(val) lines.push(t(key) + t('msgSep') + val); };
-  add('msgFirstname', d.firstname);
-  add('msgLastname',  d.lastname);
-  add('msgSocial',    d.social);
-  add('msgPhone',     d.phone);
-  add('msgWhatsapp',  d.whatsapp);
-  add('msgAddress',   d.address);
-  add('msgExtra',     d.extra);
+  add('msgName',    d.name);
+  add('msgAddress', d.address);
+  add('msgZipCity', d.zipcity);
+  add('msgCountry', d.country);
+  add('msgPhone',   d.phone);
   return lines.join('\n');
 }
+// Quatre lignes sur cinq sont obligatoires : ce sont celles sans lesquelles le
+// colis ne part pas. Le pays est le seul à pouvoir rester vide, il est
+// pré-rempli à France et se corrige d'un mot.
 function validate(d){
   let ok = true;
-  if(!d.firstname){ setFieldError($('#f_firstname'), t('errRequired')); ok = false; }
-  if(!d.lastname){  setFieldError($('#f_lastname'),  t('errRequired')); ok = false; }
-  if(!d.address){   setFieldError($('#f_address'),   t('errRequired')); ok = false; }
-  // Un colis sans moyen de joindre son destinataire, c'est un colis perdu.
-  if(!d.social && !d.phone && !d.whatsapp){
-    setFieldError($('#f_social'), t('errNoContact'));
-    ok = false;
-  }
+  if(!d.name){    setFieldError($('#f_name'),    t('errRequired')); ok = false; }
+  if(!d.address){ setFieldError($('#f_address'), t('errRequired')); ok = false; }
+  if(!d.zipcity){ setFieldError($('#f_zipcity'), t('errRequired')); ok = false; }
+  if(!d.phone){   setFieldError($('#f_phone'),   t('errRequired')); ok = false; }
   if(!ok){
     const first = document.querySelector('.field.invalid');
     if(first) first.scrollIntoView({ block:'center', behavior: prefersReduced ? 'auto' : 'smooth' });

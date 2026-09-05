@@ -4507,9 +4507,13 @@ Si un mot semble déformé par la reconnaissance vocale mais que le sens est cla
 Ne redemande JAMAIS une information déjà présente dans le message, même mal écrite.
 
 FORMULAIRE CLIENT REMPLI : si le message ressemble à une fiche remplie ligne par ligne
-(Prénom : ... / Nom : ... / Pseudo : ... / Téléphone : ... / WhatsApp : ... / Adresse : ...),
+(Nom : ... / Adresse : ... / Code postal & Ville : ... / Pays : ... / Téléphone : ...),
 lis chaque ligne et crée directement le client avec tous ces champs.
-Le champ "name" doit contenir "Prénom Nom". Les lignes laissées vides sont simplement ignorées.
+"address" doit REGROUPER en une seule chaîne la rue, le code postal, la ville et le
+pays s'il n'est pas la France : c'est ce qui sera recopié sur le colis.
+Le champ "name" contient le nom tel qu'il est écrit. Un pseudo (Pseudo / Snap /
+Insta / TikTok) ou un WhatsApp restent acceptés s'ils figurent dans le message,
+mais le formulaire ne les demande plus. Les lignes vides sont simplement ignorées.
 Ne pose aucune question si la fiche est complète : résume et demande juste confirmation.
 Quand une demande contient à la fois un nouveau client ET une commande, traite les deux :
 crée d'abord le client via create_order (le clientName suffit, le client est créé automatiquement),
