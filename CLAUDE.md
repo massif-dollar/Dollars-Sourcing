@@ -530,36 +530,36 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    8 chiffres**, ce qui n'est jamais un numéro mais le résidu d'un pseudo. Sans
    numéro exploitable, on ouvre WhatsApp sans destinataire avec un message qui
    l'explique, plutôt que d'appeler un numéro inventé.
-13. **`signInWithPopup` est cassé quand l'app tourne depuis l'écran d'accueil.**
-   En mode installé, iOS ouvre la fenêtre de connexion dans un navigateur
-   intégré qui ne sait pas répondre à la page qui l'a ouverte. L'utilisateur
-   voit la page Firebase « The requested action is invalid » sur
-   `dollar-sourcing.firebaseapp.com` et reste bloqué dehors — d'autant que
-   **le stockage d'une app installée sur iOS est séparé de celui de Safari** :
-   se connecter dans Safari ne connecte pas l'app. `runsStandalone()` détecte
-   le mode et bascule sur `signInWithRedirect`, une vraie navigation qui ne
-   dépend d'aucun dialogue entre deux fenêtres. La fenêtre reste utilisée
-   depuis un navigateur normal, où elle fonctionne.
-   La détection du mode installé ne suffit pas : la fenêtre échouait aussi dans
-   Safari, où iOS la bloque puis perd le fil de l'échange. **La redirection est
-   donc prise d'emblée sur tout appareil Apple** (`isAppleMobile()`), pas
-   seulement en mode installé.
+13. **Un diagnostic posé sur une base morte ne vaut rien.** Le 5 septembre, la
+   connexion renvoyait « The requested action is invalid » depuis
+   `dollar-sourcing.firebaseapp.com`. On en a conclu que `signInWithPopup` était
+   cassé sur iOS, et on l'a remplacé par `signInWithRedirect` — d'abord en mode
+   installé, puis sur tout appareil Apple. **Deux corrections pour rien** : le
+   projet Firebase était en fait suspendu par Google, et c'est lui qui répondait
+   ce message. La fenêtre avait toujours fonctionné.
 
-   **Et surtout, l'écran de connexion affiche désormais le code d'erreur
-   Firebase entre crochets.** Une connexion qui échoue en silence ne laisse que
-   des suppositions ; `auth/unauthorized-domain` ou `auth/internal-error` se lit
-   à voix haute au téléphone et désigne la cause en une seconde. Le retour de
-   `getRedirectResult()` est lui aussi affiché au lieu d'être avalé.
+   Pire, le remplacement a introduit un vrai bug : **la redirection échoue en
+   silence dans Safari**. Le domaine d'authentification n'est pas celui de
+   l'app, Safari cloisonne son stockage, et le retour de Google ne rapporte
+   aucune session — l'utilisateur revient sur l'écran de connexion sans la
+   moindre erreur. La fenêtre est donc redevenue la méthode principale, la
+   redirection ne servant que de repli quand la fenêtre est bloquée.
 
-   **Première chose à vérifier** devant ce symptôme : Firebase → Authentication
-   → Settings → Authorized domains contient bien le domaine de l'app. Il a déjà
-   été vidé une fois en supprimant « les anciens domaines ».
+   **La leçon : avant de corriger, vérifier que le backend répond.** Un appel
+   REST à Firestore aurait donné la réponse en dix secondes et évité deux
+   déploiements inutiles.
 
-   Si la redirection venait à échouer elle aussi (Safari cloisonne le stockage
-   tiers, et `authDomain` est sur un autre domaine que l'app), le correctif
-   officiel est de servir `/__/auth/*` depuis notre propre domaine via une
-   fonction Cloudflare — une route étroite, pas un middleware devant tout le
-   site.
+   Ce qui reste acquis, en revanche : **l'écran de connexion affiche le code
+   d'erreur Firebase entre crochets**. Une connexion qui échoue en silence ne
+   laisse que des suppositions ; `auth/unauthorized-domain` se lit à voix haute
+   au téléphone. Le retour de `getRedirectResult()` est lui aussi affiché.
+   Et devant ce symptôme, vérifier **Authentication → Settings → Authorized
+   domains**.
+
+   Si la redirection devait un jour redevenir nécessaire, le correctif officiel
+   est de servir `/__/auth/*` depuis notre propre domaine via une fonction
+   Cloudflare, et de passer `authDomain` sur ce domaine — ce qui exige aussi
+   d'ajouter l'URI de redirection dans la console Google Cloud.
 14. **Le lien 17TRACK passe le numéro dans un fragment** (`#nums=`). Un navigateur
    ne recharge pas la page quand seul le fragment change : rouvrir le lien avec
    un autre numéro **dans le même onglet** laisse l'ancien colis à l'écran. Le

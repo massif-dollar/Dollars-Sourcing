@@ -5026,31 +5026,18 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 // utilisateur : la page Firebase « The requested action is invalid ».
 // Dans ce mode on part donc directement sur la redirection, qui est une vraie
 // navigation et ne dépend d'aucun dialogue entre deux fenêtres.
-function runsStandalone(){
-  try{
-    return window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-  }catch(e){ return false; }
-}
-// Sur iPhone, la fenêtre de connexion est fragile partout : lancée depuis
-// l'écran d'accueil elle atterrit dans un navigateur intégré qui ne sait pas
-// répondre à la page qui l'a ouverte, et même dans Safari elle se fait bloquer
-// puis perd le fil. La redirection est une vraie navigation : rien à ouvrir,
-// rien à faire dialoguer. On la prend d'emblée sur tout appareil Apple.
-function isAppleMobile(){
-  const ua = navigator.userAgent || '';
-  return /iPhone|iPad|iPod/i.test(ua)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
+// La fenêtre reste la méthode principale, y compris sur iPhone : elle a
+// toujours fonctionné ici. Le message « The requested action is invalid » qui
+// a fait croire le contraire venait en réalité du projet Firebase suspendu,
+// pas d'iOS — un diagnostic posé sur les réponses d'une base morte.
+//
+// La redirection n'est gardée qu'en repli, car elle a son propre défaut :
+// Safari cloisonne le stockage du domaine d'authentification, qui n'est pas
+// celui de l'app. Le retour de Google ne rapporte alors aucune session et
+// l'utilisateur retombe sur l'écran de connexion sans la moindre erreur.
 document.getElementById('googleLoginBtn').addEventListener('click', async ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-
-  if(isAppleMobile() || runsStandalone()){
-    try{ await auth.signInWithRedirect(provider); return; }
-    catch(e0){ showLogin('loginFailed', (e0 && e0.code) || 'redirect'); return; }
-  }
 
   try{
     await auth.signInWithPopup(provider);
