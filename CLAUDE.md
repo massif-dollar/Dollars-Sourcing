@@ -100,6 +100,15 @@ refermer `orders` complètement. Une demi-journée.
   le message contient un lien**. L'ancien « formulaire à remplir » était une
   liste de champs à recopier, donc du texte pur : aucune mise en forme n'aurait
   pu lui donner un aperçu. C'est la raison d'être de la page, pas un bonus.
+- `icon-source.png` et `make-icons.py` — l'illustration d'origine et le script
+  qui en tire les trois icônes (`python3 make-icons.py`, pillow requis). Deux
+  pièges, invisibles tant que l'app n'est pas installée : **iOS compose une
+  icône transparente sur du noir**, donc les coins arrondis de la tuile
+  donneraient quatre angles noirs — chaque ligne et chaque colonne est
+  prolongée par sa couleur de bord ; et **iOS applique son propre masque
+  arrondi**, au même rayon que celui déjà dessiné, si bien que le liseré de
+  l'ancien arrondi resterait visible juste à l'intérieur du masque — un léger
+  agrandissement (12 %) le pousse hors champ sans rogner le dessin.
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` —
   ce qu'il faut pour qu'« Ajouter à l'écran d'accueil » installe une vraie app :
   fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
