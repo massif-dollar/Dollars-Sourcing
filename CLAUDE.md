@@ -452,6 +452,39 @@ bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
   exister dans les deux langues**, sinon l'app affiche la clé brute.
   `client.html` a désormais son propre `I18N` : même règle.
 
+### La densité sur téléphone
+
+L'app se consulte d'abord sur un iPhone, et elle y était mal agencée : sur un
+écran de 844 px, **la première carte de commande arrivait à 509 px** — 60 % de
+la hauteur passée en en-tête, trois commandes visibles. Le portail client était
+à 36 %.
+
+Tout se joue dans les blocs `@media (max-width:640px)` des deux fichiers. Ils ne
+**masquent aucune fonction** : les sept boutons de l'en-tête sont tous là, les
+quatre chiffres clés aussi. Ce qui a changé, c'est le vide.
+
+- **L'en-tête** : la baseline « Sourcing & revente » disparaît (elle coûtait une
+  ligne et ne disait rien), le titre passe à 21 px, et les sept actions passent
+  d'une grille étirée en 42 px de haut à une rangée souple en 34 px. 103 → 67 px.
+- **Les chiffres clés** passent **en ligne** dans l'onglet Commandes — libellé à
+  gauche, montant à droite — au lieu de quatre demi-cartes empilées. 168 → 100 px.
+  Le montant ne se coupe jamais : `white-space:nowrap` dessus, et c'est le
+  libellé qui prend l'ellipse s'il le faut. **Cette mise en ligne est réservée à
+  `#kpisMain`** : les libellés des statistiques (« Marge (période) ») sont trop
+  longs pour tenir à côté d'un montant, ils gardent la disposition empilée, en
+  version resserrée.
+- **Les cartes** perdent du rembourrage, pas du texte, et l'écart passe de 9 à 7.
+- **La fiche commande** garde des champs à la même hauteur — on les remplit au
+  doigt — mais l'espace entre eux tombe de 14 à 11.
+
+Résultat : **509 → 348 px** côté vendeur (quatre à cinq commandes visibles au
+lieu de trois), **et le portail client à 301 px**. Rien ne descend sous 30 px de
+zone tactile, c'est vérifié au navigateur.
+
+Le portail, lui, est traité **plus doucement** : c'est la vitrine, l'accueil au
+prénom, les compteurs et le mouvement restent entiers. On n'y a repris que le
+vide entre les blocs.
+
 ### Le mouvement
 
 Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
