@@ -94,7 +94,14 @@ déploiement est un choix assumé.
 ## Architecture
 
 - **Backend** : Firebase Firestore (projet `dollars-sourcing`)
-- **Auth** : Google Sign-In. Propriétaire = `chweirtzleryoyo@gmail.com`
+- **Auth** : Google Sign-In. **Deux adresses propriétaires** (`OWNER_EMAILS`
+  dans `index.html`, `isOwner()` dans les règles) : `dollars.sourcing@gmail.com`,
+  l'adresse de l'activité, et `chweirtzleryoyo@gmail.com`, l'adresse personnelle
+  gardée **en secours**. Ce n'est pas du confort : la première a déjà été
+  désactivée sans préavis (voir plus bas), et le propriétaire est le seul à
+  pouvoir modifier la liste d'accès — perdre son adresse, c'est perdre l'app.
+  Les deux listes doivent rester identiques ; l'une est dans le code, l'autre
+  dans les règles, et une règle publiée ne se déploie pas avec le site.
 
   **Le 5 septembre 2026, Google a désactivé le compte `dollars.sourcing@gmail.com`**
   (motif : « créé ou utilisé avec plusieurs autres comptes », des comptes ayant
@@ -105,6 +112,12 @@ déploiement est un choix assumé.
   reconstruit à l'identique sur un compte personnel ancien et légitime ; seules
   la configuration Firebase et l'adresse propriétaire ont changé, pas une ligne
   de fonctionnalité. Les données perdues n'étaient que des données de test.
+
+  **Le compte a été rétabli sur recours quelques heures plus tard.** Le projet
+  Firebase, lui, **reste sur le compte personnel** : c'est ce qui sépare
+  désormais la propriété de la base de l'adresse de connexion. Si Google
+  redésactivait l'adresse de l'activité, la base ne s'arrêterait plus — seule
+  la connexion basculerait sur l'adresse de secours.
 
   **Trois leçons.** Le code sur GitHub est le vrai actif, il n'a rien risqué.
   L'app a un **bouton d'export** (icône dans l'en-tête, `exportData()`) qui

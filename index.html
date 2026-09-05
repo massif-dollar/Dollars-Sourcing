@@ -2297,7 +2297,11 @@ const db = firebase.firestore();
 // (utile en Chine, où les services Google sont bloqués). Tout se resynchronise au retour.
 db.enablePersistence({ synchronizeTabs: true }).catch(()=>{ /* déjà actif ou navigateur non compatible */ });
 const auth = firebase.auth();
-const OWNER_EMAIL = 'chweirtzleryoyo@gmail.com';
+// Deux adresses propriétaires : celle de l'activité d'abord, l'adresse
+// personnelle en secours. Google a déjà désactivé un compte du jour au
+// lendemain — garder une seconde porte évite de rester dehors.
+const OWNER_EMAILS = ['dollars.sourcing@gmail.com', 'chweirtzleryoyo@gmail.com'];
+const OWNER_EMAIL = OWNER_EMAILS[0];
 
 // ===== Multi-utilisateur =====
 // Chaque donnée porte le uid de son créateur. Commandes et clients sont privés,
@@ -4001,7 +4005,7 @@ $('#addAccessBtn').addEventListener('click', async ()=>{
   if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
     setFieldError(input, t('accessInvalidEmail')); return;
   }
-  if(email === OWNER_EMAIL || allowedEmails.includes(email)){
+  if(OWNER_EMAILS.includes(email) || allowedEmails.includes(email)){
     setFieldError(input, t('accessAlready')); return;
   }
   allowedEmails.push(email);
@@ -5074,7 +5078,7 @@ auth.onAuthStateChanged(async (user)=>{
   currentUid = user.uid;
   currentEmail = (user.email || '').toLowerCase();
   currentName = user.displayName || '';
-  isOwner = currentEmail === OWNER_EMAIL;
+  isOwner = OWNER_EMAILS.includes(currentEmail);
 
   if(!isOwner){
     // compte invité : autorisé seulement s'il figure dans la liste d'accès
@@ -5263,7 +5267,9 @@ async function registerBiometric(){
       publicKey: {
         challenge,
         rp: { name: 'DOLLAR$ SOURCING' },
-        user: { id: userId, name: OWNER_EMAIL, displayName: 'DOLLAR$ SOURCING' },
+        // Le libellé de la clé porte le compte connecté : un invité ne doit pas
+        // voir l'adresse du propriétaire dans sa demande Face ID.
+        user: { id: userId, name: currentEmail || OWNER_EMAIL, displayName: 'DOLLAR$ SOURCING' },
         pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
         authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
         timeout: 60000,
