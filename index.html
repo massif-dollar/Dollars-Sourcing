@@ -2196,7 +2196,11 @@ const LOYALTY_TIERS = [
 function orderDiscount(o){ return Number(o.discount) || 0; }
 function dollarsEarned(o){
   if(o.status !== 'livre' || o.deletedAt) return 0;
-  return Math.max(0, Math.floor(orderTotalPrice(o) - orderDiscount(o)));
+  // Règle 1 : un Dollar par euro RÉELLEMENT payé. On créditait le prix affiché,
+  // donc une commande livrée mais impayée rapportait des Dollars sur de l'argent
+  // jamais reçu. On plafonne au net : un trop-perçu ne fabrique pas de points,
+  // et un solde réglé plus tard fait remonter le compte tout seul.
+  return Math.max(0, Math.floor(Math.min(orderPaid(o), orderNetPrice(o))));
 }
 function clientCoupons(clientId){
   const c = clientById(clientId);
