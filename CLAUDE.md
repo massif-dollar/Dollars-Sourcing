@@ -93,8 +93,30 @@ déploiement est un choix assumé.
 
 ## Architecture
 
-- **Backend** : Firebase Firestore (projet `dollar-sourcing`)
-- **Auth** : Google Sign-In. Propriétaire = `dollars.sourcing@gmail.com`
+- **Backend** : Firebase Firestore (projet `dollars-sourcing`)
+- **Auth** : Google Sign-In. Propriétaire = `chweirtzleryoyo@gmail.com`
+
+  **Le 5 septembre 2026, Google a désactivé le compte `dollars.sourcing@gmail.com`**
+  (motif : « créé ou utilisé avec plusieurs autres comptes », des comptes ayant
+  servi à enchaîner les essais gratuits d'hébergement). Ce n'était pas seulement
+  le compte : **le projet Firebase entier a été suspendu** — la base renvoyait
+  `PERMISSION_DENIED: Consumer 'projects/dollar-sourcing' has been suspended`,
+  donc l'app *et* les portails clients étaient à l'arrêt. Le projet a été
+  reconstruit à l'identique sur un compte personnel ancien et légitime ; seules
+  la configuration Firebase et l'adresse propriétaire ont changé, pas une ligne
+  de fonctionnalité. Les données perdues n'étaient que des données de test.
+
+  **Trois leçons.** Le code sur GitHub est le vrai actif, il n'a rien risqué.
+  L'app a un **bouton d'export** (icône dans l'en-tête, `exportData()`) qui
+  télécharge commandes, clients et fournisseurs en JSON : **s'en servir
+  régulièrement**, c'est la seule sauvegarde qui ne dépend pas de Google. Et à
+  terme, une activité ne doit pas reposer sur un Gmail gratuit : un domaine
+  avec une adresse professionnelle payante ne se fait pas désactiver par un
+  algorithme sans recours.
+
+  Les règles comparent désormais `request.auth.token.email.lower()` : Google
+  peut renvoyer l'adresse avec la casse d'origine, et une majuscule aurait suffi
+  à verrouiller le propriétaire dehors.
 - **Hébergement** : Cloudflare Pages, déploiement depuis GitHub.
   Le plan gratuit y autorise 500 constructions par mois et l'usage commercial,
   là où Netlify plafonnait à une vingtaine de mises en production — c'est ce

@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email_verified == true;
     }
     function isOwner() {
-      return signedIn() && request.auth.token.email == 'dollars.sourcing@gmail.com';
+      return signedIn() && request.auth.token.email.lower() == 'chweirtzleryoyo@gmail.com';
     }
     // Un invité est autorisé si son email figure dans settings/access
     function isTeam() {
