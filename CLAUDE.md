@@ -518,6 +518,21 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    le mode et bascule sur `signInWithRedirect`, une vraie navigation qui ne
    dépend d'aucun dialogue entre deux fenêtres. La fenêtre reste utilisée
    depuis un navigateur normal, où elle fonctionne.
+   La détection du mode installé ne suffit pas : la fenêtre échouait aussi dans
+   Safari, où iOS la bloque puis perd le fil de l'échange. **La redirection est
+   donc prise d'emblée sur tout appareil Apple** (`isAppleMobile()`), pas
+   seulement en mode installé.
+
+   **Et surtout, l'écran de connexion affiche désormais le code d'erreur
+   Firebase entre crochets.** Une connexion qui échoue en silence ne laisse que
+   des suppositions ; `auth/unauthorized-domain` ou `auth/internal-error` se lit
+   à voix haute au téléphone et désigne la cause en une seconde. Le retour de
+   `getRedirectResult()` est lui aussi affiché au lieu d'être avalé.
+
+   **Première chose à vérifier** devant ce symptôme : Firebase → Authentication
+   → Settings → Authorized domains contient bien le domaine de l'app. Il a déjà
+   été vidé une fois en supprimant « les anciens domaines ».
+
    Si la redirection venait à échouer elle aussi (Safari cloisonne le stockage
    tiers, et `authDomain` est sur un autre domaine que l'app), le correctif
    officiel est de servir `/__/auth/*` depuis notre propre domaine via une
