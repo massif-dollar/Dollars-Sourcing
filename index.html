@@ -2543,8 +2543,13 @@ function loadLangSync(){
   }catch(e){}
 }
 
+// L'export reste la seule sauvegarde qui ne dépend pas de Google : un invité y a
+// droit pour SES données. Le carnet de fournisseurs, lui, est prêté, pas donné —
+// un fichier survivrait à un retrait d'accès, alors il n'y entre pas.
 function exportData(){
-  const payload = { exportedAt:new Date().toISOString(), orders, clients, suppliers };
+  const payload = isOwner
+    ? { exportedAt:new Date().toISOString(), orders, clients, suppliers }
+    : { exportedAt:new Date().toISOString(), orders, clients };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3093,6 +3098,7 @@ function computeLoyaltyReport(){
 function renderLoyaltyReport(){
   const el = $('#loyaltyReport');
   if(!el) return;
+  if(!isOwner){ el.style.display = 'none'; return; }
   const r = computeLoyaltyReport();
   // Rien à dire tant que le programme n'a pas servi.
   if(!r.remises && !r.dollarsDehors && !r.couponsDus){ el.style.display = 'none'; return; }
@@ -3148,6 +3154,8 @@ function buildCouponSelect(order){
   const hint = $('#couponHint');
   const solde = $('#couponBalance');
   const clientId = $('#f_clientSelect').value;
+  // Pas de portail, pas de boutique, donc pas de coupon à appliquer.
+  if(!isOwner){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
   if(!clientId || clientId === '__new__'){ zone.style.display = 'none'; sel.innerHTML = ''; return; }
 
   // Le solde s'affiche dès qu'un client est choisi, même sans coupon : c'est
@@ -3574,6 +3582,9 @@ $('#clientOrdersList').addEventListener('click', (e)=>{
 function renderClientLoyalty(clientId){
   const el = $('#clientLoyalty');
   if(!el) return;
+  // Les Dollars ne s'échangent que dans la boutique du portail : chez un invité
+  // ils n'auraient nulle part où être dépensés.
+  if(!isOwner){ el.style.display = 'none'; el.innerHTML = ''; return; }
   const solde = clientDollars(clientId);
   const coupons = availableCoupons(clientId);
   if(!solde && !coupons.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
@@ -3674,7 +3685,8 @@ $('#waFormBtn').addEventListener('click', async ()=>{
 
 function openClientSheet(id, justeCree){
   editingClientId = id;
-  $('#clientCreatedBanner').style.display = justeCree ? 'block' : 'none';
+  // Sans portail, il n'y a ni bandeau « Profil créé », ni lien, ni code à envoyer.
+  $('#clientCreatedBanner').style.display = (justeCree && isOwner) ? 'block' : 'none';
   clearFormErrors($('#clientForm'));
   const c = id ? clientById(id) : null;
   $('#clientSheetTitle').textContent = c ? c.name : t('newClientTitle');
@@ -3687,7 +3699,7 @@ function openClientSheet(id, justeCree){
   $('#c_address').value = c ? (c.address||'') : '';
   $('#clientOrdersSection').style.display = c ? 'block' : 'none';
   $('#deleteClientBtn').style.display = c ? 'block' : 'none';
-  $('#clientLinkBox').style.display = (c && c.token) ? 'block' : 'none';
+  $('#clientLinkBox').style.display = (isOwner && c && c.token) ? 'block' : 'none';
   if(c && c.token){
     $('#clientLinkInput').value = clientLink(c);
     if(c.accessCode){
@@ -5244,12 +5256,31 @@ async function migrateLegacyData(){
   }catch(e){ /* les règles peuvent refuser : sans gravité, on réessaiera */ }
 }
 
-// L'assistant IA et la gestion des accès restent réservés au propriétaire.
+// ===== Ce qu'un invité n'a pas =====
+// L'app d'un invité est un outil d'organisation : ses commandes, ses clients,
+// le carnet de fournisseurs partagé. Tout ce qui regarde le CLIENT — le portail,
+// son lien, son code, les Dollars — reste au propriétaire, parce que c'est là
+// que vit la marque, et qu'un programme de fidélité sans boutique où le dépenser
+// ne serait qu'une promesse en l'air.
+//
+// Tout passe par `isOwner`, donc rien n'est détruit et rien n'est irréversible :
+// basculer un invité en compte complet, c'est retirer son adresse de la liste
+// des invités et la mettre dans OWNER_EMAILS. Les données, elles, n'ont jamais
+// changé de forme.
+function ownerOnly(id, mode){
+  const el = document.getElementById(id);
+  if(el) el.style.display = isOwner ? (mode || 'block') : 'none';
+}
 function applyRoleUI(){
-  const af = document.getElementById('assistantFab');
-  if(af) af.style.display = isOwner ? 'flex' : 'none';
-  const ab = document.getElementById('accessBtn');
-  if(ab) ab.style.display = isOwner ? 'flex' : 'none';
+  ownerOnly('assistantFab', 'flex');   // l'assistant IA : c'est sa clé qui paie
+  ownerOnly('accessBtn', 'flex');      // la liste des invités
+  ownerOnly('viewBtnRequests', 'flex');// les demandes viennent du portail
+  ownerOnly('waFormBtn');              // le formulaire porte la marque du propriétaire
+  if(!isOwner){
+    // Si un invité était resté sur l'onglet Demandes, on le ramène chez lui.
+    const rv = document.getElementById('requestsView');
+    if(rv && rv.style.display !== 'none') switchView('commandes');
+  }
 }
 
 // ================= VERROU APPAREIL (code 6 chiffres + biométrie) =================

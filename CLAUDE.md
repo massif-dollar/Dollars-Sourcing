@@ -179,7 +179,52 @@ Chaque document porte un `ownerId`. Commandes, clients et demandes sont
 comptes autorisés (seul le créateur peut supprimer le sien).
 Les invités sont gérés dans `settings/access` (liste d'emails), modifiable
 uniquement par le propriétaire via le bouton « Accès ».
-L'assistant IA est **réservé au propriétaire** (c'est sa clé API qui paie).
+
+#### Ce qu'un invité n'a pas, et pourquoi
+
+**L'app d'un invité est un outil d'organisation, pas une vitrine.** Il gère ses
+commandes, ses clients, le carnet de fournisseurs commun. Tout ce qui regarde le
+**client final** reste au propriétaire :
+
+| | propriétaire | invité |
+|---|---|---|
+| Ses commandes, ses clients, ses stats | oui | oui |
+| Carnet de fournisseurs (partagé) | oui | oui |
+| Référence de commande, expédition, corbeille, mode discret | oui | oui |
+| Lien et code du portail client | oui | **non** |
+| Onglet « Demandes » | oui | **non** |
+| Programme de fidélité (Dollars, coupons, compteur des stats) | oui | **non** |
+| « Envoyer un formulaire à remplir » | oui | **non** |
+| Assistant IA, gestion des accès | oui | **non** |
+| Export | commandes, clients **et fournisseurs** | commandes et clients seulement |
+
+Trois raisons, et aucune n'est technique :
+
+1. **Le portail client, c'est la marque.** Un espace personnel soigné est ce qui
+   fait qu'un client fait confiance et revient. Le dupliquer chez tout le monde,
+   c'est le banaliser.
+2. **Les Dollars sans boutique ne veulent rien dire.** Ils ne s'échangent que
+   dans le portail. Chez un invité, un solde n'aurait nulle part où être dépensé
+   — ce serait une promesse en l'air, et le pire service à rendre à un programme
+   de fidélité (voir la règle 4 du barème).
+3. **Le carnet de fournisseurs est prêté, pas donné.** L'invité le lit et
+   l'enrichit tant qu'il a accès. Un fichier d'export, lui, survivrait au retrait
+   de cet accès : `exportData()` ne met donc `suppliers` que pour le
+   propriétaire. L'invité garde l'export de **ses** données — c'est sa sauvegarde,
+   et la seule qui ne dépend pas de Google.
+
+**Tout passe par le drapeau `isOwner`, dans `applyRoleUI()` et cinq gardes
+posées au plus près du rendu** (`openClientSheet`, `renderClientLoyalty`,
+`buildCouponSelect`, `renderLoyaltyReport`, `exportData`). Aucune donnée n'est
+détruite, aucune structure ne change : **basculer un invité en compte complet,
+c'est déplacer son adresse de `settings/access` vers `OWNER_EMAILS`**, et tout
+réapparaît. Rien n'est irréversible.
+
+Piège à ne pas refaire : masquer seulement le bouton ne suffit pas quand le
+rendu réaffiche l'élément derrière. `#clientLinkBox` et `#couponField` sont
+remis à `block` par `openClientSheet()` et `buildCouponSelect()` à chaque
+ouverture — c'est **là** qu'il faut tester `isOwner`, pas seulement dans
+`applyRoleUI()`.
 
 ### Portail client
 Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
