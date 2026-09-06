@@ -362,10 +362,18 @@ l'affichage ne montre que ce qui existe. Ces dates alimentent la fiche client
 et, plus tard, le calcul des délais réels par transitaire pour pré-remplir la
 livraison estimée.
 
-### Programme de fidélité — les Dollars
+### Programme de fidélité — les Dollarz
 
-Chaque client cumule des **Dollars**, la monnaie interne, et les échange contre
+Chaque client cumule des **Dollarz**, la monnaie interne, et les échange contre
 des coupons de remise dans une boutique en libre-service de son espace.
+
+**Le nom affiché est « Dollarz », avec un z** — c'est la marque, décidée le
+6 septembre 2026. **Les identifiants du code gardent l'orthographe anglaise**
+(`clientDollars`, `dollarsEarned`, `tabDollars`, `.ds-coin`, la clé i18n
+`dollarsLabel`…) : les renommer aurait touché des dizaines de lignes pour zéro
+bénéfice, et c'est exactement le genre de remaniement cosmétique qui casse une
+occurrence oubliée. **Seules les chaînes visibles portent le z** — celles des
+deux objets `I18N`, le balisage HTML, et les descriptions d'aperçu de lien.
 
 **Ce programme n'est pas un remerciement, c'est un tri.** Il sert à avantager
 les meilleurs clients et ceux qui commandent en gros, pas l'acheteur de passage.
