@@ -98,63 +98,66 @@ const frame = (n, body) => `<div class="slide">
   ${body}
 </div>`;
 
+// On parle à des REVENDEURS, pas à des particuliers : ce n'est pas « ton colis »
+// mais « ton stock », pas « ce que tu paies » mais « ton prix d'achat ». Un
+// revendeur n'achète pas un objet, il achète une marge.
 const slides = [
 // ---------- 1. l'accroche ----------
 ['01-accroche', frame('', `
   <div class="stage" style="flex-direction:column;justify-content:center;gap:70px;margin-top:0">
     <div class="hero-mark"><div class="hero-tile"><span>$</span></div></div>
     <div class="head" style="text-align:center">
-      <h1>Tu commandes.<br>Je m'occupe<br>de <em>tout le reste</em>.</h1>
+      <h1>Tu revends.<br>Moi je te <em>fournis</em><br>depuis la Chine.</h1>
       <div class="lead" style="margin:34px auto 0;text-align:center">
-        Sourcing en Chine, négociation, achat, expédition.<br>Toi, tu suis tout depuis ton téléphone.</div>
+        Sourcing, négociation, achat, expédition.<br>Toi, tu n'as plus qu'à vendre.</div>
     </div>
   </div>
-  <div class="foot" style="justify-content:center"><div class="tag"><i></i>6 étapes, et ton colis arrive</div></div>`)],
+  <div class="foot" style="justify-content:center"><div class="tag"><i></i>6 étapes, et ton stock arrive</div></div>`)],
 
 // ---------- 2. ton espace ----------
 ['02-espace', frame('ÉTAPE 1', `
-  <div class="head"><h1 class="small">Tu reçois<br><em>ton lien perso</em></h1>
-    <div class="lead">Un lien rien qu'à toi, protégé par <b>un code à 6 chiffres</b>. Tu l'ajoutes à ton écran d'accueil : tu as ton application.</div></div>
+  <div class="head"><h1 class="small">Tu reçois<br><em>ton accès pro</em></h1>
+    <div class="lead">Un espace rien qu'à toi, protégé par <b>un code à 6 chiffres</b>. Tes commandes, tes prix, ton suivi — à ajouter sur ton écran d'accueil.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('code.png')}"></div></div>`)],
 
 // ---------- 3. tu demandes ----------
 ['03-demande', frame('ÉTAPE 2', `
-  <div class="head"><h1 class="small">Tu envoies<br><em>ta demande</em></h1>
-    <div class="lead">Le produit, la quantité, <b>une photo</b> si tu en as une. Et on en discute en direct quand tu veux.</div></div>
+  <div class="head"><h1 class="small">Tu me dis<br><em>ce que tu veux</em></h1>
+    <div class="lead">Le produit, la quantité, <b>une photo</b> si tu en as une. Je trouve la source. Et on en discute en direct quand tu veux.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('demande.png')}"></div></div>`)],
 
 // ---------- 4. le prix ----------
 ['04-prix', frame('ÉTAPE 3', `
-  <div class="head"><h1>Je te donne<br><em>ton prix</em></h1>
-    <div class="lead">Un seul chiffre, <b>livraison comprise</b>. Pas de frais de port qui tombent à la fin, pas de douane surprise.</div></div>
+  <div class="head"><h1 class="small">Je te donne<br><em>ton prix d'achat</em></h1>
+    <div class="lead">Un seul chiffre, <b>livraison comprise</b>. Tu calcules ta marge dessus, et rien ne bouge à l'arrivée.</div></div>
   <div class="pts">
     <div class="pt"><i></i>Le prix que tu vois est le prix que tu paies</div>
     <div class="pt"><i></i>Photos et détails du produit avant de valider</div>
     <div class="pt"><i></i>Une fois validé, on expédie au plus vite</div>
   </div>
-  <div class="foot"><div class="tag"><i></i>Aucun frais caché</div></div>`)],
+  <div class="foot"><div class="tag"><i></i>Ni frais de port, ni douane surprise</div></div>`)],
 
-// ---------- 5. j'achète et j'expédie ----------
+// ---------- 5. je suis en Chine ----------
 ['05-achat', frame('ÉTAPE 4', `
   <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1>
     <div class="lead">Je te fournis <b>au meilleur prix</b>, de quoi te faire un <b>minimum ×3</b> à la revente en France.</div></div>
   <div class="pts">
     <div class="pt"><i></i>Le prix de la source, pas le prix du grossiste</div>
-    <div class="pt"><i></i>Chaque colis porte sa référence, écrite à la main</div>
-    <div class="pt"><i></i>Emballé et expédié au plus vite</div>
+    <div class="pt"><i></i>Du volume : plus tu prends, plus ça descend</div>
+    <div class="pt"><i></i>Chaque colis part avec sa référence</div>
   </div>
   <div class="foot"><div class="tag"><i></i>Marché de gros, prix de gros</div></div>`)],
 
 // ---------- 6. le suivi ----------
 ['06-suivi', frame('ÉTAPE 5', `
-  <div class="head"><h1 class="small">Tu suis<br><em>ton colis</em></h1>
-    <div class="lead">Six étapes, en direct. Transitaire, numéro de suivi, <b>date estimée</b> — tout est là.</div></div>
+  <div class="head"><h1 class="small">Tu suis<br><em>ton stock</em></h1>
+    <div class="lead">Six étapes, en direct. Transitaire, numéro de suivi, <b>date estimée</b> — tu sais quand réapprovisionner.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('suivi.png')}"></div></div>`)],
 
 // ---------- 7. les Dollarz ----------
 ['07-dollarz', frame('ÉTAPE 6', `
-  <div class="head"><h1 class="small">Tu gagnes<br>des <em>Dollarz</em></h1>
-    <div class="lead"><b>1 € dépensé = 1 Dollarz.</b> Tu les échanges contre de vraies remises. Plus tu attends, plus ça rapporte.</div></div>
+  <div class="head"><h1 class="small">Plus tu commandes,<br>plus tu <em>gagnes</em></h1>
+    <div class="lead"><b>1 € dépensé = 1 Dollarz</b>, échangeable contre de vraies remises. Les gros paliers sont faits pour ceux qui achètent en gros.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('dollarz.png')}"></div></div>`)],
 
 // ---------- 8. l'appel ----------
@@ -162,14 +165,14 @@ const slides = [
   <div class="stage" style="flex-direction:column;justify-content:center;gap:56px;margin-top:0">
     <div class="hero-mark"><div class="hero-tile"><span>$</span></div></div>
     <div class="head" style="text-align:center">
-      <h1>Dis-moi ce<br>que tu cherches.</h1>
+      <h1>Dis-moi ce que<br>tu veux revendre.</h1>
       <div class="lead" style="margin:34px auto 0;text-align:center">
-        Écris-moi le produit. Je te réponds avec un prix,<br>livraison comprise. On en discute sur WhatsApp,<br>et ton espace est créé dans la foulée.</div>
+        Écris-moi le produit. Je te réponds avec ton prix<br>d'achat, livraison comprise. On en discute sur<br>WhatsApp, et ton accès est créé dans la foulée.</div>
     </div>
   </div>
   <div class="foot" style="flex-direction:column;gap:26px">
     <div class="cta">Écris-moi en message privé</div>
-    <div class="tag" style="align-self:center"><i></i>Ton espace client offert dès la 1re commande</div>
+    <div class="tag" style="align-self:center"><i></i>Accès pro offert dès la 1re commande</div>
   </div>`)]
 ];
 
