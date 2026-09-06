@@ -2435,7 +2435,13 @@ function startListeners(){
     renderCurrentView();
     // La copie que lit le portail suit, quel que soit le chemin d'écriture.
     // On l'écrit après le rendu : elle ne doit jamais retarder l'affichage.
-    if(!snap.metadata.hasPendingWrites) syncPublicOrders(all);
+    // Surtout : on ne saute PAS les snapshots hasPendingWrites. Une écriture
+    // locale (avancer d'une étape) en produit un, et Firestore n'en renvoie
+    // pas d'autre à la confirmation serveur — c'est un changement de
+    // métadonnées, et includeMetadataChanges n'est pas activé. Sauter celui-là,
+    // c'était ne jamais suivre les changements de statut. La double écriture
+    // que ce garde-fou évitait est déjà évitée par l'empreinte publicMirror.
+    syncPublicOrders(all);
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
@@ -2503,6 +2509,7 @@ function publicOrderData(o){
 
 let publicMirror = null;          // id -> empreinte de la copie déjà écrite
 let publicSyncing = false;
+let publicQueued = null;
 let publicSyncWarned = false;     // on n'alerte qu'une fois par session
 async function loadPublicMirror(){
   if(publicMirror || !currentUid) return;
@@ -2513,7 +2520,11 @@ async function loadPublicMirror(){
   }catch(e){ /* hors ligne : la synchro rattrapera au retour du réseau */ }
 }
 async function syncPublicOrders(allOrders){
-  if(!currentUid || publicSyncing) return;
+  if(!currentUid) return;
+  // Deux snapshots se suivent de près (l'écriture locale, puis la confirmation).
+  // Jeter le second laisserait la copie en retard d'un cran : on le met en
+  // attente et on le rejoue à la fin, avec les commandes les plus fraîches.
+  if(publicSyncing){ publicQueued = allOrders; return; }
   publicSyncing = true;
   try{
     await loadPublicMirror();
@@ -2543,7 +2554,10 @@ async function syncPublicOrders(allOrders){
       publicSyncWarned = true;
       showToast(t('publicSyncFailed').replace('{code}', code));
     }
-  }finally{ publicSyncing = false; }
+  }finally{
+    publicSyncing = false;
+    if(publicQueued){ const suite = publicQueued; publicQueued = null; syncPublicOrders(suite); }
+  }
 }
 
 async function createOrder(data){

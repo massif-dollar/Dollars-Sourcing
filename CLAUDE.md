@@ -93,16 +93,27 @@ peut l'oublier, **y compris ceux qu'on ajoutera plus tard**. Brancher les deux
 fonctions d'écriture aurait marché aujourd'hui et lâché au premier chemin
 nouveau.
 
-Trois conséquences de ce choix :
+Cinq conséquences de ce choix :
 
 - **Elle est auto-réparatrice.** Une copie manquante ou périmée est rattrapée à
   la prochaine ouverture de l'app. C'est aussi ce qui a servi de migration :
   il n'y a pas eu de script, la première ouverture a créé les copies manquantes.
 - **Elle n'écrit que ce qui a changé.** `publicMirror` garde l'empreinte de
   chaque copie déjà écrite ; identique, on ne réécrit pas.
-- **Elle s'exécute après le rendu** et ignore les snapshots `hasPendingWrites` :
-  la copie ne doit jamais retarder l'affichage, et une écriture locale non
-  encore confirmée serait recopiée deux fois.
+- **Elle s'exécute après le rendu**, mais sur **tous** les snapshots. C'est le
+  bug le plus coûteux de la copie publique, et il valait une soirée : on
+  ignorait d'abord les snapshots `hasPendingWrites`, pour ne pas recopier deux
+  fois une écriture locale pas encore confirmée. Or **une écriture locale est le
+  seul snapshot qu'on reçoive**. Firestore n'en renvoie pas de second à la
+  confirmation serveur : c'est un changement de métadonnées, et
+  `includeMetadataChanges` n'est pas activé. Le résultat, invisible côté
+  vendeur : la copie était créée à l'ouverture de l'app, puis **plus jamais mise
+  à jour** — le client voyait sa commande figée sur « demande reçue » pendant
+  que le vendeur la faisait avancer jusqu'à « livré ». La double écriture qu'on
+  cherchait à éviter l'est déjà par l'empreinte `publicMirror`.
+- **Un snapshot qui arrive pendant une synchro est mis en attente, pas jeté**
+  (`publicQueued`). Les deux snapshots d'une même écriture se suivent de près ;
+  `publicSyncing` les faisait tomber, et la copie restait en retard d'un cran.
 - **Elle prévient quand elle échoue.** Une copie qui ne passe pas vide le portail
   de *tous* les clients, et le vendeur n'en saurait rien : c'est le piège 9
   appliqué à l'écriture. Un `console.error` ne se lit pas sur un iPhone. Le code
