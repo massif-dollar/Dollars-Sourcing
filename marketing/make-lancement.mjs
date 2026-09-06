@@ -118,7 +118,7 @@ const slides = [
 // ---------- 3. tu demandes ----------
 ['03-demande', frame('ÉTAPE 2', `
   <div class="head"><h1 class="small">Tu envoies<br><em>ta demande</em></h1>
-    <div class="lead">Le produit, la quantité, <b>une photo</b> si tu en as une. Deux clics, c'est parti — pas besoin de m'écrire.</div></div>
+    <div class="lead">Le produit, la quantité, <b>une photo</b> si tu en as une. Et on en discute en direct quand tu veux.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('demande.png')}"></div></div>`)],
 
 // ---------- 4. le prix ----------
@@ -127,19 +127,19 @@ const slides = [
     <div class="lead">Un seul chiffre, <b>livraison comprise</b>. Pas de frais de port qui tombent à la fin, pas de douane surprise.</div></div>
   <div class="pts">
     <div class="pt"><i></i>Le prix que tu vois est le prix que tu paies</div>
-    <div class="pt"><i></i>Tu peux payer en deux fois : acompte puis solde</div>
-    <div class="pt"><i></i>Tu vois toujours ce qu'il te reste à régler</div>
+    <div class="pt"><i></i>Photos et détails du produit avant de valider</div>
+    <div class="pt"><i></i>Une fois validé, on expédie au plus vite</div>
   </div>
   <div class="foot"><div class="tag"><i></i>Aucun frais caché</div></div>`)],
 
 // ---------- 5. j'achète et j'expédie ----------
 ['05-achat', frame('ÉTAPE 4', `
-  <div class="head"><h1 class="small">J'achète<br>et <em>j'expédie</em></h1>
-    <div class="lead">Je suis <b>sur place, en Chine</b>. J'achète en direct au fournisseur, je vérifie, j'emballe et je confie au transitaire.</div></div>
+  <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1>
+    <div class="lead">Je te fournis <b>au meilleur prix</b>, de quoi te faire un <b>minimum ×3</b> à la revente en France.</div></div>
   <div class="pts">
-    <div class="pt"><i></i>Acheté en direct, sans intermédiaire de plus</div>
+    <div class="pt"><i></i>Le prix de la source, pas le prix du grossiste</div>
     <div class="pt"><i></i>Chaque colis porte sa référence, écrite à la main</div>
-    <div class="pt"><i></i>Tu es prévenu à chaque étape franchie</div>
+    <div class="pt"><i></i>Emballé et expédié au plus vite</div>
   </div>
   <div class="foot"><div class="tag"><i></i>Marché de gros, prix de gros</div></div>`)],
 
@@ -162,7 +162,7 @@ const slides = [
     <div class="head" style="text-align:center">
       <h1>Dis-moi ce<br>que tu cherches.</h1>
       <div class="lead" style="margin:34px auto 0;text-align:center">
-        Écris-moi le produit. Je te réponds avec un prix,<br>livraison comprise. Ton espace est créé dans la foulée.</div>
+        Écris-moi le produit. Je te réponds avec un prix,<br>livraison comprise. On en discute sur WhatsApp,<br>et ton espace est créé dans la foulée.</div>
     </div>
   </div>
   <div class="foot" style="flex-direction:column;gap:26px">
