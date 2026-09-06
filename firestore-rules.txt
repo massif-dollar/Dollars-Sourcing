@@ -39,17 +39,26 @@ service cloud.firestore {
       allow update, delete: if isTeam() && isMine();
     }
 
-    // ── COMMANDES ── strictement privées à l'écriture
-    // ATTENTION, point délicat : le portail client ne demande pas une commande
-    // par son identifiant, il fait une REQUÊTE (« toutes celles dont clientId
-    // vaut le mien »). Une requête relève de `list`, pas de `get`. Tant que
-    // `list` était réservé à l'équipe, le client ne voyait aucune commande :
-    // c'était la cause du portail vide.
-    // Ouvrir `list` est le prix à payer pour un portail sans connexion ; voir
-    // la note en bas de fichier pour le correctif propre.
+    // ── COMMANDES ── fermées, prix d'achat et marge compris
+    // Le portail client ne les lit plus : il lit `publicOrders` ci-dessous.
     match /orders/{orderId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if isTeam();
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isTeam() && isMine();
+    }
+
+    // ── COPIE PUBLIQUE DES COMMANDES ──
+    // Le portail client n'est pas connecté : Firestore le voit comme un visiteur
+    // anonyme, et sa requête (« toutes celles dont clientId vaut le mien »)
+    // relève de `list`, jamais de `get`. Il FAUT donc que `list` soit ouvert ici
+    // — c'est le piège qui avait donné un portail vide sans aucune erreur.
+    //
+    // Ce qu'on ouvre, en revanche, ne contient QUE ce que le client voit déjà :
+    // produit, quantité, statut, prix client, acompte, expédition, photo.
+    // Ni prix d'achat, ni marge. C'est l'app qui écrit cette copie, et seul le
+    // propriétaire d'une commande peut toucher la sienne.
+    match /publicOrders/{orderId} {
+      allow get, list: if true;
       allow create: if isTeam() && claimingMine();
       allow update, delete: if isTeam() && isMine();
     }
@@ -105,18 +114,23 @@ service cloud.firestore {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// NOTE — pourquoi `list` est ouvert sur orders et pendingOrders
+// NOTE — pourquoi `list` est ouvert sur publicOrders et pendingOrders
 //
 // Le portail client n'est jamais connecté à Firebase : il s'identifie avec son
 // lien (id + token) et son code à 6 chiffres, vérifiés dans le navigateur.
 // Firestore ne peut donc pas savoir « qui » demande, et une requête filtrée sur
 // clientId reste, de son point de vue, une requête anonyme sur la collection.
-// Conséquence : qui connaît la structure de la base peut lister les commandes,
-// et un document de commande contient le prix d'achat et la marge.
+// C'est pour ça que `list` doit rester ouvert quelque part.
 //
-// Le correctif propre, à faire avant tout passage payant : recopier au moment
-// de l'enregistrement une version publique de chaque commande — produit,
-// quantité, statut, prix client, acompte, expédition, photo — dans une
-// collection à part, que le portail lirait à la place. `orders` redeviendrait
-// alors entièrement fermé, coûts et marges compris. Une demi-journée.
+// Ce qui a changé : ce n'est plus `orders` qui est ouvert, mais `publicOrders`,
+// une copie qui ne contient que ce que le client voit déjà à l'écran. Le prix
+// d'achat et la marge ne quittent plus `orders`, désormais fermé à l'équipe.
+//
+// Ce qui reste ouvert et qu'il faut connaître : `pendingOrders`. Un visiteur
+// anonyme peut lister les demandes — un nom de client et un produit, jamais un
+// montant. Le refermer demanderait de faire transiter les demandes par une
+// fonction serveur ; ce n'est pas justifié tant qu'elles ne portent pas d'argent.
+//
+// `clients` n'a jamais été exposé à la liste : seul `get` est ouvert, et il
+// exige l'identifiant exact du document — celui qui est dans le lien du client.
 // ─────────────────────────────────────────────────────────────────────────

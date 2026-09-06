@@ -2431,6 +2431,9 @@ function startListeners(){
     orders = all.filter(o=>!o.deletedAt);
     trashedOrders = all.filter(o=>o.deletedAt);
     renderCurrentView();
+    // La copie que lit le portail suit, quel que soit le chemin d'écriture.
+    // On l'écrit après le rendu : elle ne doit jamais retarder l'affichage.
+    if(!snap.metadata.hasPendingWrites) syncPublicOrders(all);
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
@@ -2455,6 +2458,80 @@ function startListeners(){
 async function deletePendingOrderDoc(id){
   try{ await db.collection('pendingOrders').doc(id).delete(); return true; }
   catch(e){ showToast(t('toastSaveError')); return false; }
+}
+
+// ================= COPIE PUBLIQUE DES COMMANDES =================
+// Le portail client n'est pas connecté : pour qu'il lise les commandes de son
+// client, il fallait ouvrir la LISTE de `orders` à tout le monde. Or une
+// commande brute porte le prix d'achat et la marge — ce qui fait vivre
+// l'activité était donc lisible par qui connaît la structure de la base.
+//
+// On recopie donc dans `publicOrders` une version qui ne contient QUE ce que le
+// client voit déjà à l'écran, et `orders` se referme complètement.
+//
+// La synchro est branchée sur l'ÉCOUTEUR, pas sur les fonctions d'écriture :
+// créer, modifier, supprimer, restaurer, purger, l'assistant IA — tout finit par
+// passer par ce snapshot. Aucun chemin ne peut donc l'oublier, y compris ceux
+// qu'on ajoutera plus tard. C'est aussi ce qui la rend auto-réparatrice : une
+// copie manquante ou périmée est rattrapée à la prochaine ouverture de l'app.
+function publicOrderData(o){
+  return {
+    ownerId:   o.ownerId || currentUid,
+    clientId:  o.clientId || '',
+    product:   o.product || '',
+    qty:       Number(o.qty) || 1,
+    unitPrice: Number(o.unitPrice) || 0,   // prix CLIENT — jamais unitCost
+    discount:  Number(o.discount) || 0,
+    couponId:  o.couponId || '',
+    paidAmount:Number(o.paidAmount) || 0,
+    status:    o.status || 'nouveau',
+    statusAt:  o.statusAt || {},
+    ref:       o.ref || '',
+    note:      o.note || '',
+    // Les anciens noms de champs sont normalisés au passage.
+    carrier:   o.carrier || o.forwarder || '',
+    tracking:  o.tracking || o.trackingNumber || '',
+    eta:       o.eta || o.estimatedDelivery || '',
+    photo:     o.photo || '',
+    photoType: o.photoType || '',
+    createdAt: o.createdAt || Date.now(),
+    deletedAt: o.deletedAt || null
+  };
+}
+
+let publicMirror = null;          // id -> empreinte de la copie déjà écrite
+let publicSyncing = false;
+async function loadPublicMirror(){
+  if(publicMirror || !currentUid) return;
+  publicMirror = new Map();
+  try{
+    const snap = await db.collection('publicOrders').where('ownerId','==',currentUid).get();
+    snap.docs.forEach(d => publicMirror.set(d.id, JSON.stringify(publicOrderData(d.data()))));
+  }catch(e){ /* hors ligne : la synchro rattrapera au retour du réseau */ }
+}
+async function syncPublicOrders(allOrders){
+  if(!currentUid || publicSyncing) return;
+  publicSyncing = true;
+  try{
+    await loadPublicMirror();
+    const vivants = new Set();
+    for(const o of allOrders){
+      vivants.add(o.id);
+      const copie = publicOrderData(o);
+      const empreinte = JSON.stringify(copie);
+      if(publicMirror.get(o.id) === empreinte) continue;   // déjà à jour
+      await db.collection('publicOrders').doc(o.id).set(copie);
+      publicMirror.set(o.id, empreinte);
+    }
+    // Une commande purgée pour de bon doit voir sa copie disparaître aussi.
+    for(const id of Array.from(publicMirror.keys())){
+      if(vivants.has(id)) continue;
+      await db.collection('publicOrders').doc(id).delete();
+      publicMirror.delete(id);
+    }
+  }catch(e){
+    console.error('[copie publique]', e && (e.code || e.message));
+  }finally{ publicSyncing = false; }
 }
 
 async function createOrder(data){
