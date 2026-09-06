@@ -1822,6 +1822,7 @@ const I18N = {
     placeholderAddress:'Commence à taper, les suggestions arrivent',
     sendFormWhatsapp:'Envoyer un formulaire à remplir',
     formCopied:'Formulaire copié — colle-le dans WhatsApp',
+    publicSyncFailed:'Les commandes n\u2019ont pas pu être publiées vers les espaces clients [{code}]. Leurs portails resteront vides.',
     askPaidAll:'Le client a-t-il réglé la totalité ({total}) ?',
     askPaidRest:'Il reste {left} à régler. Le client a-t-il payé le solde ?',
     askPaidYes:'Oui, tout réglé', askPaidNo:'Pas encore',
@@ -1962,6 +1963,7 @@ const I18N = {
     placeholderAddress:'Start typing, suggestions will appear',
     sendFormWhatsapp:'Send a form to fill in',
     formCopied:'Form copied — paste it into WhatsApp',
+    publicSyncFailed:'Orders could not be published to the client spaces [{code}]. Their portals will stay empty.',
     askPaidAll:'Has the client paid in full ({total})?',
     askPaidRest:'{left} still due. Has the client settled the balance?',
     askPaidYes:'Yes, paid in full', askPaidNo:'Not yet',
@@ -2501,6 +2503,7 @@ function publicOrderData(o){
 
 let publicMirror = null;          // id -> empreinte de la copie déjà écrite
 let publicSyncing = false;
+let publicSyncWarned = false;     // on n'alerte qu'une fois par session
 async function loadPublicMirror(){
   if(publicMirror || !currentUid) return;
   publicMirror = new Map();
@@ -2530,7 +2533,16 @@ async function syncPublicOrders(allOrders){
       publicMirror.delete(id);
     }
   }catch(e){
-    console.error('[copie publique]', e && (e.code || e.message));
+    // Une copie qui échoue vide le portail de TOUS les clients, et le vendeur
+    // n'en saurait rien : c'est le piège 9 (une erreur avalée = un écran vide
+    // sans explication). On le dit donc à l'écran, avec le code d'erreur, une
+    // seule fois par session pour ne pas harceler.
+    const code = (e && (e.code || e.message)) ? String(e.code || e.message) : 'inconnue';
+    console.error('[copie publique]', code);
+    if(!publicSyncWarned){
+      publicSyncWarned = true;
+      showToast(t('publicSyncFailed').replace('{code}', code));
+    }
   }finally{ publicSyncing = false; }
 }
 
