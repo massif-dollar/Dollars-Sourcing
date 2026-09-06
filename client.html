@@ -1981,7 +1981,10 @@ function listenClientDoc(){
 function listenOrders(){
   listenClientDoc();
   if(ordersUnsub || pendingUnsub) return;   // jamais deux fois : enterApp peut être rappelé
-  ordersUnsub = db.collection('orders').where('clientId','==',clientId).onSnapshot(snap=>{
+  // On lit `publicOrders`, pas `orders` : la copie ne porte que ce qui est déjà
+  // affiché ici. La vraie commande — avec le prix d'achat et la marge — est
+  // fermée par les règles, et ce portail n'a aucune raison d'y accéder.
+  ordersUnsub = db.collection('publicOrders').where('clientId','==',clientId).onSnapshot(snap=>{
     ordersLoaded = true; loadError = '';
     myOrders = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderHistory();

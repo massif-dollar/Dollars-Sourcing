@@ -76,13 +76,45 @@ mien »). Une requête relève de `list`, jamais de `get`. Des règles qui ouvre
 `get` mais réservent `list` à l'équipe donnent donc un portail vide, sans la
 moindre erreur visible. `orders` et `pendingOrders` ont besoin de `list` ouvert.
 
-**Conséquence à connaître** : un document de commande brut contient le prix
-d'achat et la marge, et une fiche client contient son code d'accès et son
-adresse. L'interface ne les montre jamais au client, mais qui connaît la
-structure de la base peut les lire. Le correctif propre, à faire avant tout
-passage payant : recopier une version publique de chaque commande (produit,
-statut, prix client, acompte, expédition, photo) dans une collection à part, et
-refermer `orders` complètement. Une demi-journée.
+**C'est réglé pour les commandes.** Ce n'est plus `orders` qui est ouvert mais
+**`publicOrders`**, une copie qui ne contient que ce que le client voit déjà :
+produit, quantité, statut, prix client, acompte, expédition, photo, référence.
+**Ni prix d'achat, ni marge** — `orders` est désormais fermé à l'équipe.
+
+`publicOrderData()` construit la copie et **normalise au passage les anciens noms
+de champs** (`forwarder` → `carrier`, `trackingNumber` → `tracking`,
+`estimatedDelivery` → `eta`).
+
+**La synchro est branchée sur l'écouteur, pas sur les fonctions d'écriture**, et
+c'est le point à comprendre : créer, modifier, avancer d'une étape, annuler,
+supprimer, restaurer, purger, l'assistant IA — tout finit par passer par le
+`onSnapshot` des commandes. Y accrocher la copie garantit qu'aucun chemin ne
+peut l'oublier, **y compris ceux qu'on ajoutera plus tard**. Brancher les deux
+fonctions d'écriture aurait marché aujourd'hui et lâché au premier chemin
+nouveau.
+
+Trois conséquences de ce choix :
+
+- **Elle est auto-réparatrice.** Une copie manquante ou périmée est rattrapée à
+  la prochaine ouverture de l'app. C'est aussi ce qui a servi de migration :
+  il n'y a pas eu de script, la première ouverture a créé les copies manquantes.
+- **Elle n'écrit que ce qui a changé.** `publicMirror` garde l'empreinte de
+  chaque copie déjà écrite ; identique, on ne réécrit pas.
+- **Elle s'exécute après le rendu** et ignore les snapshots `hasPendingWrites` :
+  la copie ne doit jamais retarder l'affichage, et une écriture locale non
+  encore confirmée serait recopiée deux fois.
+
+**Ce qui reste ouvert, et qu'il faut savoir** : `pendingOrders`. Un visiteur
+anonyme peut lister les demandes — un nom et un produit, **jamais un montant**.
+Le refermer demanderait de faire transiter les demandes par une fonction
+serveur ; ça ne se justifie pas tant qu'elles ne portent pas d'argent.
+`clients` n'a jamais été exposé à la liste : seul `get` est ouvert, et il exige
+l'identifiant exact du document — celui qui est dans le lien du client.
+
+**Au déploiement** : publier les règles, laisser le site se déployer, puis
+**ouvrir l'app une fois** pour semer les copies. Entre les deux, les portails
+sont vides — sans conséquence tant qu'il n'y a pas de vrais clients, mais à
+savoir.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
 - `og-client.png` — la bannière 1200×630 que WhatsApp, iMessage et Snapchat
   affichent au-dessus du lien du client. **Un message WhatsApp est du texte
