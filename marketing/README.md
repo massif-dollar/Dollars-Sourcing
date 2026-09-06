@@ -6,14 +6,14 @@ fichiers.
 
 | | Ce qu'elle dit | Ce qu'elle montre |
 |---|---|---|
-| `01-accroche` | « Tu commandes. Je m'occupe de tout le reste. » | la marque |
-| `02-espace` | le lien personnel + le code à 6 chiffres | l'écran de code, en vrai |
-| `03-demande` | la demande envoyée en deux clics, photo comprise | le formulaire du portail |
-| `04-prix` | un seul prix, livraison comprise | trois promesses |
-| `05-achat` | acheté sur place, emballé, confié au transitaire | trois promesses |
-| `06-suivi` | les six étapes suivies en direct | la frise et le bloc expédition |
-| `07-dollarz` | 1 € = 1 Dollarz, échangeable contre des remises | la boutique de coupons |
-| `08-cta` | « Dis-moi ce que tu cherches » | l'appel à écrire |
+| `01-accroche` | « Tu revends. Moi je te fournis depuis la Chine. » | la marque |
+| `02-espace` | l'accès pro + le code à 6 chiffres | l'écran de code, en vrai |
+| `03-demande` | dis-moi ce que tu veux, je trouve la source | le formulaire du portail |
+| `04-prix` | ton prix d'achat, livraison comprise | trois promesses |
+| `05-achat` | je suis en Chine, de quoi faire ×3 à la revente | trois promesses |
+| `06-suivi` | tu suis ton stock, tu sais quand réapprovisionner | la frise et le bloc expédition |
+| `07-dollarz` | plus tu commandes, plus tu gagnes | la boutique de coupons |
+| `08-cta` | « Dis-moi ce que tu veux revendre » | l'appel à écrire |
 
 ## Trois choix qui ne sont pas décoratifs
 
@@ -44,3 +44,14 @@ pas joignable partout — voir `CLAUDE.md`) :
 
 Les textes sont dans `make-lancement.mjs`, un tableau `slides` : une ligne par
 image, on lit et on modifie directement.
+
+## `00-exemple-carton` — une illustration, pas une photo
+
+Aucune photo réelle n'existe pour l'instant. Cette image montre ce qu'on sait
+faire à la place : **une scène dessinée en CSS**, à la palette, avec la
+référence tracée dans une vraie écriture manuscrite (`@fontsource/caveat`).
+
+Elle est honnête sur ce qu'elle est — un dessin — et c'est justement sa limite :
+**une illustration ne prouve rien.** Une photo d'un vrai carton avec un vrai
+marqueur vaudrait dix fois cette image. Elle se regénère avec
+`node make-illustration.mjs`.
