@@ -29,7 +29,7 @@ async function portal(tab, file, extra){
   const p = await page(SEED);
   await p.goto('file:///home/user/Dollars-Sourcing/client.html?id=c1&token=tok');
   await p.evaluate(async ({seed, tab, extra})=>{
-    applyTheme('dark');
+    applyTheme('light');
     document.getElementById('codeScreen').style.display='none';
     document.getElementById('app').style.display='block';
     const cur=document.getElementById('portalCurtain'); if(cur) cur.style.display='none';
@@ -49,7 +49,7 @@ async function portal(tab, file, extra){
   const p = await page(SEED);
   await p.goto('file:///home/user/Dollars-Sourcing/client.html?id=c1&token=tok');
   await p.waitForTimeout(500);
-  await p.evaluate(()=>{ applyTheme('dark');
+  await p.evaluate(()=>{ applyTheme('light');
     // trois chiffres tapés : le clavier se montre en cours d'usage
     ['1','2','3'].forEach(d=>{ const k=[...document.querySelectorAll('.code-key')].find(e=>e.textContent.trim()===d); if(k) k.click(); });
   });

@@ -15,77 +15,79 @@ const FONTS = `
 @font-face{font-family:'IN';font-weight:500;src:url(data:font/woff2;base64,${IN5}) format('woff2');}
 @font-face{font-family:'IN';font-weight:600;src:url(data:font/woff2;base64,${IN6}) format('woff2');}`;
 
-// Noir + orange Brabus : la palette du thème sombre de l'app. C'est ce qui
-// ressort le mieux dans un fil TikTok, et ça prépare l'œil à ce qu'il verra
-// en ouvrant son espace.
+// Thème clair de l'app : fond blanc cassé, vert #2eb35c, gris nardo.
+// Jamais de noir pur — c'est la règle de la palette, et sur un fil social le
+// blanc tranche d'autant plus que tout le monde poste sombre.
 const CSS = `
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:1080px;height:1920px;overflow:hidden;background:#0a0a0b}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#fbfcfa}
 /* Zone sûre TikTok : le bas de l'écran est mangé par la légende et les boutons,
    la droite par la colonne d'icônes. Rien d'important ne descend sous 1620 px,
    et le contenu reste calé à gauche. */
-.slide{position:relative;width:1080px;height:1920px;overflow:hidden;background:#0a0a0b;
+.slide{position:relative;width:1080px;height:1920px;overflow:hidden;background:#fbfcfa;
   display:flex;flex-direction:column;padding:104px 78px 300px}
 .glow{position:absolute;border-radius:50%;filter:blur(130px);pointer-events:none}
-.g1{width:900px;height:900px;top:-380px;left:-260px;background:radial-gradient(circle,rgba(255,122,26,.34),transparent 66%)}
-.g2{width:760px;height:760px;bottom:-300px;right:-220px;background:radial-gradient(circle,rgba(255,122,26,.22),transparent 68%)}
-.g3{width:640px;height:640px;top:44%;left:56%;background:radial-gradient(circle,rgba(142,142,138,.13),transparent 70%)}
-.grid{position:absolute;inset:0;opacity:.55;
-  background-image:linear-gradient(rgba(142,142,138,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(142,142,138,.055) 1px,transparent 1px);
+.g1{width:900px;height:900px;top:-380px;left:-260px;background:radial-gradient(circle,rgba(46,179,92,.30),transparent 66%)}
+.g2{width:760px;height:760px;bottom:-300px;right:-220px;background:radial-gradient(circle,rgba(46,179,92,.20),transparent 68%)}
+.g3{width:640px;height:640px;top:44%;left:56%;background:radial-gradient(circle,rgba(142,142,138,.18),transparent 70%)}
+.grid{position:absolute;inset:0;opacity:.8;
+  background-image:linear-gradient(rgba(120,120,114,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(120,120,114,.07) 1px,transparent 1px);
   background-size:72px 72px;-webkit-mask-image:radial-gradient(120% 80% at 50% 30%,#000 18%,transparent 74%)}
 
 .top{position:relative;display:flex;align-items:center;gap:20px;margin-bottom:56px}
 .chip{width:60px;height:60px;border-radius:18px;flex-shrink:0;position:relative;
   display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(155deg,#ffb066,#ff7a1a 56%,#c9540a);
-  box-shadow:0 10px 26px rgba(255,122,26,.30)}
+  background:linear-gradient(155deg,#5fe08c,#2eb35c 56%,#1e8a44);
+  box-shadow:0 10px 26px rgba(46,179,92,.34)}
 .chip::after{content:'';position:absolute;inset:0;border-radius:18px;
-  background:linear-gradient(160deg,rgba(255,255,255,.42),rgba(255,255,255,.05) 44%,transparent 66%)}
+  background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.08) 44%,transparent 66%)}
 .chip span{position:relative;z-index:1;color:#fff;font-family:'SG';font-weight:700;font-size:34px;letter-spacing:-.04em}
-.brand{font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.16em;color:#7c7d76;text-transform:uppercase}
-.step{margin-left:auto;font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.14em;color:#ff7a1a}
+.brand{font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.16em;color:#8d918a;text-transform:uppercase}
+.step{margin-left:auto;font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.14em;color:#1e8a44}
 
 .head{position:relative}
-h1{font-family:'SG';font-weight:700;font-size:88px;line-height:1.02;letter-spacing:-.045em;color:#fff}
-h1 em{font-style:normal;color:#ff7a1a}
+h1{font-family:'SG';font-weight:700;font-size:88px;line-height:1.02;letter-spacing:-.045em;color:#2b302c}
+h1 em{font-style:normal;color:#2eb35c}
 h1.small{font-size:72px}
 .lead{margin-top:30px;font-family:'IN';font-size:37px;font-weight:400;line-height:1.4;
-  letter-spacing:-.015em;color:#a9aaa4;max-width:880px}
-.lead b{color:#f3f2ef;font-weight:600}
+  letter-spacing:-.015em;color:#5f645e;max-width:880px}
+.lead b{color:#2b302c;font-weight:600}
 
 .stage{position:relative;flex:1;display:flex;align-items:center;justify-content:center;margin-top:52px}
+/* Cadre graphite sur fond clair : sans lui, une capture d'app claire se noierait
+   dans la page. L'ombre fait le reste du décollement. */
 .phone{position:relative;width:520px;border-radius:56px;padding:12px;flex-shrink:0;
-  background:linear-gradient(160deg,#4a4a4d,#141416 62%);
-  box-shadow:0 60px 120px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.10),
-             0 0 140px rgba(255,122,26,.18)}
+  background:linear-gradient(160deg,#5b5f5a,#2b302c 62%);
+  box-shadow:0 50px 100px rgba(70,74,68,.30), 0 12px 30px rgba(70,74,68,.16),
+             0 0 0 1px rgba(255,255,255,.30) inset}
 .phone::before{content:'';position:absolute;inset:-90px;z-index:-1;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,122,26,.16),transparent 66%);filter:blur(50px)}
+  background:radial-gradient(circle,rgba(46,179,92,.16),transparent 66%);filter:blur(50px)}
 .phone img{display:block;width:100%;border-radius:45px}
 .phone.tall img{height:950px;object-fit:cover;object-position:top}
 .phone::after{content:'';position:absolute;left:50%;top:26px;transform:translateX(-50%);
-  width:132px;height:30px;border-radius:100px;background:#0a0a0b}
+  width:132px;height:30px;border-radius:100px;background:#2b302c}
 
 .pts{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;gap:46px;margin-top:44px}
 .pt{display:flex;align-items:flex-start;gap:24px;font-family:'IN';font-size:40px;font-weight:500;
-  letter-spacing:-.015em;color:#e8e8e4;line-height:1.3}
-.pt i{display:block;flex-shrink:0;width:16px;height:16px;border-radius:50%;background:#ff7a1a;margin-top:16px}
+  letter-spacing:-.015em;color:#2b302c;line-height:1.3}
+.pt i{display:block;flex-shrink:0;width:16px;height:16px;border-radius:50%;background:#2eb35c;margin-top:16px}
 
 .foot{position:relative;margin-top:auto;padding-top:44px;display:flex;align-items:center;gap:18px}
 .tag{display:inline-flex;align-items:center;gap:15px;padding:22px 38px;border-radius:100px;
-  border:1px solid rgba(255,122,26,.36);background:rgba(255,122,26,.10);
-  font-family:'IN';font-size:32px;font-weight:600;letter-spacing:-.01em;color:#ffb066}
-.tag i{display:block;width:13px;height:13px;border-radius:50%;background:#ff7a1a;flex-shrink:0}
+  border:1px solid rgba(46,179,92,.38);background:rgba(46,179,92,.10);
+  font-family:'IN';font-size:32px;font-weight:600;letter-spacing:-.01em;color:#1e8a44}
+.tag i{display:block;width:13px;height:13px;border-radius:50%;background:#2eb35c;flex-shrink:0}
 .cta{width:100%;padding:34px;border-radius:26px;text-align:center;
-  background:linear-gradient(162deg,#ffb066,#ff7a1a 72%);
-  box-shadow:0 22px 48px rgba(255,122,26,.28);
-  font-family:'SG';font-size:40px;font-weight:700;color:#1c0d00;letter-spacing:-.02em}
+  background:linear-gradient(162deg,#5fe08c,#2eb35c 72%);
+  box-shadow:0 22px 48px rgba(46,179,92,.32);
+  font-family:'SG';font-size:40px;font-weight:700;color:#fff;letter-spacing:-.02em}
 .hero-mark{position:relative;display:flex;flex-direction:column;align-items:center;gap:44px}
 .hero-tile{width:250px;height:250px;border-radius:70px;position:relative;
   display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(155deg,#ffb066,#ff7a1a 56%,#c9540a);
-  box-shadow:0 40px 90px rgba(255,122,26,.34)}
+  background:linear-gradient(155deg,#5fe08c,#2eb35c 56%,#1e8a44);
+  box-shadow:0 40px 90px rgba(46,179,92,.36)}
 .hero-tile::after{content:'';position:absolute;inset:0;border-radius:70px;
-  background:linear-gradient(160deg,rgba(255,255,255,.44),rgba(255,255,255,.06) 44%,transparent 66%)}
+  background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.10) 44%,transparent 66%)}
 .hero-tile span{position:relative;z-index:1;color:#fff;font-family:'SG';font-weight:700;font-size:148px;letter-spacing:-.05em}
 `;
 
@@ -146,7 +148,7 @@ const slides = [
 // ---------- 6. le suivi ----------
 ['06-suivi', frame('ÉTAPE 5', `
   <div class="head"><h1 class="small">Tu suis<br><em>ton colis</em></h1>
-    <div class="lead">Six étapes, en direct. Transitaire, numéro de suivi, <b>date estimée</b>. Tu n'as plus à demander où ça en est.</div></div>
+    <div class="lead">Six étapes, en direct. Transitaire, numéro de suivi, <b>date estimée</b> — tout est là.</div></div>
   <div class="stage"><div class="phone tall"><img src="${shot('suivi.png')}"></div></div>`)],
 
 // ---------- 7. les Dollarz ----------
@@ -174,7 +176,7 @@ const slides = [
 const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 fs.mkdirSync('promo', { recursive:true });
 for(const [name, html] of slides){
-  const p = await b.newPage({ viewport:{width:1080,height:1920}, deviceScaleFactor:1 });
+  const p = await b.newPage({ viewport:{width:1080,height:1920}, deviceScaleFactor:2 });
   await p.setContent(shell(html));
   await p.evaluate(()=>document.fonts.ready);
   await p.screenshot({ path:'promo/'+name+'.png' });
