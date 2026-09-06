@@ -1,6 +1,6 @@
 # Visuels de lancement — TikTok / Snapchat
 
-Huit images **1080 × 1920** qui racontent le parcours d'une commande chez
+Huit images **2160 × 3840** (9:16, qualité 4K) qui racontent le parcours d'une commande chez
 DOLLAR$ SOURCING. Elles se publient en carrousel, dans l'ordre des noms de
 fichiers.
 
@@ -25,8 +25,13 @@ ouvre `client.html` avec une base Firestore en mémoire et photographie quatre
 la droite par la colonne d'icônes. Rien d'important ne descend donc sous
 1620 px, et le texte reste calé à gauche.
 
-**Thème sombre.** C'est ce qui ressort le mieux dans un fil, et ça prépare l'œil
-à ce que le client verra en ouvrant son espace — même noir, même orange.
+**Thème clair — blanc cassé et vert `#2eb35c`.** Jamais de noir pur, c'est la
+règle de la palette. Et sur un fil social où presque tout est sombre, le blanc
+tranche davantage. Le cadre du téléphone est graphite : sans lui, une capture
+d'app claire se noierait dans la page.
+
+**Rendu ×2.** La mise en page est écrite en 1080 × 1920 et photographiée au
+double, ce qui donne du 2160 × 3840 net — pas une image agrandie après coup.
 
 ## Les regénérer
 
