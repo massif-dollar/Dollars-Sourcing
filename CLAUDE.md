@@ -103,6 +103,12 @@ Trois conséquences de ce choix :
 - **Elle s'exécute après le rendu** et ignore les snapshots `hasPendingWrites` :
   la copie ne doit jamais retarder l'affichage, et une écriture locale non
   encore confirmée serait recopiée deux fois.
+- **Elle prévient quand elle échoue.** Une copie qui ne passe pas vide le portail
+  de *tous* les clients, et le vendeur n'en saurait rien : c'est le piège 9
+  appliqué à l'écriture. Un `console.error` ne se lit pas sur un iPhone. Le code
+  d'erreur s'affiche donc dans un toast, **une seule fois par session** —
+  `permission-denied` se lit à voix haute au téléphone, et ça vaut une heure de
+  suppositions.
 
 **Ce qui reste ouvert, et qu'il faut savoir** : `pendingOrders`. Un visiteur
 anonyme peut lister les demandes — un nom et un produit, **jamais un montant**.
