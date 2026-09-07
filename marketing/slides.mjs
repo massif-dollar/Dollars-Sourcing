@@ -72,8 +72,11 @@ h1.small{font-size:72px}
 .phone.tall img{height:950px;object-fit:cover;object-position:top}
 /* Les affiches qui portent l'opposition ont moins de place : le téléphone
    descend d'un cran plutôt que de rogner ce qui se lit. */
-.phone.mid{width:452px}
-.phone.mid img{height:800px;object-fit:cover;object-position:top}
+.phone.mid{width:396px}
+.phone.mid img{height:690px;object-fit:cover;object-position:top}
+/* Une capture coupée en plein milieu d'un bouton a l'air d'un bug, pas d'un
+   cadrage. Cette affiche-là se coupe 42 px plus haut, juste au-dessus. */
+.phone.mid.cut img{height:648px}
 .phone::after{content:'';position:absolute;left:50%;top:26px;transform:translateX(-50%);
   width:132px;height:30px;border-radius:100px;background:#2b302c}
 
@@ -167,25 +170,50 @@ h1.small{font-size:72px}
 .track s.on{background:#2eb35c}
 .mini-f{margin-top:22px;font-family:'IN';font-size:27px;color:#5f645e;letter-spacing:-.01em}
 .mini-f b{color:#1e8a44;font-weight:600}
-/* L'opposition, sur CHAQUE affiche. Deux lignes : ce qui se passe sans lui,
-   ce qui se passe avec. Elle remplace le paragraphe d'explication — une phrase
-   de prose se lit en trois secondes qu'on n'a pas sur un fil social, deux
-   lignes opposées se lisent en une demie. */
-.vs{position:relative;margin-top:34px;display:flex;flex-direction:column;gap:14px}
-.vs-row{display:flex;align-items:center;gap:22px;padding:24px 30px;border-radius:28px;
-  font-family:'IN';font-size:33px;font-weight:500;letter-spacing:-.015em;line-height:1.26}
-/* Le « sans » ne porte AUCUN vert : le vert est la marque, et s'il apparaît
-   des deux côtés l'opposition ne dit plus rien. */
-.vs-row.no{background:rgba(120,120,114,.08);border:1px solid rgba(120,120,114,.17);color:#8d928c}
-.vs-row.yes{background:rgba(46,179,92,.09);border:1px solid rgba(46,179,92,.32);color:#2b302c}
-.vs-row i{flex-shrink:0;width:48px;height:48px;border-radius:50%;font-style:normal;
-  display:flex;align-items:center;justify-content:center;font-family:'SG';font-weight:700;font-size:27px}
-.vs-row.no i{background:rgba(120,120,114,.18);color:#8d928c}
-.vs-row.yes i{background:#2eb35c;color:#fff;box-shadow:0 10px 22px rgba(46,179,92,.34)}
+/* La comparaison, sur CHAQUE affiche.
+ *
+ * Première version : une ligne grise avec une croix, une ligne verte avec une
+ * coche. Testée sur quelqu'un qui découvrait — il n'a pas vu que c'était un
+ * avant/après. Il a lu deux phrases, sans comprendre qu'elles s'opposaient.
+ *
+ * La leçon : une couleur ne dit rien à qui ne connaît pas le code. Le vert veut
+ * dire « bien » pour celui qui a fabriqué l'image, pas pour celui qui la
+ * découvre en une seconde et demie entre deux vidéos. IL FAUT L'ÉCRIRE.
+ *
+ * D'où trois choses ajoutées, et aucune n'est décorative :
+ *   — deux étiquettes en toutes lettres, SANS MOI et AVEC MOI ;
+ *   — une flèche entre les deux, posée à cheval, qui dit qu'on passe de l'un
+ *     à l'autre au lieu de simplement les poser côte à côte ;
+ *   — deux surfaces différentes : le « sans » est un creux gris et plat, le
+ *     « avec » est une carte blanche qui décolle. La hiérarchie se voit avant
+ *     même qu'on lise. */
+.cmp{position:relative;margin-top:32px;display:flex;flex-direction:column;align-items:stretch}
+.cmp-side{border-radius:34px;padding:26px 32px 30px}
+.cmp-side.no{background:rgba(120,120,114,.075);border:1px solid rgba(120,120,114,.18)}
+.cmp-side.yes{background:#fff;border:1px solid rgba(46,179,92,.34);
+  box-shadow:0 28px 62px rgba(70,74,68,.14), 0 8px 20px rgba(70,74,68,.06)}
+.cmp-tag{display:inline-flex;align-items:center;gap:13px;padding:9px 26px 9px 10px;border-radius:100px;
+  font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.11em;text-transform:uppercase}
+.cmp-side.no .cmp-tag{background:rgba(120,120,114,.17);color:#7f847d}
+.cmp-side.yes .cmp-tag{background:#2eb35c;color:#fff;box-shadow:0 10px 24px rgba(46,179,92,.34)}
+.cmp-tag i{flex-shrink:0;width:38px;height:38px;border-radius:50%;font-style:normal;font-size:22px;
+  display:flex;align-items:center;justify-content:center}
+.cmp-side.no .cmp-tag i{background:rgba(255,255,255,.62);color:#7f847d}
+.cmp-side.yes .cmp-tag i{background:rgba(255,255,255,.26);color:#fff}
+.cmp-txt{margin-top:19px;font-family:'IN';font-size:35px;font-weight:500;line-height:1.27;letter-spacing:-.015em}
+.cmp-side.no .cmp-txt{color:#8d928c}
+.cmp-side.yes .cmp-txt{color:#2b302c}
 /* Le détail qui compte est surligné, pas seulement mis en gras : sur un
    téléphone tenu à bout de bras, un gras ne se distingue plus. */
-.vs-row.yes b{font-weight:700;color:#1e8a44;padding:0 8px;border-radius:5px;
+.cmp-side.yes .cmp-txt b{font-weight:700;color:#1e8a44;padding:0 8px;border-radius:5px;
   background:linear-gradient(180deg,transparent 54%,rgba(46,179,92,.30) 54%)}
+/* À cheval sur les deux surfaces, avec un anneau à la couleur de la page :
+   c'est ce qui transforme deux blocs posés l'un sous l'autre en un passage
+   de l'un à l'autre. */
+.cmp-arrow{position:relative;z-index:2;align-self:center;margin:-17px 0;
+  width:70px;height:70px;border-radius:50%;background:#2eb35c;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:'SG';font-weight:700;font-size:36px;
+  box-shadow:0 14px 30px rgba(46,179,92,.38), 0 0 0 11px #fbfcfa}
 
 /* Le chiffre qui décide, à la taille où il se lit sans lire. */
 .big{display:flex;align-items:center;gap:30px;margin-top:8px}
@@ -215,6 +243,7 @@ export const ANIM = `
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes riseS{from{opacity:0;transform:translateY(32px) scale(.972)}to{opacity:1;transform:none}}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
 /* Le surlignage se TRACE de gauche à droite, comme au marqueur. C'est le seul
    moment appuyé de l'affiche, et il tombe sur le mot qui compte. */
 @keyframes draw{from{background-size:0 100%}to{background-size:100% 100%}}
@@ -224,11 +253,14 @@ export const ANIM = `
 
 .top{animation:fadein .5s ease-out both}
 .head{animation:rise .62s cubic-bezier(.22,.9,.3,1) both;animation-delay:.06s}
-.vs-row.no{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:.44s}
-.vs-row.yes{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:.74s}
-.vs-row.yes b{background-repeat:no-repeat;animation:draw .5s cubic-bezier(.3,.8,.4,1) both;animation-delay:1.12s}
-.stage{animation:riseS .68s cubic-bezier(.22,.9,.3,1) both;animation-delay:.98s}
-.foot{animation:rise .55s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.34s}
+.cmp-side.no{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:.44s}
+/* La flèche arrive SEULE, entre les deux : c'est le temps mort qui fait
+   comprendre qu'on passe de l'un à l'autre. */
+.cmp-arrow{animation:pop .42s cubic-bezier(.3,1.05,.4,1) both;animation-delay:.86s}
+.cmp-side.yes{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.06s}
+.cmp-side.yes .cmp-txt b{background-repeat:no-repeat;animation:draw .5s cubic-bezier(.3,.8,.4,1) both;animation-delay:1.46s}
+.stage{animation:riseS .68s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.30s}
+.foot{animation:rise .55s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.70s}
 .glow{animation:drift 8s ease-in-out infinite alternate}
 .g2{animation-duration:11s;animation-direction:alternate-reverse}
 .g3{animation-duration:13s}
@@ -252,9 +284,12 @@ export const slides = [
   <div class="head" style="text-align:center">
     <div class="hero-mark" style="margin-bottom:44px"><div class="hero-tile"><span>$</span></div></div>
     <h1>Tu revends.<br>Moi je te <em>fournis</em><br>depuis la Chine.</h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Acheter à l'aveugle à un compte inconnu</div>
-    <div class="vs-row yes"><i>✓</i>Un fournisseur en Chine, <b>un espace, un suivi</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Acheter à l'aveugle à un compte inconnu</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Un fournisseur en Chine, <b>un espace, un suivi</b></div></div>
   </div>
   </div>
   <div class="foot"><div class="tag"><i></i>Sourcing, achat, expédition — toi, tu vends</div></div>`)],
@@ -262,27 +297,36 @@ export const slides = [
 // ---------- 2. l'accès ----------
 ['02-espace', frame('ÉTAPE 1', `
   <div class="head"><h1 class="small">Tu reçois<br><em>ton accès pro</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Une conversation qui se perd dans le fil</div>
-    <div class="vs-row yes"><i>✓</i>Ton espace à toi, <b>ton code à 6 chiffres</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Une conversation qui se perd dans le fil</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Ton espace à toi, <b>ton code à 6 chiffres</b></div></div>
   </div>
   <div class="stage"><div class="phone mid"><img src="${shot('code.png')}"></div></div>`)],
 
 // ---------- 3. la demande ----------
 ['03-demande', frame('ÉTAPE 2', `
   <div class="head"><h1 class="small">Tu demandes<br><em>ton produit</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>« T'as ça ? »… puis plus de nouvelles</div>
-    <div class="vs-row yes"><i>✓</i>Ta demande avec photo, <b>reçue et datée</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">« T'as ça ? »… puis plus de nouvelles</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Ta demande avec photo, <b>reçue et datée</b></div></div>
   </div>
-  <div class="stage"><div class="phone mid"><img src="${shot('demande.png')}"></div></div>`)],
+  <div class="stage"><div class="phone mid cut"><img src="${shot('demande.png')}"></div></div>`)],
 
 // ---------- 4. le prix ----------
 ['04-prix', frame('ÉTAPE 3', `
   <div class="head"><h1 class="small">Je te donne<br><em>ton prix d'achat</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Un prix annoncé, puis des frais qui s'ajoutent</div>
-    <div class="vs-row yes"><i>✓</i>Un seul chiffre, <b>livraison comprise</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Un prix annoncé, puis des frais qui s'ajoutent</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Un seul chiffre, <b>livraison comprise</b></div></div>
   </div>
   <div class="stage card-stage"><div class="card">
     <div class="card-top"><div class="card-kicker">Sacoche cuir Milano · 20 pièces</div>
@@ -297,9 +341,12 @@ export const slides = [
 // ---------- 5. je suis en Chine ----------
 ['05-achat', frame('ÉTAPE 4', `
   <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Le prix du grossiste, déjà repris trois fois</div>
-    <div class="vs-row yes"><i>✓</i><b>Le prix de la source</b>, directement</div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Le prix du grossiste, déjà repris trois fois</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt"><b>Le prix de la source</b>, directement</div></div>
   </div>
   <div class="stage card-stage"><div class="card">
     <div class="card-top"><div class="card-kicker">Ce que ça te fait</div></div>
@@ -313,18 +360,24 @@ export const slides = [
 // ---------- 6. le suivi ----------
 ['06-suivi', frame('ÉTAPE 5', `
   <div class="head"><h1 class="small">Tu suis<br><em>ton stock</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Tu paies, tu attends, tu relances</div>
-    <div class="vs-row yes"><i>✓</i>Six étapes en direct, <b>numéro de suivi</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Tu paies, tu attends, tu relances</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Six étapes en direct, <b>numéro de suivi</b></div></div>
   </div>
   <div class="stage"><div class="phone mid"><img src="${shot('suivi.png')}"></div></div>`)],
 
 // ---------- 7. les Dollarz ----------
 ['07-dollarz', frame('ÉTAPE 6', `
   <div class="head"><h1 class="small">Plus tu commandes,<br>plus tu <em>gagnes</em></h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Fidèle ou pas, le même prix pour tout le monde</div>
-    <div class="vs-row yes"><i>✓</i><b>1 € = 1 Dollarz</b>, échangeable en remises</div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Fidèle ou pas, le même prix pour tout le monde</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt"><b>1 € = 1 Dollarz</b>, échangeable en remises</div></div>
   </div>
   <div class="stage"><div class="phone mid"><img src="${shot('dollarz.png')}"></div></div>`)],
 
@@ -334,9 +387,12 @@ export const slides = [
   <div class="head" style="text-align:center">
     <div class="hero-mark" style="margin-bottom:44px"><div class="hero-tile"><span>$</span></div></div>
     <h1>Dis-moi ce que<br>tu veux <em>revendre</em>.</h1></div>
-  <div class="vs">
-    <div class="vs-row no"><i>✕</i>Chercher, comparer, croiser les doigts</div>
-    <div class="vs-row yes"><i>✓</i>Un message. <b>Ton prix, ton accès.</b></div>
+  <div class="cmp">
+    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+      <div class="cmp-txt">Chercher, comparer, croiser les doigts</div></div>
+    <div class="cmp-arrow">↓</div>
+    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+      <div class="cmp-txt">Un message. <b>Ton prix, ton accès.</b></div></div>
   </div>
   </div>
   <div class="foot" style="flex-direction:column;gap:26px">

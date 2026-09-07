@@ -63,18 +63,41 @@ marqueur vaudrait dix fois cette image. Elle se regénère avec
 `node make-illustration.mjs`.
 
 
-## Chaque affiche porte l'opposition
+## Chaque affiche porte la comparaison
 
-Le carrousel ne décrit plus, il oppose. Sur chacune des huit, deux lignes
-remplacent le paragraphe d'explication : ce qui se passe **sans** lui (gris,
-croix), ce qui se passe **avec** (vert, coche). Une phrase de prose demande
-trois secondes qu'on n'a pas sur un fil social ; deux lignes opposées se lisent
-en une demie.
+Le carrousel ne décrit plus, il compare. Sur chacune des huit, un bloc **Sans
+moi → Avec moi** remplace le paragraphe d'explication. Une phrase de prose
+demande trois secondes qu'on n'a pas sur un fil social ; deux blocs opposés se
+lisent en une demie.
 
-Trois règles tiennent le module :
+### Le test qui a tout changé
+
+La première version du module était une ligne grise avec une croix, une ligne
+verte avec une coche. Élégant, et **illisible pour qui découvre** : montré à
+quelqu'un d'extérieur, il a lu deux phrases sans comprendre qu'elles
+s'opposaient. Aucune ne disait « avant », aucune ne disait « après ».
+
+**La leçon, et elle vaut au-delà de ces images : une couleur ne dit rien à qui
+ne connaît pas le code.** Le vert veut dire « bien » pour celui qui a fabriqué
+l'image, pas pour celui qui la croise une seconde et demie entre deux vidéos.
+Ce qui est évident quand on a le contexte ne l'est jamais sans lui — et la
+seule façon de le savoir est de montrer à quelqu'un qui ne l'a pas.
+
+D'où trois ajouts, dont aucun n'est décoratif :
+
+- **Deux étiquettes en toutes lettres**, `SANS MOI` et `AVEC MOI`. C'est
+  l'ajout qui règle le problème ; le reste ne fait que l'appuyer.
+- **Une flèche à cheval sur les deux blocs**, avec un anneau à la couleur de la
+  page. Elle transforme deux blocs posés l'un sous l'autre en un *passage* de
+  l'un à l'autre.
+- **Deux surfaces différentes** : le « sans » est un creux gris et plat, le
+  « avec » est une carte blanche qui décolle. La hiérarchie se voit avant même
+  qu'on lise.
+
+### Les trois règles qui tiennent
 
 - **Le « sans » ne porte aucun vert.** Le vert est la marque : s'il apparaît des
-  deux côtés, l'opposition ne dit plus rien. Le gris nardo tient le rôle.
+  deux côtés, la comparaison ne dit plus rien. Le gris nardo tient le rôle.
 - **Le détail qui compte est surligné, pas seulement mis en gras.** Sur un
   téléphone tenu à bout de bras, un gras ne se distingue plus d'un texte normal —
   d'où le fond vert au trait, qui se voit avant même d'être lu.
@@ -82,9 +105,11 @@ Trois règles tiennent le module :
   `580 €` sur le prix, `×3` sur la marge. Deux gros chiffres sur la même image
   s'annulent.
 
-Les affiches à capture d'écran (`.phone.mid`) ont un téléphone d'un cran plus
-petit que les anciennes : l'opposition a pris la place du paragraphe, pas celle
-de ce qui se lit.
+Les affiches à capture d'écran (`.phone.mid`) ont un téléphone plus petit que
+les premières versions : la comparaison a pris la place du paragraphe, pas celle
+de ce qui se lit. `.phone.mid.cut` coupe 42 px plus haut sur l'affiche 3 —
+une capture coupée en plein milieu d'un bouton a l'air d'un bug, pas d'un
+cadrage.
 
 ## `09-avant-apres` — un post à part, pas la neuvième du carrousel
 
@@ -137,9 +162,14 @@ Trois choses à savoir sur ce procédé :
 - **On capture à 1080 de large, la taille finale.** Le texte est rendu à cette
   taille, jamais redimensionné après coup.
 
+L'ordre d'arrivée est celui de la lecture, et il porte la démonstration :
+le titre, puis le bloc **Sans moi**, puis la flèche **seule** — c'est ce temps
+mort qui fait comprendre qu'on passe de l'un à l'autre — puis le bloc **Avec
+moi**, puis la preuve à l'écran.
+
 Le seul moment appuyé est le **surlignage vert qui se trace** de gauche à
 droite, comme au marqueur, et il tombe sur le mot qui compte. Le reste ne fait
-que monter de vingt pixels en s'éclaircissant. Les masses de lumière du fond
+que monter de vingt-six pixels en s'éclaircissant. Les masses de lumière du fond
 dérivent pendant toute l'affiche : sans elles, une image arrêtée après son
 entrée a l'air d'un arrêt sur image.
 
