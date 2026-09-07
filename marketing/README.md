@@ -58,6 +58,29 @@ marqueur vaudrait dix fois cette image. Elle se regénère avec
 `node make-illustration.mjs`.
 
 
+## Chaque affiche porte l'opposition
+
+Le carrousel ne décrit plus, il oppose. Sur chacune des huit, deux lignes
+remplacent le paragraphe d'explication : ce qui se passe **sans** lui (gris,
+croix), ce qui se passe **avec** (vert, coche). Une phrase de prose demande
+trois secondes qu'on n'a pas sur un fil social ; deux lignes opposées se lisent
+en une demie.
+
+Trois règles tiennent le module :
+
+- **Le « sans » ne porte aucun vert.** Le vert est la marque : s'il apparaît des
+  deux côtés, l'opposition ne dit plus rien. Le gris nardo tient le rôle.
+- **Le détail qui compte est surligné, pas seulement mis en gras.** Sur un
+  téléphone tenu à bout de bras, un gras ne se distingue plus d'un texte normal —
+  d'où le fond vert au trait, qui se voit avant même d'être lu.
+- **Un seul chiffre par affiche, à la taille où il se lit sans lire** (`.big`) :
+  `580 €` sur le prix, `×3` sur la marge. Deux gros chiffres sur la même image
+  s'annulent.
+
+Les affiches à capture d'écran (`.phone.mid`) ont un téléphone d'un cran plus
+petit que les anciennes : l'opposition a pris la place du paragraphe, pas celle
+de ce qui se lit.
+
 ## `09-avant-apres` — un post à part, pas la neuvième du carrousel
 
 Le carrousel montre comment ça marche. Celle-ci montre **pourquoi ça change
