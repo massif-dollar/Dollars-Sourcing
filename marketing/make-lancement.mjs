@@ -115,6 +115,48 @@ h1.small{font-size:72px}
 .ck s{flex-shrink:0;width:34px;height:34px;border-radius:50%;text-decoration:none;
   background:rgba(46,179,92,.14);color:#1e8a44;font-size:21px;font-weight:700;
   display:flex;align-items:center;justify-content:center;margin-top:3px}
+/* Avant / après. Règle de la palette appliquée à la persuasion : le « avant »
+   n'a AUCUN vert. Le vert, c'est la marque — s'il apparaît des deux côtés, la
+   comparaison ne dit plus rien. Le gris nardo tient le rôle du « sans toi ». */
+.duo{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;margin-top:38px}
+.half{position:relative;border-radius:40px;padding:38px 40px}
+.half.before{background:rgba(120,120,114,.075);border:1px solid rgba(120,120,114,.18)}
+.half.after{background:#fff;border:1px solid rgba(46,179,92,.32);
+  box-shadow:0 34px 76px rgba(70,74,68,.15), 0 10px 24px rgba(70,74,68,.07)}
+.half-k{font-family:'SG';font-weight:700;font-size:24px;letter-spacing:.15em;text-transform:uppercase}
+.before .half-k{color:#a0a5a0}
+.after .half-k{color:#1e8a44}
+.half-t{margin-top:12px;font-family:'SG';font-weight:700;font-size:47px;letter-spacing:-.035em}
+.before .half-t{color:#8d928c}
+.after .half-t{color:#2b302c}
+.half-l{margin-top:20px;font-family:'IN';font-size:29px;font-weight:500;line-height:1.32;letter-spacing:-.01em}
+.before .half-l{color:#8d928c}
+.after .half-l{color:#5f645e}
+.after .half-l b{color:#2b302c;font-weight:600}
+
+/* Le « avant » : trois messages envoyés, aucune réponse. C'est le visuel qui
+   fait tout le travail — personne n'a besoin qu'on lui explique ce silence. */
+.chat{margin-top:24px;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.bub{max-width:78%;padding:18px 26px;border-radius:26px 26px 9px 26px;
+  background:rgba(120,120,114,.15);font-family:'IN';font-size:28px;color:#82877f;letter-spacing:-.01em}
+.seen{font-family:'IN';font-size:22px;color:#aeb3ad;margin-top:2px}
+
+/* L'« après » : la même attente, mais répondue par l'écran. */
+.mini{margin-top:24px;border-radius:26px;padding:28px 30px;
+  background:rgba(46,179,92,.07);border:1px solid rgba(46,179,92,.22)}
+.mini-h{display:flex;align-items:center;gap:18px;
+  font-family:'IN';font-weight:600;font-size:30px;color:#2b302c;letter-spacing:-.01em}
+.mini-h u{margin-left:auto;text-decoration:none;flex-shrink:0;padding:9px 20px;border-radius:100px;
+  background:rgba(46,179,92,.14);font-family:'SG';font-weight:700;font-size:25px;color:#1e8a44}
+.track{margin-top:26px;display:flex;align-items:center}
+.track i{display:block;width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  background:#fff;border:3px solid rgba(46,179,92,.30)}
+.track i.on{background:#2eb35c;border-color:#2eb35c}
+.track i.now{width:28px;height:28px;box-shadow:0 0 0 8px rgba(46,179,92,.16)}
+.track s{display:block;flex:1;height:5px;text-decoration:none;background:rgba(46,179,92,.22)}
+.track s.on{background:#2eb35c}
+.mini-f{margin-top:22px;font-family:'IN';font-size:27px;color:#5f645e;letter-spacing:-.01em}
+.mini-f b{color:#1e8a44;font-weight:600}
 .hero-mark{position:relative;display:flex;flex-direction:column;align-items:center;gap:44px}
 .hero-tile{width:250px;height:250px;border-radius:70px;position:relative;
   display:flex;align-items:center;justify-content:center;
@@ -221,6 +263,36 @@ const slides = [
   <div class="foot" style="flex-direction:column;gap:26px">
     <div class="cta">Écris-moi en message privé</div>
     <div class="tag" style="align-self:center"><i></i>Accès pro offert dès la 1re commande</div>
+  </div>`)],
+
+// ---------- 9. avant / après (post à part, pas dans le carrousel) ----------
+// Le « avant », ce n'est PAS un autre intermédiaire : ce serait admettre qu'on
+// en est un. C'est l'achat à l'aveugle à un compte inconnu. La différence n'est
+// pas la personne, c'est qu'il y a un espace, une référence et un suivi.
+['09-avant-apres', frame('AVANT / APRÈS', `
+  <div class="head"><h1 class="small">Fini<br><em>les relances</em></h1></div>
+  <div class="duo">
+    <div class="half before">
+      <div class="half-k">Sans espace client</div>
+      <div class="half-t">Tu paies. Puis tu attends.</div>
+      <div class="chat">
+        <div class="bub">C'est bon, j'ai envoyé 👍</div>
+        <div class="bub">Tu l'as reçu ?</div>
+        <div class="bub">Alors ? 🙏</div>
+        <div class="seen">Vu à 23:41</div>
+      </div>
+      <div class="half-l">Aucune preuve, aucun suivi. C'est toi qui relances, à chaque fois.</div>
+    </div>
+    <div class="half after">
+      <div class="half-k">Avec ton espace</div>
+      <div class="half-t">Tu ouvres. Tu vois.</div>
+      <div class="mini">
+        <div class="mini-h">Sacoche cuir Milano × 20<u>#A7F3</u></div>
+        <div class="track"><i class="on"></i><s class="on"></s><i class="on"></i><s class="on"></s><i class="on"></i><s class="on"></s><i class="on"></i><s class="on"></s><i class="on now"></i><s></s><i></i></div>
+        <div class="mini-f">Expédié le 3 septembre — <b>suivi LP00123456789CN</b></div>
+      </div>
+      <div class="half-l">Ton prix fixé, ta référence sur le carton, ton suivi en direct. <b>Tu vois où est ton argent, à chaque étape.</b></div>
+    </div>
   </div>`)]
 ];
 
