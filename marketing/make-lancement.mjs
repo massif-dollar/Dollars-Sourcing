@@ -64,6 +64,10 @@ h1.small{font-size:72px}
   background:radial-gradient(circle,rgba(46,179,92,.16),transparent 66%);filter:blur(50px)}
 .phone img{display:block;width:100%;border-radius:45px}
 .phone.tall img{height:950px;object-fit:cover;object-position:top}
+/* Les affiches qui portent l'opposition ont moins de place : le téléphone
+   descend d'un cran plutôt que de rogner ce qui se lit. */
+.phone.mid{width:452px}
+.phone.mid img{height:800px;object-fit:cover;object-position:top}
 .phone::after{content:'';position:absolute;left:50%;top:26px;transform:translateX(-50%);
   width:132px;height:30px;border-radius:100px;background:#2b302c}
 
@@ -157,6 +161,32 @@ h1.small{font-size:72px}
 .track s.on{background:#2eb35c}
 .mini-f{margin-top:22px;font-family:'IN';font-size:27px;color:#5f645e;letter-spacing:-.01em}
 .mini-f b{color:#1e8a44;font-weight:600}
+/* L'opposition, sur CHAQUE affiche. Deux lignes : ce qui se passe sans lui,
+   ce qui se passe avec. Elle remplace le paragraphe d'explication — une phrase
+   de prose se lit en trois secondes qu'on n'a pas sur un fil social, deux
+   lignes opposées se lisent en une demie. */
+.vs{position:relative;margin-top:34px;display:flex;flex-direction:column;gap:14px}
+.vs-row{display:flex;align-items:center;gap:22px;padding:24px 30px;border-radius:28px;
+  font-family:'IN';font-size:33px;font-weight:500;letter-spacing:-.015em;line-height:1.26}
+/* Le « sans » ne porte AUCUN vert : le vert est la marque, et s'il apparaît
+   des deux côtés l'opposition ne dit plus rien. */
+.vs-row.no{background:rgba(120,120,114,.08);border:1px solid rgba(120,120,114,.17);color:#8d928c}
+.vs-row.yes{background:rgba(46,179,92,.09);border:1px solid rgba(46,179,92,.32);color:#2b302c}
+.vs-row i{flex-shrink:0;width:48px;height:48px;border-radius:50%;font-style:normal;
+  display:flex;align-items:center;justify-content:center;font-family:'SG';font-weight:700;font-size:27px}
+.vs-row.no i{background:rgba(120,120,114,.18);color:#8d928c}
+.vs-row.yes i{background:#2eb35c;color:#fff;box-shadow:0 10px 22px rgba(46,179,92,.34)}
+/* Le détail qui compte est surligné, pas seulement mis en gras : sur un
+   téléphone tenu à bout de bras, un gras ne se distingue plus. */
+.vs-row.yes b{font-weight:700;color:#1e8a44;padding:0 8px;border-radius:5px;
+  background:linear-gradient(180deg,transparent 54%,rgba(46,179,92,.30) 54%)}
+
+/* Le chiffre qui décide, à la taille où il se lit sans lire. */
+.big{display:flex;align-items:center;gap:30px;margin-top:8px}
+.big u{text-decoration:none;flex-shrink:0;font-family:'SG';font-weight:700;font-size:132px;
+  line-height:.92;letter-spacing:-.055em;color:#2eb35c}
+.big span{font-family:'IN';font-size:33px;font-weight:400;color:#5f645e;line-height:1.28;letter-spacing:-.01em}
+.big span b{color:#2b302c;font-weight:600}
 .hero-mark{position:relative;display:flex;flex-direction:column;align-items:center;gap:44px}
 .hero-tile{width:250px;height:250px;border-radius:70px;position:relative;
   display:flex;align-items:center;justify-content:center;
@@ -180,85 +210,96 @@ const frame = (n, body) => `<div class="slide">
 const slides = [
 // ---------- 1. l'accroche ----------
 ['01-accroche', frame('', `
-  <div class="stage" style="flex-direction:column;justify-content:center;gap:70px;margin-top:0">
-    <div class="hero-mark"><div class="hero-tile"><span>$</span></div></div>
-    <div class="head" style="text-align:center">
-      <h1>Tu revends.<br>Moi je te <em>fournis</em><br>depuis la Chine.</h1>
-      <div class="lead" style="margin:34px auto 0;text-align:center">
-        Sourcing, négociation, achat, expédition.<br>Toi, tu n'as plus qu'à vendre.</div>
-    </div>
+  <div class="stage" style="flex-direction:column;justify-content:center;align-items:stretch;margin-top:0">
+  <div class="head" style="text-align:center">
+    <div class="hero-mark" style="margin-bottom:44px"><div class="hero-tile"><span>$</span></div></div>
+    <h1>Tu revends.<br>Moi je te <em>fournis</em><br>depuis la Chine.</h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Acheter à l'aveugle à un compte inconnu</div>
+    <div class="vs-row yes"><i>✓</i>Un fournisseur en Chine, <b>un espace, un suivi</b></div>
   </div>
-  <div class="foot" style="justify-content:center"><div class="tag"><i></i>6 étapes, et ton stock arrive</div></div>`)],
+  </div>
+  <div class="foot"><div class="tag"><i></i>Sourcing, achat, expédition — toi, tu vends</div></div>`)],
 
-// ---------- 2. ton espace ----------
+// ---------- 2. l'accès ----------
 ['02-espace', frame('ÉTAPE 1', `
-  <div class="head"><h1 class="small">Tu reçois<br><em>ton accès pro</em></h1>
-    <div class="lead">Un espace rien qu'à toi, protégé par <b>un code à 6 chiffres</b>. Tes commandes, tes prix, ton suivi — à ajouter sur ton écran d'accueil.</div></div>
-  <div class="stage"><div class="phone tall"><img src="${shot('code.png')}"></div></div>`)],
+  <div class="head"><h1 class="small">Tu reçois<br><em>ton accès pro</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Une conversation qui se perd dans le fil</div>
+    <div class="vs-row yes"><i>✓</i>Ton espace à toi, <b>ton code à 6 chiffres</b></div>
+  </div>
+  <div class="stage"><div class="phone mid"><img src="${shot('code.png')}"></div></div>`)],
 
-// ---------- 3. tu demandes ----------
+// ---------- 3. la demande ----------
 ['03-demande', frame('ÉTAPE 2', `
-  <div class="head"><h1 class="small">Tu me dis<br><em>ce que tu veux</em></h1>
-    <div class="lead">Le produit, la quantité, <b>une photo</b> si tu en as une. Je trouve la source. Et on en discute en direct quand tu veux.</div></div>
-  <div class="stage"><div class="phone tall"><img src="${shot('demande.png')}"></div></div>`)],
+  <div class="head"><h1 class="small">Tu demandes<br><em>ton produit</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>« T'as ça ? »… puis plus de nouvelles</div>
+    <div class="vs-row yes"><i>✓</i>Ta demande avec photo, <b>reçue et datée</b></div>
+  </div>
+  <div class="stage"><div class="phone mid"><img src="${shot('demande.png')}"></div></div>`)],
 
 // ---------- 4. le prix ----------
 ['04-prix', frame('ÉTAPE 3', `
-  <div class="head"><h1 class="small">Je te donne<br><em>ton prix d'achat</em></h1>
-    <div class="lead">Un seul chiffre, <b>livraison comprise</b>. Tu calcules ta marge dessus, et rien ne bouge à l'arrivée.</div></div>
+  <div class="head"><h1 class="small">Je te donne<br><em>ton prix d'achat</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Un prix annoncé, puis des frais qui s'ajoutent</div>
+    <div class="vs-row yes"><i>✓</i>Un seul chiffre, <b>livraison comprise</b></div>
+  </div>
   <div class="stage card-stage"><div class="card">
-    <div class="card-top"><div class="card-kicker">Ton prix</div>
+    <div class="card-top"><div class="card-kicker">Sacoche cuir Milano · 20 pièces</div>
       <div class="card-badge">Livraison incluse</div></div>
-    <div class="card-title">Sacoche cuir Milano</div>
-    <div class="card-sub">20 pièces</div>
-    <div class="rule"></div>
     <div class="row">Prix à la pièce<b>29 €</b></div>
-    <div class="row hi">Total à régler<b>580 €</b></div>
-    <div class="checks">
-      <div class="ck"><s>✓</s>Photos et détails du produit avant que tu valides</div>
-      <div class="ck"><s>✓</s>Le prix que tu vois est le prix que tu paies</div>
-    </div>
+    <div class="row">Livraison jusqu'à chez toi<b>incluse</b></div>
+    <div class="rule"></div>
+    <div class="big"><u>580 €</u><span>et c'est tout.<br><b>Rien ne s'ajoute à l'arrivée.</b></span></div>
   </div></div>
   <div class="foot"><div class="tag"><i></i>Ni frais de port, ni douane surprise</div></div>`)],
 
 // ---------- 5. je suis en Chine ----------
 ['05-achat', frame('ÉTAPE 4', `
-  <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1>
-    <div class="lead">Je te fournis <b>au meilleur prix</b>, de quoi te faire un <b>minimum ×3</b> à la revente en France.</div></div>
+  <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Le prix du grossiste, déjà repris trois fois</div>
+    <div class="vs-row yes"><i>✓</i><b>Le prix de la source</b>, directement</div>
+  </div>
   <div class="stage card-stage"><div class="card">
     <div class="card-top"><div class="card-kicker">Ce que ça te fait</div></div>
     <div class="row">Ton prix d'achat<b>29 €</b></div>
     <div class="row">Ta revente en France<b>89 €</b></div>
     <div class="rule"></div>
-    <div class="row hi">Ta marge, par pièce<b>+ 60 €</b><span class="mult">×3</span></div>
-    <div class="checks">
-      <div class="ck"><s>✓</s>Le prix de la source, pas le prix du grossiste</div>
-      <div class="ck"><s>✓</s>Du volume : plus tu prends, plus ça descend</div>
-    </div>
+    <div class="big"><u>×3</u><span>minimum à la revente.<br><b>60 € de marge la pièce</b>, soit 1 200 € sur les 20.</span></div>
   </div></div>
-  <div class="foot"><div class="tag"><i></i>Marché de gros, prix de gros</div></div>`)],
+  <div class="foot"><div class="tag"><i></i>Plus tu prends, plus ça descend</div></div>`)],
 
 // ---------- 6. le suivi ----------
 ['06-suivi', frame('ÉTAPE 5', `
-  <div class="head"><h1 class="small">Tu suis<br><em>ton stock</em></h1>
-    <div class="lead">Six étapes, en direct. Transitaire, numéro de suivi, <b>date estimée</b> — tu sais quand réapprovisionner.</div></div>
-  <div class="stage"><div class="phone tall"><img src="${shot('suivi.png')}"></div></div>`)],
+  <div class="head"><h1 class="small">Tu suis<br><em>ton stock</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Tu paies, tu attends, tu relances</div>
+    <div class="vs-row yes"><i>✓</i>Six étapes en direct, <b>numéro de suivi</b></div>
+  </div>
+  <div class="stage"><div class="phone mid"><img src="${shot('suivi.png')}"></div></div>`)],
 
 // ---------- 7. les Dollarz ----------
 ['07-dollarz', frame('ÉTAPE 6', `
-  <div class="head"><h1 class="small">Plus tu commandes,<br>plus tu <em>gagnes</em></h1>
-    <div class="lead"><b>1 € dépensé = 1 Dollarz</b>, échangeable contre de vraies remises. Les gros paliers sont faits pour ceux qui achètent en gros.</div></div>
-  <div class="stage"><div class="phone tall"><img src="${shot('dollarz.png')}"></div></div>`)],
+  <div class="head"><h1 class="small">Plus tu commandes,<br>plus tu <em>gagnes</em></h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Fidèle ou pas, le même prix pour tout le monde</div>
+    <div class="vs-row yes"><i>✓</i><b>1 € = 1 Dollarz</b>, échangeable en remises</div>
+  </div>
+  <div class="stage"><div class="phone mid"><img src="${shot('dollarz.png')}"></div></div>`)],
 
 // ---------- 8. l'appel ----------
 ['08-cta', frame('', `
-  <div class="stage" style="flex-direction:column;justify-content:center;gap:56px;margin-top:0">
-    <div class="hero-mark"><div class="hero-tile"><span>$</span></div></div>
-    <div class="head" style="text-align:center">
-      <h1>Dis-moi ce que<br>tu veux revendre.</h1>
-      <div class="lead" style="margin:34px auto 0;text-align:center">
-        Écris-moi le produit. Je te réponds avec ton prix<br>d'achat, livraison comprise. On en discute sur<br>WhatsApp, et ton accès est créé dans la foulée.</div>
-    </div>
+  <div class="stage" style="flex-direction:column;justify-content:center;align-items:stretch;margin-top:0">
+  <div class="head" style="text-align:center">
+    <div class="hero-mark" style="margin-bottom:44px"><div class="hero-tile"><span>$</span></div></div>
+    <h1>Dis-moi ce que<br>tu veux <em>revendre</em>.</h1></div>
+  <div class="vs">
+    <div class="vs-row no"><i>✕</i>Chercher, comparer, croiser les doigts</div>
+    <div class="vs-row yes"><i>✓</i>Un message. <b>Ton prix, ton accès.</b></div>
+  </div>
   </div>
   <div class="foot" style="flex-direction:column;gap:26px">
     <div class="cta">Écris-moi en message privé</div>
