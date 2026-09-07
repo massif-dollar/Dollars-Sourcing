@@ -40,7 +40,8 @@ Depuis un dossier qui contient `node_modules/@fontsource/space-grotesk` et
 pas joignable partout — voir `CLAUDE.md`) :
 
     node capture-app.mjs     # refait les 4 captures dans shots/
-    node make-lancement.mjs  # compose les 8 images dans promo/
+    node make-lancement.mjs  # compose les 9 images dans promo/
+    python3 make-video.py    # monte les 8 premières en vidéo 9:16
 
 Les textes sont dans `make-lancement.mjs`, un tableau `slides` : une ligne par
 image, on lit et on modifie directement.
@@ -55,3 +56,41 @@ Elle est honnête sur ce qu'elle est — un dessin — et c'est justement sa lim
 **une illustration ne prouve rien.** Une photo d'un vrai carton avec un vrai
 marqueur vaudrait dix fois cette image. Elle se regénère avec
 `node make-illustration.mjs`.
+
+
+## `09-avant-apres` — un post à part, pas la neuvième du carrousel
+
+Le carrousel montre comment ça marche. Celle-ci montre **pourquoi ça change
+quelque chose** : en haut, trois messages envoyés sans réponse et « Vu à 23:41 » ;
+en bas, la commande, sa référence et son suivi.
+
+Deux règles s'y appliquent, et elles ne sont pas décoratives :
+
+- **Le « avant » n'a aucun vert.** Le vert est la marque. S'il apparaît des deux
+  côtés, la comparaison ne dit plus rien — c'est le gris nardo qui tient le rôle
+  du « sans toi ».
+- **Le « avant », ce n'est pas un autre intermédiaire.** Ce serait admettre qu'on
+  en est un. C'est l'achat à l'aveugle à un compte inconnu : la différence n'est
+  pas la personne, c'est qu'il y a un espace, une référence et un suivi.
+
+Le bas ne promet pas « fini les arnaques » — une garantie qu'on ne peut pas
+tenir se retourne au premier colis en retard. Il montre ce qui la remplace :
+*« Tu vois où est ton argent, à chaque étape. »* C'est vérifiable, donc ça tient.
+
+## La vidéo
+
+`python3 make-video.py` monte les **huit premières** images (pas la 9) en
+1080×1920, 30 i/s, ~24 s : 3,4 s par image, glissement latéral de 0,4 s,
+ouverture et fermeture sur le fond de la palette.
+
+Deux pièges déjà payés :
+
+- **`zoompan` sort `d` images PAR image reçue.** Avec `d=102` sur un flux de
+  102 images, on obtient 102 × 102 images par slide — six minutes de vidéo au
+  lieu de vingt-quatre secondes. Il faut `d=1` et un zoom piloté par `on`.
+- **Pas de fondu enchaîné sur des slides de texte.** Pendant la demi-seconde de
+  fondu, deux titres se superposent et plus rien ne se lit. Le glissement garde
+  chaque texte net, et imite le geste de balayer le carrousel.
+
+Le fichier `.mp4` n'est pas versionné : il se refait en une commande, et un
+binaire de 10 Mo n'a rien à faire dans un dépôt qui se déploie à chaque commit.
