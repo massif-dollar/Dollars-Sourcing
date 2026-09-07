@@ -41,10 +41,15 @@ pas joignable partout — voir `CLAUDE.md`) :
 
     node capture-app.mjs     # refait les 4 captures dans shots/
     node make-lancement.mjs  # compose les 9 images dans promo/
-    python3 make-video.py    # monte les 8 premières en vidéo 9:16
+    node make-video.mjs      # monte les 8 premières en vidéo 9:16
 
-Les textes sont dans `make-lancement.mjs`, un tableau `slides` : une ligne par
-image, on lit et on modifie directement.
+Le contenu et l'apparence des affiches vivent dans **`slides.mjs`**, importé par
+les deux autres : un texte corrigé là l'est dans l'image *et* dans la vidéo.
+C'était l'inverse avant, et c'est exactement comme ça qu'une affiche finit par
+dire autre chose que la vidéo qui la reprend.
+
+Les textes sont dans `slides.mjs`, un tableau `slides` : une ligne par image,
+on lit et on modifie directement.
 
 ## `00-exemple-carton` — une illustration, pas une photo
 
@@ -102,18 +107,51 @@ tenir se retourne au premier colis en retard. Il montre ce qui la remplace :
 
 ## La vidéo
 
-`python3 make-video.py` monte les **huit premières** images (pas la 9) en
-1080×1920, 30 i/s, ~24 s : 3,4 s par image, glissement latéral de 0,4 s,
-ouverture et fermeture sur le fond de la palette.
+`node make-video.mjs` monte les **huit premières** affiches (pas la 9) en
+1080×1920, 30 i/s, ~24 s : 3,4 s par affiche, glissement latéral de 0,4 s,
+ouverture et fermeture sur le fond de la palette. Il lui faut un ffmpeg — celui
+du système, celui désigné par `$FFMPEG`, ou `pip install imageio-ffmpeg` qui en
+embarque un statique.
 
-Deux pièges déjà payés :
+### Le mouvement est joué dans le navigateur, pas fabriqué dans ffmpeg
+
+Le premier montage se contentait d'un zoom lent sur des images fixes. Ça bouge,
+mais ça n'explique rien : le spectateur reçoit toute l'affiche d'un coup et lit
+ce qu'il veut, dans l'ordre qu'il veut.
+
+Le mouvement qu'on veut n'est pas un mouvement d'**image**, c'est un mouvement
+d'**éléments** : le titre, puis le problème, puis la solution, puis la preuve.
+C'est l'ordre d'arrivée qui explique — l'effet ne fait rien tout seul. Et seul
+le navigateur sait où sont ces éléments, d'où la capture image par image.
+
+Trois choses à savoir sur ce procédé :
+
+- **Le CSS d'animation n'est pas dans celui des affiches.** Une image fixe doit
+  se rendre à son état final, pas au premier instant d'une entrée :
+  `shell(html, true)` ajoute `ANIM`, `shell(html)` ne l'ajoute pas.
+- **La capture est déterministe.** Toutes les animations sont mises en pause et
+  leur `currentTime` posé à la main pour chaque image. Rien ne dépend de la
+  vitesse de la machine, et deux rendus donnent le même fichier — l'inverse
+  d'une capture d'écran en temps réel, qui saute des images dès que la machine
+  travaille.
+- **On capture à 1080 de large, la taille finale.** Le texte est rendu à cette
+  taille, jamais redimensionné après coup.
+
+Le seul moment appuyé est le **surlignage vert qui se trace** de gauche à
+droite, comme au marqueur, et il tombe sur le mot qui compte. Le reste ne fait
+que monter de vingt pixels en s'éclaircissant. Les masses de lumière du fond
+dérivent pendant toute l'affiche : sans elles, une image arrêtée après son
+entrée a l'air d'un arrêt sur image.
+
+### Deux pièges déjà payés
 
 - **`zoompan` sort `d` images PAR image reçue.** Avec `d=102` sur un flux de
-  102 images, on obtient 102 × 102 images par slide — six minutes de vidéo au
-  lieu de vingt-quatre secondes. Il faut `d=1` et un zoom piloté par `on`.
-- **Pas de fondu enchaîné sur des slides de texte.** Pendant la demi-seconde de
-  fondu, deux titres se superposent et plus rien ne se lit. Le glissement garde
-  chaque texte net, et imite le geste de balayer le carrousel.
+  102 images, on obtient 102 × 102 images par affiche — six minutes de vidéo au
+  lieu de vingt-quatre secondes. (Le zoom a depuis disparu : l'animation des
+  éléments le remplace, et les deux ensemble se gênaient.)
+- **Pas de fondu enchaîné sur des affiches de texte.** Pendant la demi-seconde
+  de fondu, deux titres se superposent et plus rien ne se lit. Le glissement
+  garde chaque texte net, et imite le geste de balayer le carrousel.
 
 Le fichier `.mp4` n'est pas versionné : il se refait en une commande, et un
 binaire de 10 Mo n'a rien à faire dans un dépôt qui se déploie à chaque commit.
