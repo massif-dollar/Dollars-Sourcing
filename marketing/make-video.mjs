@@ -20,7 +20,9 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { shell, slides } from './slides.mjs';
 
-const FPS = 30, HOLD = 3.4, XF = 0.40;
+// 3,8 s et non 3,4 : chaque affiche porte maintenant deux blocs à lire au
+// lieu de deux lignes, et l'entrée des éléments prend elle-même 1,9 s.
+const FPS = 30, HOLD = 3.8, XF = 0.40;
 const FRAMES = Math.round(HOLD * FPS);
 const BG = '0xfbfcfa';                 // le fond des affiches, jamais du noir
 const OUT = 'dollars-sourcing.mp4';
