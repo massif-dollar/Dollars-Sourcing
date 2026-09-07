@@ -1,4 +1,5 @@
-# Le montage se refait en une commande (marketing/make-video.py) ; un binaire
+# Le montage se refait en une commande (marketing/make-video.mjs) ; un binaire
 # de 10 Mo n'a rien à faire dans un dépôt qui se déploie à chaque commit.
 marketing/*.mp4
+marketing/frames/
 marketing/promo/
