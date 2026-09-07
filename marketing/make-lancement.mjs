@@ -81,6 +81,40 @@ h1.small{font-size:72px}
   background:linear-gradient(162deg,#5fe08c,#2eb35c 72%);
   box-shadow:0 22px 48px rgba(46,179,92,.32);
   font-family:'SG';font-size:40px;font-weight:700;color:#fff;letter-spacing:-.02em}
+/* Les slides sans capture avaient un trou au milieu : une liste centrée dans
+   un espace vide ne fait pas un visuel. On y met une vraie carte, dans la
+   matière des cartes de l'app — surface blanche, bordure fine, ombre en deux
+   couches, chiffres tabulaires. */
+.stage.card-stage{align-items:center}
+.card{position:relative;width:100%;background:#fff;border-radius:46px;padding:58px 56px;
+  border:1px solid rgba(120,120,114,.16);
+  box-shadow:0 44px 96px rgba(70,74,68,.16), 0 12px 28px rgba(70,74,68,.08)}
+.card::before{content:'';position:absolute;inset:-70px;z-index:-1;border-radius:50%;
+  background:radial-gradient(circle,rgba(46,179,92,.15),transparent 66%);filter:blur(50px)}
+.card-top{display:flex;align-items:center;gap:20px;margin-bottom:34px}
+.card-kicker{font-family:'SG';font-weight:700;font-size:24px;letter-spacing:.14em;
+  text-transform:uppercase;color:#9aa09a}
+.card-badge{margin-left:auto;padding:14px 26px;border-radius:100px;
+  background:rgba(46,179,92,.12);border:1px solid rgba(46,179,92,.34);
+  font-family:'IN';font-weight:600;font-size:25px;letter-spacing:-.01em;color:#1e8a44}
+.card-title{font-family:'SG';font-weight:700;font-size:52px;letter-spacing:-.035em;color:#2b302c}
+.card-sub{margin-top:12px;font-family:'IN';font-size:31px;font-weight:400;color:#7c817b}
+.rule{height:1px;background:rgba(120,120,114,.18);margin:40px 0}
+.row{display:flex;align-items:baseline;gap:24px;padding:17px 0;
+  font-family:'IN';font-size:35px;font-weight:400;color:#5f645e;letter-spacing:-.01em}
+.row b{margin-left:auto;font-weight:600;color:#2b302c;font-size:38px;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.row.hi{font-size:37px;color:#2b302c;font-weight:500}
+.row.hi b{color:#2eb35c;font-family:'SG';font-weight:700;font-size:52px;letter-spacing:-.03em}
+.mult{margin-left:20px;padding:10px 24px;border-radius:100px;background:#2eb35c;
+  font-family:'SG';font-weight:700;font-size:32px;color:#fff;letter-spacing:-.02em;
+  box-shadow:0 12px 26px rgba(46,179,92,.34)}
+.checks{margin-top:38px;display:flex;flex-direction:column;gap:22px}
+.ck{display:flex;align-items:flex-start;gap:18px;font-family:'IN';font-size:29px;
+  font-weight:500;color:#5f645e;line-height:1.32;letter-spacing:-.01em}
+.ck s{flex-shrink:0;width:34px;height:34px;border-radius:50%;text-decoration:none;
+  background:rgba(46,179,92,.14);color:#1e8a44;font-size:21px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;margin-top:3px}
 .hero-mark{position:relative;display:flex;flex-direction:column;align-items:center;gap:44px}
 .hero-tile{width:250px;height:250px;border-radius:70px;position:relative;
   display:flex;align-items:center;justify-content:center;
@@ -130,22 +164,36 @@ const slides = [
 ['04-prix', frame('ÉTAPE 3', `
   <div class="head"><h1 class="small">Je te donne<br><em>ton prix d'achat</em></h1>
     <div class="lead">Un seul chiffre, <b>livraison comprise</b>. Tu calcules ta marge dessus, et rien ne bouge à l'arrivée.</div></div>
-  <div class="pts">
-    <div class="pt"><i></i>Le prix que tu vois est le prix que tu paies</div>
-    <div class="pt"><i></i>Photos et détails du produit avant de valider</div>
-    <div class="pt"><i></i>Une fois validé, on expédie au plus vite</div>
-  </div>
+  <div class="stage card-stage"><div class="card">
+    <div class="card-top"><div class="card-kicker">Ton prix</div>
+      <div class="card-badge">Livraison incluse</div></div>
+    <div class="card-title">Sacoche cuir Milano</div>
+    <div class="card-sub">20 pièces</div>
+    <div class="rule"></div>
+    <div class="row">Prix à la pièce<b>29 €</b></div>
+    <div class="row hi">Total à régler<b>580 €</b></div>
+    <div class="checks">
+      <div class="ck"><s>✓</s>Photos et détails du produit avant que tu valides</div>
+      <div class="ck"><s>✓</s>Le prix que tu vois est le prix que tu paies</div>
+    </div>
+  </div></div>
   <div class="foot"><div class="tag"><i></i>Ni frais de port, ni douane surprise</div></div>`)],
 
 // ---------- 5. je suis en Chine ----------
 ['05-achat', frame('ÉTAPE 4', `
   <div class="head"><h1 class="small">Je suis<br><em>en Chine</em></h1>
     <div class="lead">Je te fournis <b>au meilleur prix</b>, de quoi te faire un <b>minimum ×3</b> à la revente en France.</div></div>
-  <div class="pts">
-    <div class="pt"><i></i>Le prix de la source, pas le prix du grossiste</div>
-    <div class="pt"><i></i>Du volume : plus tu prends, plus ça descend</div>
-    <div class="pt"><i></i>Chaque colis part avec sa référence</div>
-  </div>
+  <div class="stage card-stage"><div class="card">
+    <div class="card-top"><div class="card-kicker">Ce que ça te fait</div></div>
+    <div class="row">Ton prix d'achat<b>29 €</b></div>
+    <div class="row">Ta revente en France<b>89 €</b></div>
+    <div class="rule"></div>
+    <div class="row hi">Ta marge, par pièce<b>+ 60 €</b><span class="mult">×3</span></div>
+    <div class="checks">
+      <div class="ck"><s>✓</s>Le prix de la source, pas le prix du grossiste</div>
+      <div class="ck"><s>✓</s>Du volume : plus tu prends, plus ça descend</div>
+    </div>
+  </div></div>
   <div class="foot"><div class="tag"><i></i>Marché de gros, prix de gros</div></div>`)],
 
 // ---------- 6. le suivi ----------
