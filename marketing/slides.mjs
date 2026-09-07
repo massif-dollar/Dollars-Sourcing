@@ -48,6 +48,14 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#fbfcfa}
 .step{margin-left:auto;font-family:'SG';font-weight:700;font-size:25px;letter-spacing:.14em;color:#1e8a44}
 
 .head{position:relative}
+/* L'affiche d'accroche est la seule qui parle à quelqu'un qui ne sait pas
+   encore de quoi il s'agit. Cette étiquette dit le sujet en trois mots, avant
+   le titre : sans elle, « fournisseur » et « revendre » ne raccrochent qu'un
+   spectateur déjà dans le métier. */
+.kick{display:inline-block;margin-bottom:26px;padding:11px 26px;border-radius:100px;
+  border:1px solid rgba(46,179,92,.34);background:rgba(46,179,92,.10);
+  font-family:'SG';font-weight:700;font-size:24px;letter-spacing:.11em;
+  text-transform:uppercase;color:#1e8a44}
 h1{font-family:'SG';font-weight:700;font-size:88px;line-height:1.02;letter-spacing:-.045em;color:#2b302c}
 h1 em{font-style:normal;color:#2eb35c}
 h1.small{font-size:72px}
@@ -281,16 +289,19 @@ export const slides = [
 // ---------- 1. l'accroche ----------
 ['01-accroche', frame('', `
   <div class="center">
-  <div class="head" style="text-align:center">
-    <div class="hero-mark" style="margin-bottom:44px"><div class="hero-tile"><span>$</span></div></div>
-    <h1>Tu revends.<br>Moi je te <em>fournis</em><br>depuis la Chine.</h1></div>
-  <div class="cmp">
-    <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
-      <div class="cmp-txt">Acheter à l'aveugle à un compte inconnu</div></div>
-    <div class="cmp-arrow">↓</div>
-    <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
-      <div class="cmp-txt">Un fournisseur en Chine, <b>un espace, un suivi</b></div></div>
-  </div>
+    <div class="head">
+      <div class="kick">Sourcing Chine · pour revendeurs</div>
+      <h1 class="small">Fini les fournisseurs<br><em>inconnus</em> sur WhatsApp.</h1>
+      <div class="lead">Je suis <b>en Chine</b>. Je te trouve le produit, je te donne
+        ton prix livré, et tu suis chaque commande depuis <b>ton espace</b>.</div>
+    </div>
+    <div class="cmp">
+      <div class="cmp-side no"><div class="cmp-tag"><i>✕</i>Sans moi</div>
+        <div class="cmp-txt">Un compte inconnu, un virement, et tu croises les doigts</div></div>
+      <div class="cmp-arrow">↓</div>
+      <div class="cmp-side yes"><div class="cmp-tag"><i>✓</i>Avec moi</div>
+        <div class="cmp-txt">Un vrai fournisseur, <b>ton espace, ton suivi</b></div></div>
+    </div>
   </div>
   <div class="foot"><div class="tag"><i></i>Sourcing, achat, expédition — toi, tu vends</div></div>`)],
 
