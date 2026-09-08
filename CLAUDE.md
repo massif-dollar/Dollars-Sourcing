@@ -366,6 +366,41 @@ Astuce sans code, à rappeler : sur iPhone, un appui long dans un champ de texte
 propose « Scanner du texte » — le numéro de suivi se saisit à l'appareil photo
 depuis l'étiquette, sans faute de frappe.
 
+### Le carnet de fournisseurs, et le scan de carte
+
+La fiche fournisseur est pensée pour le terrain chinois : identifiant WeChat,
+adresse au format « Marché Baima, étage 3, stand 217 », MOQ en note, marques et
+modèles. Le vrai problème sur place n'est pas d'ajouter les gens — c'est de se
+souvenir de qui est qui après trente stands dans la journée.
+
+**Un bouton « Scanner une carte de visite »** ouvre l'appareil photo, envoie
+l'image au modèle, et remplit la fiche : nom, WeChat, téléphone, adresse, note.
+La photo de la carte reste attachée au fournisseur (`photo`, `photoType`).
+
+Deux règles, et elles sont volontaires :
+
+- **La fiche n'est jamais enregistrée toute seule.** Une carte chinoise se lit
+  mal — idéogrammes, pinyin, cartes abîmées, photo de travers. Un fournisseur
+  faux ajouté en silence coûte plus cher qu'un champ à corriger.
+- **On ne remplit que les champs VIDES.** Rescanner une fiche déjà corrigée à la
+  main doit la compléter, jamais écraser le travail.
+
+**Pourquoi pas le QR code WeChat**, la question revient et la réponse est
+définitive : un QR WeChat personnel ne contient **qu'un jeton opaque**
+(`weixin.qq.com/r/…`) — ni nom, ni identifiant, rien à recopier. Les
+informations du fournisseur sont sur les serveurs de Tencent, qui ne les ouvre à
+aucun tiers. Et **ce jeton expire au bout d'environ un mois**, donc le stocker
+pour « rouvrir la conversation plus tard » lâcherait en silence. Enfin, seul
+WeChat peut ajouter un contact WeChat : aucune application extérieure ne le
+peut. L'appareil photo de l'iPhone scanne déjà ces QR et propose d'ouvrir
+WeChat — c'est le meilleur chemin, et il ne demande aucun code.
+
+Ce qui remplace vraiment le QR : **un bouton qui copie l'identifiant WeChat**
+depuis la liste des fournisseurs. Un tap, on colle dans la recherche de WeChat,
+et contrairement au jeton du QR, un identifiant ne périme jamais. Le repli
+`execCommand('copy')` est là parce que Safari refuse le presse-papiers hors
+geste direct — un échec silencieux serait pire que pas de bouton.
+
 ### Dates de parcours
 
 Chaque commande porte une carte `statusAt` : une date par étape franchie
@@ -802,12 +837,19 @@ Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
 commandes, fournisseurs, changement de statut.
 Il reçoit un instantané des données réelles et une mémoire persistante
 (`settings/assistantMemory`) qu'il enrichit via un champ `remember`.
-Il sait lire une photo, une conversation WhatsApp collée, et un formulaire
-client rempli ligne par ligne. **Son invite décrit le format exact de
+Il sait lire une photo, une conversation WhatsApp collée, un formulaire
+client rempli ligne par ligne, et **une carte de visite de fournisseur**. **Son invite décrit le format exact de
 `formulaire.html`** (Nom / Adresse / Code postal & Ville / Pays / Téléphone) et
 lui demande de regrouper les trois lignes d'adresse en une seule chaîne : c'est
 elle qui sera recopiée sur le colis. Changer les champs du formulaire sans
 changer cette invite, c'est se retrouver avec des fiches clients amputées.
+
+**La même maladie a frappé les fournisseurs, et il a fallu la corriger** :
+la fiche portait six champs (nom, WeChat, téléphone, WhatsApp, adresse, note)
+mais l'invite n'en décrivait que trois. Une carte de visite lue donnait donc une
+fiche à moitié vide, et il fallait retaper le reste à la main. **Règle générale :
+un champ ajouté à un formulaire doit être ajouté à l'invite le même jour**,
+sinon l'assistant crée des fiches amputées sans que rien ne signale l'erreur.
 
 ## Fait
 
@@ -824,7 +866,8 @@ historique par client dans sa fiche, archivage volontaire côté client,
 référence de commande à écrire sur le carton avec recherche par référence et
 par numéro de suivi,
 page de formulaire client avec bannière propre et renvoi WhatsApp,
-mode discret qui masque montants et marges, programme de fidélité complet
+mode discret qui masque montants et marges, scan de carte de visite
+fournisseur, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques.
@@ -833,7 +876,8 @@ fidélité dans les statistiques.
 
 - Délais réels par transitaire (moyenne calculée sur `statusAt`) pour
   pré-remplir la date de livraison estimée
-- Photo dans la fiche fournisseur
+- Photo du stand dans la fiche fournisseur (le champ `photo` existe déjà,
+  rempli par le scan de carte : il reste à pouvoir en ajouter une à la main)
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
 - Plus tard : abonnement payant, inscription autonome
