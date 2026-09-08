@@ -702,6 +702,7 @@
   }
   .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); outline:none; }
   .field-error{ display:none; color:var(--danger); font-size:12px; margin-top:6px; }
+  .hint{ color:var(--text-ghost); font-size:12px; line-height:1.4; margin-top:7px; }
   .field.invalid input, .field.invalid select, .field.invalid textarea{ border-color:var(--danger); }
   .field.invalid .field-error{ display:block; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -1697,6 +1698,14 @@
         <label data-i18n="fieldWechat">WeChat</label>
         <input type="text" id="s_wechat" data-i18n-placeholder="placeholderWechatId" placeholder="Identifiant WeChat">
       </div>
+      <!-- Apparaît seulement quand un QR WeChat a été lu sur la photo. -->
+      <div class="field" id="wechatQrField" style="display:none;">
+        <button type="button" class="btn-secondary" id="openWechatBtn"
+                style="width:100%; color:var(--accent); border-color:var(--accent);"
+                data-i18n="openInWechat">Ouvrir dans WeChat</button>
+        <div class="hint" data-i18n="qrExpiryHint">Ce lien finit par périmer : WeChat renouvelle
+          les codes. L'identifiant, lui, reste valable.</div>
+      </div>
       <div class="row2">
         <div class="field">
           <label data-i18n="fieldPhone">Téléphone</label>
@@ -1935,6 +1944,10 @@ const I18N = {
     cardNothing:'Rien de lisible sur cette photo.', cardFailed:'Lecture impossible ({code}).',
     copyWechat:'Copier l\u2019identifiant WeChat', wechatCopied:'WeChat {id} copié',
     wechatCopyFailed:'Copie impossible',
+    openInWechat:'Ouvrir dans WeChat',
+    qrExpiryHint:'Ce lien finit par périmer : WeChat renouvelle les codes. L\u2019identifiant, lui, reste valable.',
+    qrOnly:'QR WeChat lu. Rien d\u2019autre de lisible : complète à la main.',
+    cardFilledQr:'QR WeChat lu, {n} champ(s) rempli(s).',
     confirmDeleteOrder:'Supprimer définitivement cette commande ?', confirmDeleteClient:'Supprimer ce client ?',
     confirmDeleteSupplier:'Supprimer ce fournisseur ?',
     confirmReset:'Réinitialiser toutes les données (commandes, clients, fournisseurs) ? Cette action est irréversible.',
@@ -2081,6 +2094,10 @@ const I18N = {
     cardNothing:'Nothing readable on this photo.', cardFailed:'Could not read the card ({code}).',
     copyWechat:'Copy WeChat ID', wechatCopied:'WeChat {id} copied',
     wechatCopyFailed:'Copy failed',
+    openInWechat:'Open in WeChat',
+    qrExpiryHint:'This link eventually expires: WeChat refreshes its codes. The ID stays valid.',
+    qrOnly:'WeChat QR read. Nothing else readable: fill in by hand.',
+    cardFilledQr:'WeChat QR read, {n} field(s) filled.',
     confirmDeleteOrder:'Permanently delete this order?', confirmDeleteClient:'Delete this client?',
     confirmDeleteSupplier:'Delete this supplier?',
     confirmReset:'Reset all data (orders, clients, suppliers)? This action is irreversible.',
@@ -4089,7 +4106,9 @@ function fillSupplierForm(sup){
   // reprise des anciens fournisseurs où tout était dans "contact"
   if(sup && !sup.wechat && sup.contact) $('#s_wechat').value = sup.contact;
   cardPhoto = (sup && sup.photo) ? { data:sup.photo, type:sup.photoType || 'image/jpeg' } : null;
+  wechatQr = (sup && sup.wechatQr) ? sup.wechatQr : '';
   showCardPhoto();
+  showWechatQr();
   editingBrands = (sup && Array.isArray(sup.brands))
     ? sup.brands.map(b => ({ name:b.name || '', models: Array.isArray(b.models) ? b.models.slice() : [] }))
     : [];
@@ -4103,6 +4122,7 @@ function fillSupplierForm(sup){
 // ne les ouvre à personne. La carte de visite, elle, porte tout — et en Chine
 // c'est la première chose qu'on te tend.
 let cardPhoto = null;   // { data, type } — la photo suit la fiche
+let wechatQr = '';      // le lien lu dans un QR WeChat, s'il y en avait un
 
 function showCardPhoto(){
   const field = $('#cardPhotoField');
@@ -4117,6 +4137,65 @@ function showCardPhoto(){
   }
 }
 
+// jsQR est chargé À LA DEMANDE, au premier scan seulement, et son échec n'est
+// jamais fatal : sans lui la lecture du texte continue, on perd juste le lien
+// WeChat. C'est ce qui autorise une dépendance extérieure dans une app qui n'en
+// a pas — elle ne peut pas casser ce qui marchait avant.
+let jsQrLoading = null;
+function loadJsQR(){
+  if(typeof jsQR === 'function') return Promise.resolve(true);
+  if(jsQrLoading) return jsQrLoading;
+  jsQrLoading = new Promise(resolve=>{
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+    sc.onload  = ()=> resolve(typeof jsQR === 'function');
+    sc.onerror = ()=> resolve(false);
+    document.head.appendChild(sc);
+  });
+  return jsQrLoading;
+}
+
+// Un QR photographié de loin, sur une pancarte ou un écran de téléphone, occupe
+// peu de pixels. On tente donc deux tailles : la grande d'abord, puis une plus
+// petite qui gomme le bruit de l'appareil photo et sauve les prises floues.
+async function decodeQrFromFile(file){
+  if(!await loadJsQR()) return '';
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej)=>{
+      const i = new Image();
+      i.onload = ()=>res(i); i.onerror = rej; i.src = url;
+    });
+    for(const MAX of [1600, 800]){
+      const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.round(img.width * ratio), h = Math.round(img.height * ratio);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d', { willReadFrequently:true });
+      ctx.drawImage(img, 0, 0, w, h);
+      const found = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+      if(found && found.data) return found.data;
+    }
+    return '';
+  }catch(e){ return ''; }
+  finally{ URL.revokeObjectURL(url); }
+}
+
+// Un QR WeChat personnel : weixin.qq.com/r/… ou le schéma weixin://
+function isWechatQr(txt){
+  const v = String(txt || '');
+  return /(^|\/\/)([a-z0-9.-]*\.)?weixin\.qq\.com\//i.test(v) || /^weixin:\/\//i.test(v);
+}
+
+function showWechatQr(){
+  $('#wechatQrField').style.display = wechatQr ? 'block' : 'none';
+}
+// Le QR ne se « décode » pas en profil : il ne porte qu'un jeton. Mais l'ouvrir
+// amène WeChat sur la page d'ajout du fournisseur, ce qui est tout ce qu'on veut.
+$('#openWechatBtn').addEventListener('click', ()=>{
+  if(wechatQr) window.open(wechatQr, '_blank');
+});
+
 const CARD_PROMPT = `Tu lis la carte de visite d'un fournisseur (souvent chinois) et tu en extrais les informations.
 Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
 {"name":"","wechat":"","phone":"","whatsapp":"","address":"","note":""}
@@ -4127,9 +4206,12 @@ RÈGLES :
 - whatsapp : seulement s'il est écrit noir sur blanc.
 - address : marché, bâtiment, étage, NUMÉRO DE STAND. C'est ce qui sert à retrouver l'échoppe : ne perds jamais le numéro de stand.
 - note : ce qui reste d'utile — produits, spécialité, MOQ. Deux lignes maximum.
-Une information absente de la carte reste une chaîne VIDE. N'invente jamais rien.`;
+Une information absente de la carte reste une chaîne VIDE. N'invente jamais rien.
+Si on te donne le CONTENU D'UN QR CODE lu sur l'image, sers-t'en : une fiche vCard ou MECARD
+donne le nom, le téléphone et la société. Un lien weixin.qq.com ne contient rien d'exploitable,
+ignore-le. N'écris jamais un lien brut dans un champ.`;
 
-async function readBusinessCard(img){
+async function readBusinessCard(img, qrText){
   const response = await fetch(AI_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -4139,7 +4221,9 @@ async function readBusinessCard(img){
       system: CARD_PROMPT,
       messages: [{ role:'user', content:[
         { type:'image', source:{ type:'base64', media_type: img.media_type, data: img.data } },
-        { type:'text', text: 'Lis cette carte.' }
+        { type:'text', text: qrText
+            ? 'Lis cette carte. Contenu du QR code présent sur l\'image : ' + qrText
+            : 'Lis cette carte.' }
       ]}]
     })
   });
@@ -4168,7 +4252,12 @@ $('#scanCardInput').addEventListener('change', async (e)=>{
     cardPhoto = { data: img.data, type: img.media_type };
     showCardPhoto();
 
-    const card = await readBusinessCard(img);
+    // Le QR est décodé sur l'appareil, avant tout appel au modèle : un modèle
+    // de vision ne lit pas un QR de façon fiable, une bibliothèque si.
+    const qrText = await decodeQrFromFile(file);
+    if(qrText && isWechatQr(qrText)){ wechatQr = qrText; showWechatQr(); }
+
+    const card = await readBusinessCard(img, qrText);
     // On ne remplit QUE les champs vides : rescanner une fiche déjà remplie
     // doit la compléter, jamais écraser ce qui a été corrigé à la main.
     const champs = { name:'#s_name', wechat:'#s_wechat', phone:'#s_phone',
@@ -4179,7 +4268,9 @@ $('#scanCardInput').addEventListener('change', async (e)=>{
       const input = $(sel);
       if(valeur && !input.value.trim()){ input.value = valeur; n++; }
     }
-    showToast(n ? t('cardFilled').replace('{n}', n) : t('cardNothing'));
+    if(wechatQr && !n)      showToast(t('qrOnly'));
+    else if(wechatQr)       showToast(t('cardFilledQr').replace('{n}', n));
+    else                    showToast(n ? t('cardFilled').replace('{n}', n) : t('cardNothing'));
   }catch(err){
     const code = (err && err.message) ? err.message : 'inconnue';
     showToast(t('cardFailed').replace('{code}', code));
@@ -4236,7 +4327,8 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
     brands:   cleanBrands(),
     contact:  $('#s_wechat').value.trim(),  // compatibilité avec l'affichage existant
     photo:     cardPhoto ? cardPhoto.data : '',
-    photoType: cardPhoto ? cardPhoto.type : ''
+    photoType: cardPhoto ? cardPhoto.type : '',
+    wechatQr
   };
 
   if(editingSupplierId){

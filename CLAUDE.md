@@ -173,6 +173,9 @@ savoir.
   suffisent.
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
+Une seule bibliothèque extérieure au-delà de Firebase : **jsQR**, chargée à la
+demande depuis cdnjs pour lire les QR des fournisseurs, et dont l'absence ne
+casse rien (voir « Le carnet de fournisseurs »).
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
 déploiement est un choix assumé.
 
@@ -373,9 +376,10 @@ adresse au format « Marché Baima, étage 3, stand 217 », MOQ en note, marques
 modèles. Le vrai problème sur place n'est pas d'ajouter les gens — c'est de se
 souvenir de qui est qui après trente stands dans la journée.
 
-**Un bouton « Scanner une carte de visite »** ouvre l'appareil photo, envoie
-l'image au modèle, et remplit la fiche : nom, WeChat, téléphone, adresse, note.
-La photo de la carte reste attachée au fournisseur (`photo`, `photoType`).
+**Un bouton « Scanner une carte de visite »** ouvre l'appareil photo et fait deux
+choses sur la même image : il **décode le QR** qui s'y trouve, et il **envoie la
+photo au modèle** pour lire le texte — nom, WeChat, téléphone, adresse, note. La
+photo reste attachée au fournisseur (`photo`, `photoType`).
 
 Deux règles, et elles sont volontaires :
 
@@ -385,21 +389,46 @@ Deux règles, et elles sont volontaires :
 - **On ne remplit que les champs VIDES.** Rescanner une fiche déjà corrigée à la
   main doit la compléter, jamais écraser le travail.
 
-**Pourquoi pas le QR code WeChat**, la question revient et la réponse est
-définitive : un QR WeChat personnel ne contient **qu'un jeton opaque**
-(`weixin.qq.com/r/…`) — ni nom, ni identifiant, rien à recopier. Les
-informations du fournisseur sont sur les serveurs de Tencent, qui ne les ouvre à
-aucun tiers. Et **ce jeton expire au bout d'environ un mois**, donc le stocker
-pour « rouvrir la conversation plus tard » lâcherait en silence. Enfin, seul
-WeChat peut ajouter un contact WeChat : aucune application extérieure ne le
-peut. L'appareil photo de l'iPhone scanne déjà ces QR et propose d'ouvrir
-WeChat — c'est le meilleur chemin, et il ne demande aucun code.
+**Le QR code WeChat : ce qu'on en tire, et ce qu'on n'en tirera jamais.**
+Beaucoup de fournisseurs n'ont pas de carte papier — ils montrent un QR, sur une
+pancarte ou sur leur écran. Le scan le lit donc aussi, avec **jsQR**, décodé
+**sur l'appareil** : un modèle de vision ne lit pas un QR de façon fiable, une
+bibliothèque si.
 
-Ce qui remplace vraiment le QR : **un bouton qui copie l'identifiant WeChat**
-depuis la liste des fournisseurs. Un tap, on colle dans la recherche de WeChat,
-et contrairement au jeton du QR, un identifiant ne périme jamais. Le repli
-`execCommand('copy')` est là parce que Safari refuse le presse-papiers hors
-geste direct — un échec silencieux serait pire que pas de bouton.
+Mais il faut savoir ce qu'on y trouve : **rien d'exploitable**. Un QR WeChat
+personnel ne contient qu'un jeton opaque (`weixin.qq.com/r/…`) — ni nom, ni
+identifiant. Les informations du fournisseur sont sur les serveurs de Tencent,
+qui ne les ouvre à aucun tiers, et **seul WeChat peut ajouter un contact
+WeChat**. Aucune application extérieure ne le peut, jamais.
+
+Ce que le lien permet quand même, et c'est ce qui le rend utile : **l'ouvrir
+amène WeChat sur la page d'ajout du fournisseur.** D'où le bouton « Ouvrir dans
+WeChat » (`wechatQr`) sur la fiche. **Ce lien finit par périmer** — WeChat
+renouvelle les codes personnels, sans durée annoncée — donc la fiche affiche la
+mise en garde à côté du bouton : l'identifiant, lui, reste valable.
+
+Trois précautions dans le code :
+
+- **jsQR est chargé à la demande**, au premier scan seulement, et **son échec
+  n'est jamais fatal** : sans lui la lecture du texte continue, on perd juste le
+  lien. C'est ce qui autorise une dépendance extérieure dans une app qui n'en a
+  pas — elle ne peut pas casser ce qui marchait avant. Vérifié au navigateur en
+  coupant le CDN. Cela compte d'autant plus que le site sera consulté depuis la
+  Chine.
+- **Deux tailles sont tentées** (1600 px puis 800 px) : un QR photographié de
+  loin sur une pancarte occupe peu de pixels, et réduire l'image gomme le bruit
+  de l'appareil photo.
+- **`isWechatQr()` vérifie le domaine, pas la sous-chaîne** : `weixin.qq.com`
+  doit être le vrai hôte. Sinon `exemple-weixin.qq.com.evil.tld` passerait.
+
+Le contenu du QR est aussi transmis au modèle avec la photo : une fiche vCard ou
+MECARD, elle, porte de vraies informations, et il sait s'en servir.
+
+Ce qui reste le plus fiable sur la durée : **le bouton qui copie l'identifiant
+WeChat** depuis la liste des fournisseurs. Un tap, on colle dans la recherche de
+WeChat, et contrairement au jeton du QR, un identifiant ne périme jamais. Le
+repli `execCommand('copy')` est là parce que Safari refuse le presse-papiers
+hors geste direct — un échec silencieux serait pire que pas de bouton.
 
 ### Dates de parcours
 
