@@ -248,27 +248,54 @@ h1.small{font-size:72px}
 // le titre, puis le problème, puis la solution, puis la preuve. C'est l'ordre
 // qui explique, pas l'effet. Rien ne rebondit, rien ne tourne.
 export const ANIM = `
-@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-@keyframes riseS{from{opacity:0;transform:translateY(32px) scale(.972)}to{opacity:1;transform:none}}
+/* Le mouvement de la vidéo. Il n'est PAS dans le CSS des affiches : une image
+ * fixe doit se rendre à son état final, pas au premier instant d'une entrée.
+ * shell(html, true) l'ajoute, shell(html) ne l'ajoute pas.
+ *
+ * Langage repris du montage éditorial : rien n'apparaît en fondu, tout se
+ * DÉVOILE derrière une arête nette. L'œil suit un bord qui avance, ce qui est
+ * bien plus lisible qu'une opacité qui monte — et c'est ce qui distingue un
+ * montage travaillé d'un diaporama.
+ *
+ * Tout passe par clip-path : aucune balise n'est touchée, donc les images fixes
+ * restent identiques au pixel près. Vérifié octet par octet.
+ *
+ * Deux directions, et elles ont un sens : le TITRE se dévoile par le bas, comme
+ * une ligne qu'on pose ; tout le reste part de la GAUCHE, dans le sens de la
+ * lecture. Mélanger les deux au hasard donnerait du désordre. */
+@keyframes upMask{
+  from{ clip-path:inset(0 0 104% 0); transform:translateY(16px); }
+  to  { clip-path:inset(0 0 -2% 0);  transform:none; }
+}
+@keyframes leftWipe{
+  from{ clip-path:inset(0 102% 0 0); }
+  to  { clip-path:inset(0 -2% 0 0); }
+}
+@keyframes riseMask{
+  from{ clip-path:inset(14% 0 0 0); transform:translateY(30px) scale(.985); opacity:0; }
+  to  { clip-path:inset(-2% 0 0 0); transform:none; opacity:1; }
+}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
-/* Le surlignage se TRACE de gauche à droite, comme au marqueur. C'est le seul
-   moment appuyé de l'affiche, et il tombe sur le mot qui compte. */
+/* Le surlignage se TRACE de gauche à droite, comme au marqueur. */
 @keyframes draw{from{background-size:0 100%}to{background-size:100% 100%}}
-/* Les masses de lumière dérivent pendant toute l'affiche : c'est ce qui évite
-   qu'une image arrêtée après son entrée ait l'air d'un arrêt sur image. */
+/* Les masses de lumière dérivent pendant toute l'affiche : sans elles, une
+   image arrêtée après son entrée a l'air d'un arrêt sur image. */
 @keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(18px,-30px,0)}}
 
-.top{animation:fadein .5s ease-out both}
-.head{animation:rise .62s cubic-bezier(.22,.9,.3,1) both;animation-delay:.06s}
-.cmp-side.no{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:.44s}
-/* La flèche arrive SEULE, entre les deux : c'est le temps mort qui fait
+/* Sortie exponentielle, courte et décidée : le mouvement éditorial n'accompagne
+   pas, il pose. Une entrée molle sur un fil social se lit comme un ralenti. */
+.top{animation:fadein .42s ease-out both}
+.head h1{animation:upMask .60s cubic-bezier(.16,1,.3,1) both;animation-delay:.10s}
+.head .kick,.head .lead{animation:leftWipe .52s cubic-bezier(.16,1,.3,1) both;animation-delay:.42s}
+.cmp-side.no{animation:leftWipe .46s cubic-bezier(.16,1,.3,1) both;animation-delay:.62s}
+/* La flèche arrive SEULE, entre les deux : ce temps mort est ce qui fait
    comprendre qu'on passe de l'un à l'autre. */
-.cmp-arrow{animation:pop .42s cubic-bezier(.3,1.05,.4,1) both;animation-delay:.86s}
-.cmp-side.yes{animation:rise .5s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.06s}
-.cmp-side.yes .cmp-txt b{background-repeat:no-repeat;animation:draw .5s cubic-bezier(.3,.8,.4,1) both;animation-delay:1.46s}
-.stage{animation:riseS .68s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.30s}
-.foot{animation:rise .55s cubic-bezier(.22,.9,.3,1) both;animation-delay:1.70s}
+.cmp-arrow{animation:pop .38s cubic-bezier(.3,1.05,.4,1) both;animation-delay:.92s}
+.cmp-side.yes{animation:leftWipe .46s cubic-bezier(.16,1,.3,1) both;animation-delay:1.06s}
+.cmp-side.yes .cmp-txt b{background-repeat:no-repeat;animation:draw .46s cubic-bezier(.3,.8,.4,1) both;animation-delay:1.44s}
+.stage{animation:riseMask .64s cubic-bezier(.16,1,.3,1) both;animation-delay:1.34s}
+.foot{animation:leftWipe .5s cubic-bezier(.16,1,.3,1) both;animation-delay:1.66s}
 .glow{animation:drift 8s ease-in-out infinite alternate}
 .g2{animation-duration:11s;animation-direction:alternate-reverse}
 .g3{animation-duration:13s}
