@@ -77,7 +77,10 @@ for(const [i, [name, html]] of used.entries()){
       await p.evaluate(([txt, k])=>{
         const u = document.querySelector('.big u');
         if(!u) return;
-        const m = txt.match(/([^\d]*)([\d\u00a0\u202f .,]+)(.*)$/);
+        // Le nombre doit COMMENCER et FINIR par un chiffre : sinon l'espace fine
+        // qui précède le « € » est avalée dans le nombre, et le compteur écrit
+        // « 49€ » au lieu de « 49 € ».
+        const m = txt.match(/([^\d]*)(\d(?:[\d\u00a0\u202f .,]*\d)?)(.*)$/);
         if(!m){ u.textContent = txt; return; }
         const cible = parseFloat(m[2].replace(/[\u00a0\u202f ]/g,'').replace(',','.'));
         if(!isFinite(cible)){ u.textContent = txt; return; }
