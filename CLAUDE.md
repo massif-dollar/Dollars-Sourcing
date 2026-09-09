@@ -376,10 +376,21 @@ adresse au format « Marché Baima, étage 3, stand 217 », MOQ en note, marques
 modèles. Le vrai problème sur place n'est pas d'ajouter les gens — c'est de se
 souvenir de qui est qui après trente stands dans la journée.
 
-**Un bouton « Scanner une carte de visite »** ouvre l'appareil photo et fait deux
-choses sur la même image : il **décode le QR** qui s'y trouve, et il **envoie la
-photo au modèle** pour lire le texte — nom, WeChat, téléphone, adresse, note. La
-photo reste attachée au fournisseur (`photo`, `photoType`).
+**Un bouton « Scanner »** ouvre un **scanner en direct**, comme celui de WeChat :
+la caméra cherche en continu, dix images par seconde (analyser chaque image ne
+trouve pas le code plus vite et vide la batterie). Dès qu'un QR est vu, l'image
+du moment est figée et fait tout le travail : elle **donne le lien**, elle est
+**lue par le modèle** pour le texte autour — nom, WeChat, téléphone, adresse — et
+elle **reste la photo de la fiche** (`photo`, `photoType`). Un seul geste.
+
+`handleScanFile()` est le point de passage unique du scanner en direct **et** du
+choix d'une photo : une seule suite d'étapes à maintenir, et les deux chemins ne
+peuvent pas diverger. Trois replis, dans cet ordre : sans jsQR ou sans caméra on
+bascule sur la photo, et une permission refusée le dit avant de basculer — un
+bouton qui ne fait rien est pire qu'un chemin plus lent.
+
+`closeQrScanner()` **coupe les pistes vidéo**. Sans ça la caméra reste allumée,
+la pastille verte du téléphone aussi, et la batterie descend en silence.
 
 Deux règles, et elles sont volontaires :
 
@@ -417,9 +428,17 @@ Trois précautions dans le code :
   Chine.
 - **Deux tailles sont tentées** (1600 px puis 800 px) : un QR photographié de
   loin sur une pancarte occupe peu de pixels, et réduire l'image gomme le bruit
-  de l'appareil photo.
-- **`isWechatQr()` vérifie le domaine, pas la sous-chaîne** : `weixin.qq.com`
-  doit être le vrai hôte. Sinon `exemple-weixin.qq.com.evil.tld` passerait.
+  de l'appareil photo. Le logo WeChat au centre du code ne gêne pas : ces QR
+  portent une correction d'erreur élevée, vérifié sur un code réel.
+- **`isWechatQr()` connaît DEUX hôtes**, et il a fallu une vraie capture d'écran
+  pour s'en apercevoir : l'application chinoise produit `weixin.qq.com`, la
+  **version internationale `u.wechat.com`**. Le premier jet ne reconnaissait que
+  le premier — le QR du propriétaire lui-même n'aurait pas déclenché le bouton.
+  **Un décodeur testé sur un QR fabriqué pour le test ne prouve rien** : c'est
+  la capture réelle qui a trouvé le bug.
+- **La comparaison porte sur l'HÔTE, jamais sur la sous-chaîne** : on passe par
+  `new URL().hostname`. Sinon `exemple-weixin.qq.com.piege.tld` passerait pour
+  un lien WeChat.
 
 Le contenu du QR est aussi transmis au modèle avec la photo : une fiche vCard ou
 MECARD, elle, porte de vraies informations, et il sait s'en servir.
