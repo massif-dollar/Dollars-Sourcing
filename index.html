@@ -703,6 +703,54 @@
   .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); outline:none; }
   .field-error{ display:none; color:var(--danger); font-size:12px; margin-top:6px; }
   .hint{ color:var(--text-ghost); font-size:12px; line-height:1.4; margin-top:7px; }
+
+  /* ---- Le scanner de QR ---- */
+  .scan-overlay{
+    position:fixed; inset:0; z-index:120; display:none;
+    background:#0b0d0c; overflow:hidden;
+  }
+  .scan-overlay.open{ display:block; }
+  #scanVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  /* Le voile assombrit tout SAUF le viseur : c'est ce qui dit où viser sans
+     écrire une consigne. */
+  .scan-mask{
+    position:absolute; inset:0; background:rgba(8,10,9,.62);
+    -webkit-mask:radial-gradient(circle at 50% 44%, transparent 0 41vw, #000 41vw);
+            mask:radial-gradient(circle at 50% 44%, transparent 0 41vw, #000 41vw);
+  }
+  .scan-frame{
+    position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+    width:64vw; height:64vw; max-width:340px; max-height:340px;
+  }
+  .scan-frame i{ position:absolute; width:34px; height:34px; border:3px solid var(--accent); }
+  .scan-frame i:nth-child(1){ top:0; left:0; border-right:none; border-bottom:none; border-radius:14px 0 0 0; }
+  .scan-frame i:nth-child(2){ top:0; right:0; border-left:none; border-bottom:none; border-radius:0 14px 0 0; }
+  .scan-frame i:nth-child(3){ bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 14px; }
+  .scan-frame i:nth-child(4){ bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 14px 0; }
+  .scan-line{
+    position:absolute; left:6%; right:6%; height:2px; border-radius:2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow:0 0 14px rgba(46,179,92,.7);
+    animation:scanSweep 2.4s ease-in-out infinite;
+  }
+  @keyframes scanSweep{ 0%,100%{ top:4%; } 50%{ top:96%; } }
+  .scan-help{
+    position:absolute; left:0; right:0; top:calc(44% + 34vw + 26px); text-align:center;
+    color:rgba(255,255,255,.86); font-size:15px; font-weight:500; padding:0 28px;
+  }
+  .scan-bar{
+    position:absolute; left:0; right:0; bottom:calc(28px + env(safe-area-inset-bottom));
+    display:flex; gap:10px; padding:0 22px;
+  }
+  .scan-btn{
+    flex:1; padding:15px 10px; border-radius:16px; cursor:pointer;
+    font-family:var(--font-body); font-size:15px; font-weight:600;
+    background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.2);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .scan-btn.primary{ background:var(--accent); border-color:transparent; }
+  .scan-btn:active{ transform:scale(.97); }
+  @media (prefers-reduced-motion:reduce){ .scan-line{ animation:none; top:50%; } }
   .field.invalid input, .field.invalid select, .field.invalid textarea{ border-color:var(--danger); }
   .field.invalid .field-error{ display:block; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -1672,6 +1720,19 @@
   </div>
 </div>
 
+<!-- Le scanner plein écran. Volontairement sombre : on regarde une image de
+     caméra, et un cadre clair autour fatiguerait la lecture du viseur. -->
+<div class="scan-overlay" id="scanOverlay">
+  <video id="scanVideo" playsinline muted autoplay></video>
+  <div class="scan-mask"></div>
+  <div class="scan-frame"><i></i><i></i><i></i><i></i><span class="scan-line"></span></div>
+  <div class="scan-help" data-i18n="scanHelp">Vise le QR code du fournisseur</div>
+  <div class="scan-bar">
+    <button type="button" class="scan-btn" id="scanFromPhoto" data-i18n="scanFromPhoto">Depuis une photo</button>
+    <button type="button" class="scan-btn primary" id="scanClose" data-i18n="cancelBtn">Annuler</button>
+  </div>
+</div>
+
 <div class="overlay" id="supplierOverlay">
   <div class="sheet">
     <button class="icon-btn close-x" id="closeSupplierSheet">✕</button>
@@ -1944,6 +2005,8 @@ const I18N = {
     cardNothing:'Rien de lisible sur cette photo.', cardFailed:'Lecture impossible ({code}).',
     copyWechat:'Copier l\u2019identifiant WeChat', wechatCopied:'WeChat {id} copié',
     wechatCopyFailed:'Copie impossible',
+    scanHelp:'Vise le QR code du fournisseur', scanFromPhoto:'Depuis une photo',
+    cameraDenied:'Caméra refusée. Choisis une photo à la place.',
     openInWechat:'Ouvrir dans WeChat',
     qrExpiryHint:'Ce lien finit par périmer : WeChat renouvelle les codes. L\u2019identifiant, lui, reste valable.',
     qrOnly:'QR WeChat lu. Rien d\u2019autre de lisible : complète à la main.',
@@ -2094,6 +2157,8 @@ const I18N = {
     cardNothing:'Nothing readable on this photo.', cardFailed:'Could not read the card ({code}).',
     copyWechat:'Copy WeChat ID', wechatCopied:'WeChat {id} copied',
     wechatCopyFailed:'Copy failed',
+    scanHelp:'Point at the supplier\u2019s QR code', scanFromPhoto:'From a photo',
+    cameraDenied:'Camera denied. Pick a photo instead.',
     openInWechat:'Open in WeChat',
     qrExpiryHint:'This link eventually expires: WeChat refreshes its codes. The ID stays valid.',
     qrOnly:'WeChat QR read. Nothing else readable: fill in by hand.',
@@ -4181,10 +4246,17 @@ async function decodeQrFromFile(file){
   finally{ URL.revokeObjectURL(url); }
 }
 
-// Un QR WeChat personnel : weixin.qq.com/r/… ou le schéma weixin://
+// Un QR WeChat personnel. DEUX hôtes, et il a fallu une vraie capture d'écran
+// pour s'en apercevoir : l'application chinoise produit `weixin.qq.com`, la
+// version internationale `u.wechat.com`. Ne reconnaître que le premier, c'est
+// ignorer le QR de la moitié du monde — dont celui du propriétaire.
+const WECHAT_HOSTS = /^(u\.wechat\.com|(.+\.)?wechat\.com|(.+\.)?weixin\.qq\.com)$/i;
 function isWechatQr(txt){
-  const v = String(txt || '');
-  return /(^|\/\/)([a-z0-9.-]*\.)?weixin\.qq\.com\//i.test(v) || /^weixin:\/\//i.test(v);
+  const v = String(txt || '').trim();
+  if(/^weixin:\/\//i.test(v)) return true;
+  // On compare l'HÔTE, jamais la sous-chaîne : sinon
+  // « exemple-weixin.qq.com.piege.tld » passerait pour un lien WeChat.
+  try{ return WECHAT_HOSTS.test(new URL(v).hostname); }catch(e){ return false; }
 }
 
 function showWechatQr(){
@@ -4235,12 +4307,85 @@ async function readBusinessCard(img, qrText){
   return extractJson(text);
 }
 
-$('#scanCardBtn').addEventListener('click', ()=> $('#scanCardInput').click());
-$('#scanCardInput').addEventListener('change', async (e)=>{
+// ---------- Le scanner en direct, comme celui de WeChat ----------
+// On ne demande plus « prends une photo » : on ouvre la caméra et on cherche en
+// continu. C'est le geste que tout le monde connaît, et il supprime l'étape où
+// l'on doit viser juste du premier coup.
+let scanStream = null, scanTimer = null;
+
+function closeQrScanner(){
+  if(scanTimer){ clearInterval(scanTimer); scanTimer = null; }
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  const v = $('#scanVideo');
+  if(v) v.srcObject = null;
+  $('#scanOverlay').classList.remove('open');
+}
+
+async function openQrScanner(){
+  // Sans la bibliothèque ou sans caméra, on retombe sur la photo : mieux vaut
+  // un chemin plus lent qu'un bouton qui ne fait rien.
+  const dispo = await loadJsQR();
+  if(!dispo || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    $('#scanCardInput').click();
+    return;
+  }
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false
+    });
+  }catch(e){
+    // Permission refusée : on le dit, puis on propose l'autre chemin.
+    showToast(t('cameraDenied'));
+    $('#scanCardInput').click();
+    return;
+  }
+  const v = $('#scanVideo');
+  v.srcObject = scanStream;
+  v.setAttribute('playsinline', '');     // sans ça, iOS passe en plein écran natif
+  try{ await v.play(); }catch(e){}
+  $('#scanOverlay').classList.add('open');
+
+  const cv = document.createElement('canvas');
+  const ctx = cv.getContext('2d', { willReadFrequently:true });
+  // Dix images par seconde suffisent largement et ménagent la batterie ;
+  // analyser chaque image ne trouve pas le code plus vite.
+  scanTimer = setInterval(()=>{
+    if(!scanStream || v.readyState < 2) return;
+    const MAX = 720;
+    const ratio = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
+    const w = Math.round(v.videoWidth * ratio), h = Math.round(v.videoHeight * ratio);
+    if(!w || !h) return;
+    cv.width = w; cv.height = h;
+    ctx.drawImage(v, 0, 0, w, h);
+    const found = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+    if(!found || !found.data) return;
+
+    // Trouvé : on fige l'image du moment, qui sert AUSSI de photo à lire.
+    // Un seul geste donne donc le lien, le texte autour et la photo de la fiche.
+    const plein = document.createElement('canvas');
+    plein.width = v.videoWidth; plein.height = v.videoHeight;
+    plein.getContext('2d').drawImage(v, 0, 0);
+    closeQrScanner();
+    if(navigator.vibrate) try{ navigator.vibrate(30); }catch(e){}
+    plein.toBlob(blob=>{
+      if(blob) handleScanFile(new File([blob], 'scan.jpg', { type:'image/jpeg' }), found.data);
+    }, 'image/jpeg', 0.9);
+  }, 100);
+}
+
+$('#scanCardBtn').addEventListener('click', openQrScanner);
+$('#scanClose').addEventListener('click', closeQrScanner);
+$('#scanFromPhoto').addEventListener('click', ()=>{ closeQrScanner(); $('#scanCardInput').click(); });
+$('#scanCardInput').addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
   $('#scanCardInput').value = '';          // sinon rephotographier la même carte ne déclenche rien
-  if(!file) return;
+  if(file) handleScanFile(file);
+});
 
+// Le scanner en direct et la photo aboutissent ici tous les deux : une seule
+// suite d'étapes à maintenir, et le comportement ne peut pas diverger entre
+// les deux chemins. `qrDejaLu` évite de redécoder ce que la caméra a trouvé.
+async function handleScanFile(file, qrDejaLu){
   const btn = $('#scanCardBtn');
   const label = btn.querySelector('span');
   const before = label.textContent;
@@ -4254,7 +4399,7 @@ $('#scanCardInput').addEventListener('change', async (e)=>{
 
     // Le QR est décodé sur l'appareil, avant tout appel au modèle : un modèle
     // de vision ne lit pas un QR de façon fiable, une bibliothèque si.
-    const qrText = await decodeQrFromFile(file);
+    const qrText = qrDejaLu || await decodeQrFromFile(file);
     if(qrText && isWechatQr(qrText)){ wechatQr = qrText; showWechatQr(); }
 
     const card = await readBusinessCard(img, qrText);
@@ -4278,7 +4423,7 @@ $('#scanCardInput').addEventListener('change', async (e)=>{
     btn.disabled = false;
     label.textContent = before;
   }
-});
+}
 
 function openSupplierSheet(id){
   editingSupplierId = id;
