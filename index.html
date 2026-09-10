@@ -1809,10 +1809,13 @@
       </div>
       <!-- Apparaît seulement quand un QR WeChat a été lu sur la photo. -->
       <div class="field" id="wechatQrField" style="display:none;">
+        <!-- Pas de data-i18n ici : showWechatQr() choisit le libellé selon
+             qu'on a lu un code personnel ou un code de groupe, et
+             applyTranslations() l'écraserait. Elle rappelle donc showWechatQr(). -->
         <button type="button" class="btn-secondary" id="openWechatBtn"
                 style="width:100%; color:var(--accent); border-color:var(--accent);"
-                data-i18n="openInWechat">Ouvrir dans WeChat</button>
-        <div class="hint" data-i18n="qrExpiryHint">Ce lien finit par périmer : WeChat renouvelle
+                >Ouvrir dans WeChat</button>
+        <div class="hint" id="wechatQrHint">Ce lien finit par périmer : WeChat renouvelle
           les codes. L'identifiant, lui, reste valable.</div>
       </div>
       <div class="row2">
@@ -2057,7 +2060,7 @@ const I18N = {
     scanStarting:'Ouverture de la caméra\u2026',
     scanTip:'Approche-toi du code, ou prends-le depuis une photo.',
     scanNothingAtAll:'Aucun QR ni texte lisible sur cette image.',
-    scanHit:'QR code lu', scanHitWechat:'QR WeChat lu',
+    scanHit:'QR code lu', scanHitWechat:'QR WeChat lu', scanHitWechatGroup:'QR de groupe WeChat lu',
     scanDenied:'Caméra refusée.\nAutorise-la dans Réglages \u203a Safari, ou choisis une photo.',
     scanNoCamera:'Pas de caméra disponible ici.\nChoisis une photo à la place.',
     scanNoLib:'Le lecteur de QR n\u2019a pas pu se charger.\nVérifie ta connexion, ou choisis une photo.',
@@ -2065,6 +2068,8 @@ const I18N = {
     openInWechat:'Ouvrir dans WeChat',
     qrExpiryHint:'Ce lien finit par périmer : WeChat renouvelle les codes. L\u2019identifiant, lui, reste valable.',
     qrOnly:'QR WeChat lu. Rien d\u2019autre de lisible : complète à la main.',
+    joinWechatGroup:'Rejoindre le groupe WeChat',
+    qrGroupHint:'C\u2019est un QR de GROUPE : il fait rejoindre le groupe, il n\u2019ajoute pas le contact. Ces liens-l\u00e0 p\u00e9riment vite \u2014 ouvre-le tout de suite.',
     cardFilledQr:'QR WeChat lu, {n} champ(s) rempli(s).',
     confirmDeleteOrder:'Supprimer définitivement cette commande ?', confirmDeleteClient:'Supprimer ce client ?',
     confirmDeleteSupplier:'Supprimer ce fournisseur ?',
@@ -2216,7 +2221,7 @@ const I18N = {
     scanStarting:'Opening the camera\u2026',
     scanTip:'Get closer to the code, or pick it from a photo.',
     scanNothingAtAll:'No QR code or readable text on this image.',
-    scanHit:'QR code read', scanHitWechat:'WeChat QR read',
+    scanHit:'QR code read', scanHitWechat:'WeChat QR read', scanHitWechatGroup:'WeChat group QR read',
     scanDenied:'Camera denied.\nAllow it in Settings \u203a Safari, or pick a photo.',
     scanNoCamera:'No camera available here.\nPick a photo instead.',
     scanNoLib:'The QR reader could not load.\nCheck your connection, or pick a photo.',
@@ -2224,6 +2229,8 @@ const I18N = {
     openInWechat:'Open in WeChat',
     qrExpiryHint:'This link eventually expires: WeChat refreshes its codes. The ID stays valid.',
     qrOnly:'WeChat QR read. Nothing else readable: fill in by hand.',
+    joinWechatGroup:'Join the WeChat group',
+    qrGroupHint:'This is a GROUP QR: it joins the group, it does not add the contact. These links expire fast \u2014 open it right away.',
     cardFilledQr:'WeChat QR read, {n} field(s) filled.',
     confirmDeleteOrder:'Permanently delete this order?', confirmDeleteClient:'Delete this client?',
     confirmDeleteSupplier:'Delete this supplier?',
@@ -2365,26 +2372,34 @@ function showToast(msg){
   toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
 }
 
-// Toast avec action « Annuler » (rattrapage immédiat d'une suppression)
-function showUndoToast(msg, onUndo){
+// Toast portant un bouton d'action. Deux usages : « Annuler » juste après une
+// suppression, et « Ouvrir dans WeChat » juste après l'enregistrement d'un
+// fournisseur scanné. Le clic sur ce bouton est un vrai geste utilisateur,
+// donc window.open n'y est pas bloqué — ce ne serait pas le cas depuis
+// l'enregistrement lui-même.
+function showActionToast(msg, label, onAction){
   const el = $('#toast');
   el.innerHTML = '';
   const span = document.createElement('span');
   span.textContent = msg;
   const btn = document.createElement('button');
   btn.className = 'toast-undo';
-  btn.textContent = t('undo');
+  btn.textContent = label;
   btn.addEventListener('click', async ()=>{
     clearTimeout(toastTimer);
     el.classList.remove('show');
-    await onUndo();
-    showToast(t('restored'));
+    await onAction();
   });
   el.appendChild(span);
   el.appendChild(btn);
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.remove('show'), 6000);
+}
+
+// Rattrapage immédiat d'une suppression.
+function showUndoToast(msg, onUndo){
+  showActionToast(msg, t('undo'), async ()=>{ await onUndo(); showToast(t('restored')); });
 }
 function newId(prefix){ return prefix+Date.now()+Math.random().toString(36).slice(2,6); }
 
@@ -2854,6 +2869,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.innerHTML = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
+  showWechatQr();   // libellé choisi à la main : personnel ou groupe
   render();
   if(viewState==='stats'){ buildRangeTabs(); renderStats(); }
   if(viewState==='clients') renderClients();
@@ -4293,22 +4309,37 @@ const QR_TAILLES = [1400, 1000, 800, 640, 520, 420, 340];
 // pixels au lieu de les diluer.
 const QR_CADRES = [[0, 0, 1, 1], [0.14, 0.14, 0.72, 0.72], [0.28, 0.28, 0.44, 0.44]];
 
+// UN SEUL décodage élémentaire, partagé par la photo ET par le direct. C'est
+// volontaire, et ça vient d'un vrai défaut : les deux chemins avaient divergé
+// — le direct n'essayait que trois tailles sur l'image entière — et le QR
+// affiché en plein écran sur le téléphone d'un fournisseur, le cas de tous les
+// stands chinois, se lisait depuis la galerie sans jamais se lire devant la
+// caméra. Une seule primitive : ils ne peuvent plus diverger.
+function decodeAt(ctx, source, sx, sy, cw, ch, MAX){
+  const ratio = Math.min(1, MAX / Math.max(cw, ch));
+  const w = Math.max(1, Math.round(cw * ratio)), h = Math.max(1, Math.round(ch * ratio));
+  ctx.canvas.width = w; ctx.canvas.height = h;
+  ctx.drawImage(source, sx, sy, cw, ch, 0, 0, w, h);
+  // attemptBoth explicitement : un QR clair sur fond sombre — le cas de
+  // tous les QR WeChat en thème sombre — se lit à l'envers.
+  const f = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' });
+  return (f && f.data) ? f.data : '';
+}
+
+// Les trois cadrages, ramenés en pixels pour une source donnée.
+function cadresQr(sw, sh){
+  return QR_CADRES
+    .map(([fx, fy, fw, fh]) => [Math.round(sw * fx), Math.round(sh * fy),
+                                Math.round(sw * fw), Math.round(sh * fh)])
+    .filter(([, , cw, ch]) => cw >= 40 && ch >= 40);
+}
+
 function chercheQr(source, sw, sh){
-  const cv = document.createElement('canvas');
-  const ctx = cv.getContext('2d', { willReadFrequently:true });
-  for(const [fx, fy, fw, fh] of QR_CADRES){
-    const sx = Math.round(sw * fx), sy = Math.round(sh * fy);
-    const cw = Math.round(sw * fw), ch = Math.round(sh * fh);
-    if(cw < 40 || ch < 40) continue;
+  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently:true });
+  for(const [sx, sy, cw, ch] of cadresQr(sw, sh)){
     for(const MAX of QR_TAILLES){
-      const ratio = Math.min(1, MAX / Math.max(cw, ch));
-      const w = Math.max(1, Math.round(cw * ratio)), h = Math.max(1, Math.round(ch * ratio));
-      cv.width = w; cv.height = h;
-      ctx.drawImage(source, sx, sy, cw, ch, 0, 0, w, h);
-      // attemptBoth explicitement : un QR clair sur fond sombre — le cas de
-      // tous les QR WeChat en thème sombre — se lit à l'envers.
-      const f = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' });
-      if(f && f.data) return f.data;
+      const trouve = decodeAt(ctx, source, sx, sy, cw, ch, MAX);
+      if(trouve) return trouve;
     }
   }
   return '';
@@ -4340,8 +4371,21 @@ function isWechatQr(txt){
   try{ return WECHAT_HOSTS.test(new URL(v).hostname); }catch(e){ return false; }
 }
 
+// Un QR de GROUPE (weixin.qq.com/g/…) n'ajoute pas un contact : il fait
+// rejoindre un groupe, et son lien périme en une poignée de jours là où un code
+// personnel tient plus longtemps. Le bouton doit dire lequel des deux il ouvre :
+// atterrir sur « rejoindre le groupe » en croyant ajouter un fournisseur, c'est
+// exactement le genre de surprise qui fait refermer l'app.
+function isWechatGroupQr(txt){
+  if(!isWechatQr(txt)) return false;
+  try{ return /^\/g\//i.test(new URL(String(txt).trim()).pathname); }catch(e){ return false; }
+}
+
 function showWechatQr(){
+  const groupe = isWechatGroupQr(wechatQr);
   $('#wechatQrField').style.display = wechatQr ? 'block' : 'none';
+  $('#openWechatBtn').textContent = t(groupe ? 'joinWechatGroup' : 'openInWechat');
+  $('#wechatQrHint').textContent  = t(groupe ? 'qrGroupHint' : 'qrExpiryHint');
 }
 // Le QR ne se « décode » pas en profil : il ne porte qu'un jeton. Mais l'ouvrir
 // amène WeChat sur la page d'ajout du fournisseur, ce qui est tout ce qu'on veut.
@@ -4488,23 +4532,22 @@ function openQrScanner(){
 }
 
 function lanceRecherche(v){
-  const cv = document.createElement('canvas');
-  const ctx = cv.getContext('2d', { willReadFrequently:true });
-  let fige = false;
+  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently:true });
+  let fige = false, tour = 0;
   // Dix images par seconde suffisent et ménagent la batterie ; analyser chaque
   // image ne trouve pas le code plus vite.
   scanTimer = setInterval(()=>{
     if(fige || !scanStream || v.readyState < 2 || !v.videoWidth) return;
-    // Trois tailles par image : une seule laissait passer des codes qu'un autre
-    // cadrage lisait sans peine.
+    // Le direct ratisse EXACTEMENT comme la photo — sept tailles, trois
+    // cadrages — mais étalé dans le temps : les vingt et un décodages d'un
+    // seul coup feraient saccader la vidéo. Une taille par image, les trois
+    // cadrages à chaque fois. Un QR tenu devant l'objectif est donc couvert en
+    // sept dixièmes de seconde, pour le même coût par image qu'avant.
+    const MAX = QR_TAILLES[tour++ % QR_TAILLES.length];
     let trouve = '';
-    for(const MAX of [900, 640, 460]){
-      const ratio = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
-      const w = Math.round(v.videoWidth * ratio), h = Math.round(v.videoHeight * ratio);
-      cv.width = w; cv.height = h;
-      ctx.drawImage(v, 0, 0, w, h);
-      const f = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' });
-      if(f && f.data){ trouve = f.data; break; }
+    for(const [sx, sy, cw, ch] of cadresQr(v.videoWidth, v.videoHeight)){
+      trouve = decodeAt(ctx, v, sx, sy, cw, ch, MAX);
+      if(trouve) break;
     }
     if(!trouve) return;
     fige = true;
@@ -4515,7 +4558,9 @@ function lanceRecherche(v){
     plein.width = v.videoWidth; plein.height = v.videoHeight;
     plein.getContext('2d').drawImage(v, 0, 0);
 
-    scanState('hit', isWechatQr(trouve) ? t('scanHitWechat') : t('scanHit'));
+    scanState('hit', isWechatGroupQr(trouve) ? t('scanHitWechatGroup')
+                   : isWechatQr(trouve)      ? t('scanHitWechat')
+                   :                           t('scanHit'));
     if(navigator.vibrate) try{ navigator.vibrate(40); }catch(e){}
     clearInterval(scanTimer); scanTimer = null;
 
@@ -4660,8 +4705,21 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
   } else {
     await createSupplierDoc(data);
   }
+  // C'est ICI que l'onglet fournisseurs est relié à WeChat, et c'est le maximum
+  // atteignable : aucune application ne peut ajouter un contact WeChat à la
+  // place de WeChat — Tencent n'expose rien pour ça, à personne. Ce qu'on peut
+  // faire, on le fait : valider la fiche propose d'ouvrir WeChat directement sur
+  // la page d'ajout du fournisseur. Deux appuis, et le lien du QR est utilisé
+  // pendant qu'il est encore frais — il périme.
+  const lienWechat = wechatQr;   // capturé avant que la fiche se remette à zéro
   closeSupplierSheet();
-  showToast(t('toastSupplierSaved'));
+  if(lienWechat){
+    showActionToast(t('toastSupplierSaved'),
+                    t(isWechatGroupQr(lienWechat) ? 'joinWechatGroup' : 'openInWechat'),
+                    ()=>window.open(lienWechat, '_blank'));
+  } else {
+    showToast(t('toastSupplierSaved'));
+  }
 });
 
 $('#closeSupplierSheet').addEventListener('click', closeSupplierSheet);
