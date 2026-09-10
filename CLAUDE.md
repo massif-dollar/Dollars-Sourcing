@@ -412,8 +412,21 @@ identifiant. Les informations du fournisseur sont sur les serveurs de Tencent,
 qui ne les ouvre à aucun tiers, et **seul WeChat peut ajouter un contact
 WeChat**. Aucune application extérieure ne le peut, jamais.
 
+**Et non, l'app ne peut pas ajouter le contact toute seule.** La question est
+revenue trois fois, elle reviendra : aucune application, sur aucun téléphone, ne
+peut ajouter un contact WeChat à la place de WeChat. Ce n'est pas une limite du
+code — Tencent n'expose aucune interface pour ça, à personne. Le maximum
+atteignable est **deux appuis** : le scan ouvre la fiche, on appuie sur « Ouvrir
+dans WeChat », on appuie sur « Ajouter » dans WeChat. C'est ce que fait
+l'application, et c'est ce que ferait n'importe quelle autre.
+
 Ce que le lien permet quand même, et c'est ce qui le rend utile : **l'ouvrir
-amène WeChat sur la page d'ajout du fournisseur.** D'où le bouton « Ouvrir dans
+amène WeChat sur la page d'ajout du fournisseur.** Après le scan, la fiche fait
+**défiler jusqu'au bouton et le fait battre deux fois** : c'est l'étape à ne pas
+rater, puisque le lien du QR finit par périmer. Attention, le lien mène à la
+page d'**ajout**, jamais à la conversation : aucun lien public ne pointe une
+conversation WeChat précise. Pour retrouver quelqu'un plus tard, c'est
+l'identifiant WeChat et son bouton « copier » qui servent. D'où le bouton « Ouvrir dans
 WeChat » (`wechatQr`) sur la fiche. **Ce lien finit par périmer** — WeChat
 renouvelle les codes personnels, sans durée annoncée — donc la fiche affiche la
 mise en garde à côté du bouton : l'identifiant, lui, reste valable.
@@ -426,10 +439,19 @@ Trois précautions dans le code :
   pas — elle ne peut pas casser ce qui marchait avant. Vérifié au navigateur en
   coupant le CDN. Cela compte d'autant plus que le site sera consulté depuis la
   Chine.
-- **Deux tailles sont tentées** (1600 px puis 800 px) : un QR photographié de
-  loin sur une pancarte occupe peu de pixels, et réduire l'image gomme le bruit
-  de l'appareil photo. Le logo WeChat au centre du code ne gêne pas : ces QR
-  portent une correction d'erreur élevée, vérifié sur un code réel.
+- **La lecture d'un QR est bien plus capricieuse qu'il n'y paraît**, et c'est le
+  deuxième bug qu'une vraie capture a trouvé. Le décodeur a besoin que les
+  carrés du code tombent proprement sur des pixels : la **même image** a échoué
+  à 1600 px et à 1200 px, puis réussi à 800 px. Deux tailles ne suffisent donc
+  pas — on ratisse **sept tailles × trois cadrages** (l'image entière, puis deux
+  recadrages au centre, parce qu'un QR photographié de loin est minuscule dans
+  l'image et que le recadrer lui rend des pixels au lieu de les diluer). Premier
+  succès, on s'arrête : 130 à 500 ms sur les cas réels.
+- **`inversionAttempts:'attemptBoth'` est passé explicitement.** Les QR WeChat
+  affichés en thème sombre sont **clairs sur fond noir** : sans ça, la moitié
+  des captures d'écran ne se lisent pas.
+- Le logo WeChat au centre du code ne gêne pas : ces QR portent une correction
+  d'erreur élevée, vérifié sur des codes réels — personnel *et* de groupe.
 - **`isWechatQr()` connaît DEUX hôtes**, et il a fallu une vraie capture d'écran
   pour s'en apercevoir : l'application chinoise produit `weixin.qq.com`, la
   **version internationale `u.wechat.com`**. Le premier jet ne reconnaissait que
