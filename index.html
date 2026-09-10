@@ -4298,6 +4298,45 @@ function loadJsQR(){
   return jsQrLoading;
 }
 
+// LE DÉCODEUR DE WECHAT LUI-MÊME. Tencent a ouvert l'algorithme de son scanner
+// dans OpenCV (`wechat_qrcode`) ; `vendor/wechat-qr/` en est le portage
+// WebAssembly. Deux réseaux de neurones — un détecteur qui trouve le code dans
+// l'image, un modèle de super-résolution qui l'agrandit quand il est trop petit.
+// C'est précisément ce qui manque à jsQR, et précisément le cas du terrain : le
+// fournisseur tend son téléphone à bout de bras, le QR fait 200 px dans l'image.
+// Mesuré sur les vraies captures : jsQR échoue, celui-ci lit en une centaine de
+// millisecondes.
+//
+// Il est servi depuis NOTRE domaine, pas d'un CDN, et c'est délibéré : cdnjs,
+// jsdelivr et unpkg sont bloqués ou capricieux en Chine, c'est-à-dire là où on
+// s'en sert. Il arrive donc si l'app arrive.
+//
+// jsQR RESTE LA BASE, celui-ci est le renfort : 40 Ko qui démarrent tout de
+// suite contre 6 Mo qui se chargent derrière. Son échec n'est jamais fatal —
+// sans lui, le scanner se comporte exactement comme avant.
+let wechatLoading = null, wechatScan = null;
+function loadWechatDecoder(){
+  if(wechatScan) return Promise.resolve(true);
+  if(wechatLoading) return wechatLoading;
+  wechatLoading = import('./vendor/wechat-qr/index.js')
+    .then(async (m)=>{ await m.ready(); wechatScan = m.scan; return true; })
+    .catch(()=> false);
+  return wechatLoading;
+}
+
+// Il lit l'image entière : le détecteur fait lui-même le cadrage, on n'a donc
+// aucune cascade à lui donner.
+async function decodeWechat(source, sw, sh){
+  if(!wechatScan) return '';
+  try{
+    const cv = document.createElement('canvas');
+    cv.width = sw; cv.height = sh;
+    cv.getContext('2d').drawImage(source, 0, 0, sw, sh);
+    const r = await wechatScan(cv);
+    return (r && r.text) ? r.text : '';
+  }catch(e){ return ''; }
+}
+
 // La lecture d'un QR est bien plus capricieuse qu'il n'y paraît : le décodeur a
 // besoin que les carrés du code tombent proprement sur des pixels. Un QR
 // photographié sur un écran a réellement échoué à 1600 px et à 1200 px, puis
@@ -4346,14 +4385,27 @@ function chercheQr(source, sw, sh){
 }
 
 async function decodeQrFromFile(file){
-  if(!await loadJsQR()) return '';
+  const jsqrPret = await loadJsQR();
   const url = URL.createObjectURL(file);
   try{
     const img = await new Promise((res, rej)=>{
       const i = new Image();
       i.onload = ()=>res(i); i.onerror = rej; i.src = url;
     });
-    return chercheQr(img, img.width, img.height);
+    // jsQR d'abord : quand il trouve, c'est en 100 ms et rien d'autre n'est
+    // nécessaire.
+    if(jsqrPret){
+      const vite = chercheQr(img, img.width, img.height);
+      if(vite) return vite;
+    }
+    // Il n'a rien trouvé. Ici, contrairement au direct, ON ATTEND le décodeur de
+    // WeChat : la personne regarde une roue tourner, quelques secondes de
+    // chargement valent mieux qu'un « rien de lisible » sur une image qui, elle,
+    // portait bien un QR.
+    if(await loadWechatDecoder()){
+      return await decodeWechat(img, img.width, img.height);
+    }
+    return '';
   }catch(e){ return ''; }
   finally{ URL.revokeObjectURL(url); }
 }
@@ -4493,6 +4545,10 @@ function openQrScanner(){
     audio: false
   });
   const lib = loadJsQR();                       // en parallèle, pas avant
+  // Le décodeur de WeChat démarre en même temps, et on ne l'ATTEND PAS : jsQR
+  // fait 40 Ko et suffit à tout ce qui est net, ces 6 Mo-là ne doivent retarder
+  // l'ouverture de personne. Il entre dans la boucle dès qu'il est prêt.
+  loadWechatDecoder();
 
   scanScrollAvant = document.body.style.overflow;
   document.body.style.overflow = 'hidden';   // sinon la fiche défile derrière
@@ -4533,26 +4589,16 @@ function openQrScanner(){
 
 function lanceRecherche(v){
   const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently:true });
-  let fige = false, tour = 0;
-  // Dix images par seconde suffisent et ménagent la batterie ; analyser chaque
-  // image ne trouve pas le code plus vite.
-  scanTimer = setInterval(()=>{
-    if(fige || !scanStream || v.readyState < 2 || !v.videoWidth) return;
-    // Le direct ratisse EXACTEMENT comme la photo — sept tailles, trois
-    // cadrages — mais étalé dans le temps : les vingt et un décodages d'un
-    // seul coup feraient saccader la vidéo. Une taille par image, les trois
-    // cadrages à chaque fois. Un QR tenu devant l'objectif est donc couvert en
-    // sept dixièmes de seconde, pour le même coût par image qu'avant.
-    const MAX = QR_TAILLES[tour++ % QR_TAILLES.length];
-    let trouve = '';
-    for(const [sx, sy, cw, ch] of cadresQr(v.videoWidth, v.videoHeight)){
-      trouve = decodeAt(ctx, v, sx, sy, cw, ch, MAX);
-      if(trouve) break;
-    }
-    if(!trouve) return;
+  let fige = false, tour = 0, wechatOccupe = false;
+
+  // Trouvé — par jsQR ou par le décodeur de WeChat, le traitement est le même.
+  // Une seule sortie : les deux ne peuvent pas se contredire, et le second à
+  // répondre ne peut pas rouvrir ce que le premier a fermé.
+  const traiter = (trouve)=>{
+    if(fige) return;
     fige = true;
 
-    // Trouvé : l'image du moment est figée et sert AUSSI de photo à lire.
+    // L'image du moment est figée et sert AUSSI de photo à lire.
     // Un seul geste donne le lien, le texte autour et la photo de la fiche.
     const plein = document.createElement('canvas');
     plein.width = v.videoWidth; plein.height = v.videoHeight;
@@ -4572,6 +4618,34 @@ function lanceRecherche(v){
         if(blob) handleScanFile(new File([blob], 'scan.jpg', { type:'image/jpeg' }), trouve);
       }, 'image/jpeg', 0.9);
     }, 620);
+  };
+  // Dix images par seconde suffisent et ménagent la batterie ; analyser chaque
+  // image ne trouve pas le code plus vite.
+  scanTimer = setInterval(()=>{
+    if(fige || !scanStream || v.readyState < 2 || !v.videoWidth) return;
+    // Le direct ratisse EXACTEMENT comme la photo — sept tailles, trois
+    // cadrages — mais étalé dans le temps : les vingt et un décodages d'un
+    // seul coup feraient saccader la vidéo. Une taille par image, les trois
+    // cadrages à chaque fois. Un QR tenu devant l'objectif est donc couvert en
+    // sept dixièmes de seconde, pour le même coût par image qu'avant.
+    const MAX = QR_TAILLES[tour++ % QR_TAILLES.length];
+    let trouve = '';
+    for(const [sx, sy, cw, ch] of cadresQr(v.videoWidth, v.videoHeight)){
+      trouve = decodeAt(ctx, v, sx, sy, cw, ch, MAX);
+      if(trouve) break;
+    }
+    if(trouve){ traiter(trouve); return; }
+
+    // jsQR n'a rien vu. On passe la main au décodeur de WeChat, mais UNE FOIS
+    // SUR QUATRE seulement : il coûte une centaine de millisecondes, l'appeler à
+    // chaque image ferait ramer la vidéo pour rien. Deux fois et demie par
+    // seconde suffisent largement à rattraper un QR tenu trop loin, et
+    // `wechatOccupe` empêche les appels de s'empiler.
+    if(wechatOccupe || !wechatScan || tour % 4) return;
+    wechatOccupe = true;
+    decodeWechat(v, v.videoWidth, v.videoHeight)
+      .then(txt=>{ if(txt) traiter(txt); })
+      .finally(()=>{ wechatOccupe = false; });
   }, 100);
 }
 
