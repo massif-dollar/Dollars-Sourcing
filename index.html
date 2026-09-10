@@ -1790,7 +1790,11 @@
               style="width:100%; margin-bottom:14px; color:var(--accent); border-color:var(--accent);">
         <span data-i18n="scanCard">Scanner un QR ou une carte</span>
       </button>
-      <input type="file" id="scanCardInput" accept="image/*" capture="environment" style="display:none;">
+      <!-- PAS de capture= : cet attribut force l'appareil photo sur iOS et
+           SUPPRIME l'entrée « Photothèque ». Sans lui, iOS propose le choix —
+           photothèque, appareil photo, fichiers — et une capture d'écran de QR
+           prise hors de l'app redevient utilisable. -->
+      <input type="file" id="scanCardInput" accept="image/*" style="display:none;">
       <div class="field" id="cardPhotoField" style="display:none;">
         <label data-i18n="fieldCardPhoto">Carte de visite</label>
         <img class="req-photo" id="s_cardPhoto" alt="">
@@ -2051,6 +2055,8 @@ const I18N = {
     wechatCopyFailed:'Copie impossible',
     scanHelp:'Vise le QR code du fournisseur', scanFromPhoto:'Depuis une photo',
     scanStarting:'Ouverture de la caméra\u2026',
+    scanTip:'Approche-toi du code, ou prends-le depuis une photo.',
+    scanNothingAtAll:'Aucun QR ni texte lisible sur cette image.',
     scanHit:'QR code lu', scanHitWechat:'QR WeChat lu',
     scanDenied:'Caméra refusée.\nAutorise-la dans Réglages \u203a Safari, ou choisis une photo.',
     scanNoCamera:'Pas de caméra disponible ici.\nChoisis une photo à la place.',
@@ -2208,6 +2214,8 @@ const I18N = {
     wechatCopyFailed:'Copy failed',
     scanHelp:'Point at the supplier\u2019s QR code', scanFromPhoto:'From a photo',
     scanStarting:'Opening the camera\u2026',
+    scanTip:'Get closer to the code, or pick it from a photo.',
+    scanNothingAtAll:'No QR code or readable text on this image.',
     scanHit:'QR code read', scanHitWechat:'WeChat QR read',
     scanDenied:'Camera denied.\nAllow it in Settings \u203a Safari, or pick a photo.',
     scanNoCamera:'No camera available here.\nPick a photo instead.',
@@ -4386,6 +4394,16 @@ async function readBusinessCard(img, qrText){
 // continu. C'est le geste que tout le monde connaît, et il supprime l'étape où
 // l'on doit viser juste du premier coup.
 let scanStream = null, scanTimer = null, scanTrack = null;
+let scanHint = null, scanScrollAvant = '';
+
+// Quitter l'app doit couper la caméra : iOS gèle le flux sans le libérer, la
+// pastille verte reste allumée et la batterie descend pour rien.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && scanStream) closeQrScanner();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && $('#scanOverlay').classList.contains('open')) closeQrScanner();
+});
 
 function scanState(etat, texte){
   const o = $('#scanOverlay');
@@ -4395,6 +4413,8 @@ function scanState(etat, texte){
 
 function closeQrScanner(){
   if(scanTimer){ clearInterval(scanTimer); scanTimer = null; }
+  if(scanHint){ clearTimeout(scanHint); scanHint = null; }
+  document.body.style.overflow = scanScrollAvant;
   if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
   scanTrack = null;
   const v = $('#scanVideo');
@@ -4418,11 +4438,20 @@ function openQrScanner(){
     return;
   }
   const demande = navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } },
+    video: {
+      facingMode: { ideal: 'environment' },
+      width: { ideal: 1280 },
+      // Sans mise au point continue, un QR tenu à trente centimètres reste
+      // flou et ne se décode jamais. « ideal » et non « exact » : un appareil
+      // qui ne sait pas faire doit quand même ouvrir sa caméra.
+      focusMode: { ideal: 'continuous' }
+    },
     audio: false
   });
   const lib = loadJsQR();                       // en parallèle, pas avant
 
+  scanScrollAvant = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';   // sinon la fiche défile derrière
   $('#scanOverlay').classList.add('open');
   scanState('start', t('scanStarting'));
 
@@ -4447,6 +4476,11 @@ function openQrScanner(){
       return;
     }
     scanState('scan', t('scanHelp'));
+    // Six secondes sans rien trouver : on donne la bonne consigne plutôt que de
+    // laisser tourner en silence. C'est presque toujours la distance.
+    scanHint = setTimeout(()=>{
+      if($('#scanOverlay').dataset.state === 'scan') $('#scanHelp').textContent = t('scanTip');
+    }, 6000);
     lanceRecherche(v);
   }).catch(()=>{
     scanState('error', t('scanDenied'));
@@ -4544,6 +4578,8 @@ async function handleScanFile(file, qrDejaLu){
       const input = $(sel);
       if(valeur && !input.value.trim()){ input.value = valeur; n++; }
     }
+    // Quatre issues possibles, et chacune a son message : dire « rien de
+    // lisible » alors qu'un QR a été lu ferait douter d'un scan réussi.
     if(wechatQr){
       // Le bouton est plus bas dans la fiche : sans ça on ne le voit pas, et
       // l'étape « ajouter sur WeChat » est justement celle qu'il ne faut pas
@@ -4553,8 +4589,11 @@ async function handleScanFile(file, qrDejaLu){
       b.classList.add('pulse');
       setTimeout(()=>b.classList.remove('pulse'), 2600);
       showToast(n ? t('cardFilledQr').replace('{n}', n) : t('qrOnly'));
+    } else if(n){
+      showToast(t('cardFilled').replace('{n}', n));
     } else {
-      showToast(n ? t('cardFilled').replace('{n}', n) : t('cardNothing'));
+      // Ni QR ni texte : on le dit franchement, avec le geste qui marche.
+      showToast(qrText ? t('cardNothing') : t('scanNothingAtAll'));
     }
   }catch(err){
     const code = (err && err.message) ? err.message : 'inconnue';
