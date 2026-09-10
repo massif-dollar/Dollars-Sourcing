@@ -511,6 +511,41 @@ Trois précautions dans le code :
 - **La comparaison porte sur l'HÔTE, jamais sur la sous-chaîne** : on passe par
   `new URL().hostname`. Sinon `exemple-weixin.qq.com.piege.tld` passerait pour
   un lien WeChat.
+- **LE DIRECT ET LA PHOTO PARTAGENT UNE SEULE PRIMITIVE (`decodeAt`), et c'est
+  le bug qui a fait douter du scanner trois fois de suite.** Les deux chemins
+  avaient divergé sans que rien ne le signale : la photo ratissait sept tailles
+  × trois cadrages, le direct se contentait de trois tailles sur l'image
+  entière. Conséquence exacte, vérifiée sur sa vraie capture : un QR **affiché
+  en plein écran sur le téléphone d'un fournisseur** — le cas de tous les stands
+  chinois — se lisait depuis la galerie et **ne se lisait jamais devant la
+  caméra**. Le scanner tournait sans rien trouver, on finissait par prendre une
+  photo, le modèle lisait le nom écrit à l'écran, et la fiche arrivait sans
+  bouton WeChat : le symptôme ne ressemblait pas du tout à sa cause.
+  Le direct ratisse donc **exactement** comme la photo, mais **étalé dans le
+  temps** : vingt et un décodages sur une image feraient saccader la vidéo, donc
+  **une taille par image, les trois cadrages à chaque fois**. Un QR tenu devant
+  l'objectif est couvert en sept dixièmes de seconde, pour le même coût par
+  image qu'avant. Règle générale : **deux chemins qui doivent donner le même
+  résultat partagent la fonction, jamais l'algorithme recopié.**
+- **Un QR de GROUPE n'est pas un QR de contact.** `weixin.qq.com/g/…` fait
+  rejoindre un groupe, il n'ajoute personne — et ces liens-là périment en
+  quelques jours (celui du test portait « valid until 9/13 » écrit dessus).
+  `isWechatGroupQr()` les distingue sur le **chemin** de l'URL, et le bouton
+  change de libellé : « Rejoindre le groupe WeChat » au lieu de « Ouvrir dans
+  WeChat ». Atterrir sur une page « rejoindre le groupe » en croyant ajouter un
+  fournisseur, c'est le genre de surprise qui fait refermer l'app.
+  Ce libellé-là **n'a pas de `data-i18n`** : il est choisi à la main selon le
+  type de QR, donc `applyTranslations()` l'écraserait au changement de langue.
+  Elle rappelle `showWechatQr()` à la fin, c'est ce qui tient les deux langues.
+
+**Enregistrer la fiche propose d'ouvrir WeChat, et c'est là qu'est le lien entre
+l'onglet fournisseurs et WeChat.** On scanne, on valide, un toast propose
+« Ouvrir dans WeChat » (ou « Rejoindre le groupe ») et WeChat s'ouvre sur la
+page d'ajout du fournisseur. Le bouton du toast est un **vrai geste
+utilisateur** : `window.open` n'y est pas bloqué, alors qu'il le serait depuis
+l'enregistrement lui-même. C'est aussi ce qui fait servir le lien **pendant
+qu'il est frais** — il périme. `showUndoToast()` est devenu un cas particulier
+de `showActionToast(msg, libellé, action)`.
 
 Le contenu du QR est aussi transmis au modèle avec la photo : une fiche vCard ou
 MECARD, elle, porte de vraies informations, et il sait s'en servir.
