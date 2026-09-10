@@ -703,6 +703,15 @@
   .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); outline:none; }
   .field-error{ display:none; color:var(--danger); font-size:12px; margin-top:6px; }
   .hint{ color:var(--text-ghost); font-size:12px; line-height:1.4; margin-top:7px; }
+  /* Trois battements puis plus rien : un halo qui pulse sans fin devient un
+     décor qu'on ne voit plus. */
+  @keyframes pulseRing{
+    0%   { box-shadow:0 0 0 0 rgba(46,179,92,.5); }
+    70%  { box-shadow:0 0 0 14px rgba(46,179,92,0); }
+    100% { box-shadow:0 0 0 0 rgba(46,179,92,0); }
+  }
+  .pulse{ animation:pulseRing 1.3s ease-out 2; }
+  @media (prefers-reduced-motion:reduce){ .pulse{ animation:none; } }
 
   /* ---- Le scanner de QR ---- */
   .scan-overlay{
@@ -4220,9 +4229,38 @@ function loadJsQR(){
   return jsQrLoading;
 }
 
-// Un QR photographié de loin, sur une pancarte ou un écran de téléphone, occupe
-// peu de pixels. On tente donc deux tailles : la grande d'abord, puis une plus
-// petite qui gomme le bruit de l'appareil photo et sauve les prises floues.
+// La lecture d'un QR est bien plus capricieuse qu'il n'y paraît : le décodeur a
+// besoin que les carrés du code tombent proprement sur des pixels. Un QR
+// photographié sur un écran a réellement échoué à 1600 px et à 1200 px, puis
+// réussi à 800 px — la même image. Deux tailles ne suffisent donc pas : il faut
+// ratisser.
+const QR_TAILLES = [1400, 1000, 800, 640, 520, 420, 340];
+// Et trois cadrages : l'image entière, puis deux recadrages au centre. Un QR
+// photographié de loin est minuscule dans l'image ; le recadrer lui rend des
+// pixels au lieu de les diluer.
+const QR_CADRES = [[0, 0, 1, 1], [0.14, 0.14, 0.72, 0.72], [0.28, 0.28, 0.44, 0.44]];
+
+function chercheQr(source, sw, sh){
+  const cv = document.createElement('canvas');
+  const ctx = cv.getContext('2d', { willReadFrequently:true });
+  for(const [fx, fy, fw, fh] of QR_CADRES){
+    const sx = Math.round(sw * fx), sy = Math.round(sh * fy);
+    const cw = Math.round(sw * fw), ch = Math.round(sh * fh);
+    if(cw < 40 || ch < 40) continue;
+    for(const MAX of QR_TAILLES){
+      const ratio = Math.min(1, MAX / Math.max(cw, ch));
+      const w = Math.max(1, Math.round(cw * ratio)), h = Math.max(1, Math.round(ch * ratio));
+      cv.width = w; cv.height = h;
+      ctx.drawImage(source, sx, sy, cw, ch, 0, 0, w, h);
+      // attemptBoth explicitement : un QR clair sur fond sombre — le cas de
+      // tous les QR WeChat en thème sombre — se lit à l'envers.
+      const f = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' });
+      if(f && f.data) return f.data;
+    }
+  }
+  return '';
+}
+
 async function decodeQrFromFile(file){
   if(!await loadJsQR()) return '';
   const url = URL.createObjectURL(file);
@@ -4231,17 +4269,7 @@ async function decodeQrFromFile(file){
       const i = new Image();
       i.onload = ()=>res(i); i.onerror = rej; i.src = url;
     });
-    for(const MAX of [1600, 800]){
-      const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
-      const w = Math.round(img.width * ratio), h = Math.round(img.height * ratio);
-      const cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      const ctx = cv.getContext('2d', { willReadFrequently:true });
-      ctx.drawImage(img, 0, 0, w, h);
-      const found = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
-      if(found && found.data) return found.data;
-    }
-    return '';
+    return chercheQr(img, img.width, img.height);
   }catch(e){ return ''; }
   finally{ URL.revokeObjectURL(url); }
 }
@@ -4351,14 +4379,21 @@ async function openQrScanner(){
   // analyser chaque image ne trouve pas le code plus vite.
   scanTimer = setInterval(()=>{
     if(!scanStream || v.readyState < 2) return;
-    const MAX = 720;
-    const ratio = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
-    const w = Math.round(v.videoWidth * ratio), h = Math.round(v.videoHeight * ratio);
-    if(!w || !h) return;
-    cv.width = w; cv.height = h;
-    ctx.drawImage(v, 0, 0, w, h);
-    const found = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
-    if(!found || !found.data) return;
+    if(!v.videoWidth || !v.videoHeight) return;
+    // Trois tailles par image plutôt qu'une : à dix images par seconde le coût
+    // reste négligeable, et une seule taille laissait passer des codes qu'un
+    // autre cadrage lisait sans peine.
+    let trouve = '';
+    for(const MAX of [900, 640, 460]){
+      const ratio = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
+      const w = Math.round(v.videoWidth * ratio), h = Math.round(v.videoHeight * ratio);
+      cv.width = w; cv.height = h;
+      ctx.drawImage(v, 0, 0, w, h);
+      const f = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts:'attemptBoth' });
+      if(f && f.data){ trouve = f.data; break; }
+    }
+    if(!trouve) return;
+    const found = { data: trouve };
 
     // Trouvé : on fige l'image du moment, qui sert AUSSI de photo à lire.
     // Un seul geste donne donc le lien, le texte autour et la photo de la fiche.
@@ -4413,9 +4448,18 @@ async function handleScanFile(file, qrDejaLu){
       const input = $(sel);
       if(valeur && !input.value.trim()){ input.value = valeur; n++; }
     }
-    if(wechatQr && !n)      showToast(t('qrOnly'));
-    else if(wechatQr)       showToast(t('cardFilledQr').replace('{n}', n));
-    else                    showToast(n ? t('cardFilled').replace('{n}', n) : t('cardNothing'));
+    if(wechatQr){
+      // Le bouton est plus bas dans la fiche : sans ça on ne le voit pas, et
+      // l'étape « ajouter sur WeChat » est justement celle qu'il ne faut pas
+      // rater — le lien du QR finit par périmer.
+      const b = $('#openWechatBtn');
+      b.scrollIntoView({ block:'center', behavior:'smooth' });
+      b.classList.add('pulse');
+      setTimeout(()=>b.classList.remove('pulse'), 2600);
+      showToast(n ? t('cardFilledQr').replace('{n}', n) : t('qrOnly'));
+    } else {
+      showToast(n ? t('cardFilled').replace('{n}', n) : t('cardNothing'));
+    }
   }catch(err){
     const code = (err && err.message) ? err.message : 'inconnue';
     showToast(t('cardFailed').replace('{code}', code));
