@@ -411,6 +411,34 @@ réussi**.
 choix d'une photo : une seule suite d'étapes à maintenir, et les deux chemins ne
 peuvent pas diverger.
 
+**`capture=` est interdit sur ce champ de fichier.** L'attribut force
+l'appareil photo sur iOS et **supprime l'entrée « Photothèque »** : une capture
+d'écran de QR prise hors de l'app devenait inutilisable. Sans lui, iOS propose
+le choix — photothèque, appareil photo, fichiers.
+
+**Les quatre issues d'un scan ont chacune leur message**, et ce n'est pas du
+confort : dire « rien de lisible » alors qu'un QR a bien été lu ferait douter
+d'un scan réussi.
+
+| QR trouvé | champs remplis | ce qui s'affiche |
+|---|---|---|
+| oui | oui | « QR WeChat lu, N champs remplis. » |
+| oui | non | « QR WeChat lu. Rien d'autre de lisible : complète à la main. » |
+| non | oui | « N champs remplis. Vérifie et enregistre. » |
+| non | non | « Aucun QR ni texte lisible sur cette image. » |
+
+**Le cycle de vie du scanner**, et chaque point vient d'un vrai défaut :
+`focusMode:'continuous'` en `ideal` (sans mise au point continue, un QR tenu à
+trente centimètres reste flou et ne se décode jamais — et en `exact`, un
+appareil qui ne sait pas faire refuserait d'ouvrir sa caméra) ; le défilement de
+la fiche est bloqué derrière l'écran ; **Échap** ferme ; et **passer en
+arrière-plan coupe la caméra** — iOS gèle le flux sans le libérer, la pastille
+verte reste allumée et la batterie descend pour rien.
+
+Après **six secondes sans rien trouver**, la consigne change : « Approche-toi du
+code, ou prends-le depuis une photo. » C'est presque toujours la distance, et
+laisser tourner en silence n'apprend rien.
+
 `closeQrScanner()` **coupe les pistes vidéo**. Sans ça la caméra reste allumée,
 la pastille verte du téléphone aussi, et la batterie descend en silence.
 
