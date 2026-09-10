@@ -172,10 +172,20 @@ savoir.
   client, et une adresse de départ fixe les effacerait. Les balises iOS lui
   suffisent.
 
+- `vendor/wechat-qr/` — **l'algorithme du scanner de WeChat lui-même**, en
+  WebAssembly (portage MIT de `wechat_qrcode`, que Tencent a ouvert dans
+  OpenCV). Deux réseaux de neurones : un détecteur qui trouve le code dans
+  l'image, un modèle de super-résolution qui l'agrandit quand il est trop petit.
+  6,2 Mo, **servis depuis notre domaine et pas d'un CDN** — cdnjs, jsdelivr et
+  unpkg sont bloqués ou capricieux en Chine, c'est-à-dire là où on s'en sert.
+  Le fichier est autonome, les modèles y sont embarqués, il ne va rien chercher
+  ailleurs. Voir son `README.md` pour la mise à jour et les mesures.
+
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
-Une seule bibliothèque extérieure au-delà de Firebase : **jsQR**, chargée à la
-demande depuis cdnjs pour lire les QR des fournisseurs, et dont l'absence ne
-casse rien (voir « Le carnet de fournisseurs »).
+Deux bibliothèques extérieures au-delà de Firebase, toutes deux pour lire les QR
+des fournisseurs, et **aucune des deux ne casse quoi que ce soit en son
+absence** : **jsQR** (40 Ko, chargée à la demande depuis cdnjs) et le décodeur
+de **WeChat** ci-dessus (voir « Le carnet de fournisseurs »).
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
 déploiement est un choix assumé.
 
@@ -527,6 +537,51 @@ Trois précautions dans le code :
   l'objectif est couvert en sept dixièmes de seconde, pour le même coût par
   image qu'avant. Règle générale : **deux chemins qui doivent donner le même
   résultat partagent la fonction, jamais l'algorithme recopié.**
+- **LE DÉCODEUR DE WECHAT LUI-MÊME EST EMBARQUÉ, et c'est ce qui a enfin réglé
+  le fond du problème.** jsQR lit ce qui est net ; il ne sait rien faire d'un QR
+  petit. Or le geste du terrain, c'est le fournisseur qui **tend son téléphone à
+  bout de bras** — le code fait alors deux cents pixels dans l'image, et aucune
+  cascade de tailles ne rattrape des pixels qui n'existent pas.
+  Tencent a ouvert l'algorithme de son propre scanner dans OpenCV
+  (`wechat_qrcode`) : un détecteur SSD qui localise le code, et **un modèle de
+  super-résolution (QRSR) qui le reconstruit quand il est trop petit**. C'est
+  exactement la pièce qui manquait. Mesuré sur les vraies captures de Massif :
+
+  | l'image | jsQR (7 tailles × 3 cadrages) | WeChat |
+  |---|---|---|
+  | plein écran, de près | oui | oui |
+  | à bout de bras (351 px) | oui | oui |
+  | **tenu loin (210 px)** | **non** | **oui, 91 ms** |
+  | **loin et flou (327 px)** | **non** | **oui, 102 ms** |
+  | de travers, sombre, flou | oui | oui |
+
+  Partout où les deux lisent, ils lisent la même chose : **aucun faux positif**.
+  En direct, sur une caméra simulée montrant un téléphone à bout de bras :
+  **détecté en une seconde avec, jamais détecté sans.**
+- **jsQR reste la base, WeChat est le renfort — et cet ordre est tout.**
+  40 Ko qui démarrent tout de suite contre 6 Mo qui se chargent derrière. Le
+  scanner s'ouvre sans jamais attendre le gros fichier ; celui-ci entre dans la
+  boucle dès qu'il est prêt. **Si son chargement échoue, le scanner se comporte
+  exactement comme avant** — vérifié en coupant le dossier au navigateur : aucune
+  erreur, aucun blocage, les cas faciles passent toujours. C'est la seule
+  condition qui autorise 6 Mo dans une app qui tient en un fichier.
+- **Le renfort tourne UNE FOIS SUR QUATRE dans le direct, jamais à chaque
+  image.** Il coûte une centaine de millisecondes ; à dix images par seconde, la
+  vidéo saccaderait pour rien. Deux fois et demie par seconde suffisent, et un
+  drapeau (`wechatOccupe`) empêche les appels de s'empiler. Sur le chemin
+  **photo**, au contraire, **on l'attend** : la personne regarde déjà une roue
+  tourner, et quelques secondes valent mieux qu'un « rien de lisible » sur une
+  image qui portait bien un QR.
+- **Les deux décodeurs sortent par la même porte** (`traiter()` dans
+  `lanceRecherche`). Deux chemins asynchrones qui peuvent répondre en même
+  temps, c'est deux fiches ouvertes ou un scanner qui se rouvre après s'être
+  fermé : le drapeau `fige` est testé **dans** la sortie commune, pas chez
+  chaque appelant.
+- **Les fichiers du décodeur portent l'extension `.js`, pas `.mjs`**, et c'est
+  volontaire : tout hébergeur sert `.js` en `text/javascript`, alors qu'un
+  `.mjs` servi en `application/octet-stream` ferait échouer l'import **sans
+  autre symptôme qu'un scanner redevenu ordinaire**. Un risque gratuit, donc
+  supprimé.
 - **Un QR de GROUPE n'est pas un QR de contact.** `weixin.qq.com/g/…` fait
   rejoindre un groupe, il n'ajoute personne — et ces liens-là périment en
   quelques jours (celui du test portait « valid until 9/13 » écrit dessus).
@@ -1028,7 +1083,7 @@ référence de commande à écrire sur le carton avec recherche par référence 
 par numéro de suivi,
 page de formulaire client avec bannière propre et renvoi WhatsApp,
 mode discret qui masque montants et marges, scan de carte de visite
-fournisseur, programme de fidélité complet
+fournisseur, scanner de QR avec l'algorithme de WeChat lui-même, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques.
