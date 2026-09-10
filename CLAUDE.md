@@ -383,11 +383,33 @@ du moment est figée et fait tout le travail : elle **donne le lien**, elle est
 **lue par le modèle** pour le texte autour — nom, WeChat, téléphone, adresse — et
 elle **reste la photo de la fiche** (`photo`, `photoType`). Un seul geste.
 
+**LE PIÈGE iOS QUI A COÛTÉ TROIS ALLERS-RETOURS**, et il vaut pour toute
+demande de permission : sur iPhone, `getUserMedia` n'obtient la caméra que s'il
+est appelé **dans le geste de l'utilisateur**. La moindre attente avant — ici un
+`await loadJsQR()` qui va chercher la bibliothèque sur le CDN — **consomme ce
+geste**, Safari refuse, et l'ancien code basculait alors en silence sur
+l'appareil photo. Résultat vu par l'utilisateur : un bouton « Scanner un QR »
+qui ouvre… l'appareil photo d'iOS, avec son déclencheur et son zoom. Rien ne
+disait pourquoi.
+
+**La règle : la permission d'abord, sans aucun `await` avant elle.** La
+bibliothèque se charge **en parallèle**, pendant que l'objectif s'ouvre.
+
+Et **on ne bascule jamais en silence** : un bouton qui fait autre chose que ce
+qu'il annonce est pire qu'un bouton en panne. Les échecs s'affichent dans le
+scanner lui-même — caméra refusée, pas de caméra, lecteur injoignable — chacun
+avec ce qu'il faut faire, et « Depuis une photo » reste un choix **explicite**.
+
+L'écran est piloté par un seul attribut, `data-state` : `start` (la caméra
+démarre), `scan` (on cherche), `hit` (trouvé), `error`. Un seul attribut, donc
+aucun état ne peut en contredire un autre. À la détection, le cadre se referme
+et une pastille verte tombe au centre pendant 0,6 s avant que l'écran ne
+disparaisse : **un scan sans accusé de réception laisse toujours douter d'avoir
+réussi**.
+
 `handleScanFile()` est le point de passage unique du scanner en direct **et** du
 choix d'une photo : une seule suite d'étapes à maintenir, et les deux chemins ne
-peuvent pas diverger. Trois replis, dans cet ordre : sans jsQR ou sans caméra on
-bascule sur la photo, et une permission refusée le dit avant de basculer — un
-bouton qui ne fait rien est pire qu'un chemin plus lent.
+peuvent pas diverger.
 
 `closeQrScanner()` **coupe les pistes vidéo**. Sans ça la caméra reste allumée,
 la pastille verte du téléphone aussi, et la batterie descend en silence.
@@ -785,6 +807,12 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    qui est réservé au propriétaire — sinon les invités ne peuvent pas créer le leur.
 5. **Spécificité CSS** : une règle comme `.key span` peut écraser `.ripple`.
    L'onde de contact est un `<i>` avec un sélecteur prioritaire.
+
+   **Même famille, et déjà rencontrée depuis** : deux `@keyframes` de même nom,
+   c'est **la dernière de la feuille qui gagne**, silencieusement. Un halo
+   ajouté sous le nom `pulseRing` a été écrasé par le `pulseRing` des anneaux du
+   mode vocal, cinq cents lignes plus bas — le bouton prenait l'animation de
+   l'orbe. **Avant de nommer une animation, chercher le nom dans le fichier.**
 6. **Dans une rangée de boutons**, le bouton principal doit être `flex:1`,
    sinon il prend 100% et écrase le bouton « Annuler ».
 7. **Crédits Netlify** : seul un **déploiement de production** en consomme
