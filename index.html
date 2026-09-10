@@ -704,34 +704,41 @@
   .field-error{ display:none; color:var(--danger); font-size:12px; margin-top:6px; }
   .hint{ color:var(--text-ghost); font-size:12px; line-height:1.4; margin-top:7px; }
   /* Trois battements puis plus rien : un halo qui pulse sans fin devient un
-     décor qu'on ne voit plus. */
-  @keyframes pulseRing{
+     décor qu'on ne voit plus.
+     NOM À PART, et ce n'est pas cosmétique : « pulseRing » existait déjà pour
+     les anneaux du mode vocal, plus bas dans la feuille. Deux keyframes de même
+     nom, c'est la dernière qui gagne — ce bouton aurait pris l'animation de
+     l'orbe au lieu de la sienne. */
+  @keyframes pulseBtnRing{
     0%   { box-shadow:0 0 0 0 rgba(46,179,92,.5); }
     70%  { box-shadow:0 0 0 14px rgba(46,179,92,0); }
     100% { box-shadow:0 0 0 0 rgba(46,179,92,0); }
   }
-  .pulse{ animation:pulseRing 1.3s ease-out 2; }
+  .pulse{ animation:pulseBtnRing 1.3s ease-out 2; }
   @media (prefers-reduced-motion:reduce){ .pulse{ animation:none; } }
 
   /* ---- Le scanner de QR ---- */
-  .scan-overlay{
-    position:fixed; inset:0; z-index:120; display:none;
-    background:#0b0d0c; overflow:hidden;
-  }
+  .scan-overlay{ position:fixed; inset:0; z-index:120; display:none; background:#0b0d0c; overflow:hidden; }
   .scan-overlay.open{ display:block; }
   #scanVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  /* Le voile assombrit tout SAUF le viseur : c'est ce qui dit où viser sans
-     écrire une consigne. */
+  /* Le voile assombrit tout SAUF le viseur : ça dit où viser sans l'écrire. */
   .scan-mask{
-    position:absolute; inset:0; background:rgba(8,10,9,.62);
-    -webkit-mask:radial-gradient(circle at 50% 44%, transparent 0 41vw, #000 41vw);
-            mask:radial-gradient(circle at 50% 44%, transparent 0 41vw, #000 41vw);
+    position:absolute; inset:0; background:rgba(8,10,9,.66);
+    /* Le disque clair suit le cadre d'une quinzaine de pixels : plus large, il
+       laisse un halo qui ne veut rien dire ; plus étroit, il rogne les coins. */
+    -webkit-mask:radial-gradient(circle at 50% 42%, transparent 0 min(35vw,188px), #000 min(35vw,188px));
+            mask:radial-gradient(circle at 50% 42%, transparent 0 min(35vw,188px), #000 min(35vw,188px));
+    transition:background .25s ease;
   }
   .scan-frame{
-    position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
-    width:64vw; height:64vw; max-width:340px; max-height:340px;
+    position:absolute; left:50%; top:42%; transform:translate(-50%,-50%);
+    width:62vw; height:62vw; max-width:330px; max-height:330px;
+    transition:transform .28s cubic-bezier(.3,1.1,.4,1);
   }
-  .scan-frame i{ position:absolute; width:34px; height:34px; border:3px solid var(--accent); }
+  .scan-frame i{
+    position:absolute; width:34px; height:34px; border:3px solid var(--accent);
+    transition:border-color .2s ease, width .28s ease, height .28s ease;
+  }
   .scan-frame i:nth-child(1){ top:0; left:0; border-right:none; border-bottom:none; border-radius:14px 0 0 0; }
   .scan-frame i:nth-child(2){ top:0; right:0; border-left:none; border-bottom:none; border-radius:0 14px 0 0; }
   .scan-frame i:nth-child(3){ bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 14px; }
@@ -740,12 +747,32 @@
     position:absolute; left:6%; right:6%; height:2px; border-radius:2px;
     background:linear-gradient(90deg, transparent, var(--accent), transparent);
     box-shadow:0 0 14px rgba(46,179,92,.7);
-    animation:scanSweep 2.4s ease-in-out infinite;
+    animation:scanSweep 2.2s ease-in-out infinite;
   }
   @keyframes scanSweep{ 0%,100%{ top:4%; } 50%{ top:96%; } }
+
+  /* Trouvé : le cadre se referme et la pastille tombe au centre. Un scan sans
+     accusé de réception laisse toujours douter d'avoir réussi. */
+  .scan-badge{
+    position:absolute; left:50%; top:42%; transform:translate(-50%,-50%) scale(.3);
+    width:88px; height:88px; border-radius:50%; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:44px; font-weight:700;
+    opacity:0; pointer-events:none; box-shadow:0 16px 40px rgba(46,179,92,.5);
+    transition:opacity .18s ease, transform .32s cubic-bezier(.3,1.4,.4,1);
+  }
+  .scan-overlay[data-state="hit"] .scan-badge{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  .scan-overlay[data-state="hit"] .scan-line{ display:none; }
+  .scan-overlay[data-state="hit"] .scan-frame{ transform:translate(-50%,-50%) scale(.86); }
+  .scan-overlay[data-state="hit"] .scan-frame i{ width:52px; height:52px; }
+  .scan-overlay[data-state="start"] .scan-line,
+  .scan-overlay[data-state="error"] .scan-line{ display:none; }
+  .scan-overlay[data-state="error"] .scan-frame i{ border-color:rgba(255,255,255,.28); }
+  .scan-overlay[data-state="error"] .scan-mask{ background:rgba(8,10,9,.9); }
+
   .scan-help{
-    position:absolute; left:0; right:0; top:calc(44% + 34vw + 26px); text-align:center;
-    color:rgba(255,255,255,.86); font-size:15px; font-weight:500; padding:0 28px;
+    position:absolute; left:0; right:0; top:calc(42% + 33vw + 30px); text-align:center;
+    color:rgba(255,255,255,.9); font-size:15px; font-weight:500; line-height:1.45;
+    padding:0 30px; white-space:pre-line;
   }
   .scan-bar{
     position:absolute; left:0; right:0; bottom:calc(28px + env(safe-area-inset-bottom));
@@ -757,9 +784,14 @@
     background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.2);
     -webkit-tap-highlight-color:transparent;
   }
+  .scan-btn#scanTorch{ flex:0 0 58px; font-size:20px; }
+  .scan-btn#scanTorch.on{ background:#fff; }
   .scan-btn.primary{ background:var(--accent); border-color:transparent; }
   .scan-btn:active{ transform:scale(.97); }
-  @media (prefers-reduced-motion:reduce){ .scan-line{ animation:none; top:50%; } }
+  @media (prefers-reduced-motion:reduce){
+    .scan-line{ animation:none; top:50%; }
+    .scan-badge, .scan-frame, .scan-frame i{ transition:none; }
+  }
   .field.invalid input, .field.invalid select, .field.invalid textarea{ border-color:var(--danger); }
   .field.invalid .field-error{ display:block; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -1729,14 +1761,17 @@
   </div>
 </div>
 
-<!-- Le scanner plein écran. Volontairement sombre : on regarde une image de
-     caméra, et un cadre clair autour fatiguerait la lecture du viseur. -->
-<div class="scan-overlay" id="scanOverlay">
-  <video id="scanVideo" playsinline muted autoplay></video>
+<!-- Le scanner plein écran. L'état vit dans data-state : start (la caméra
+     démarre), scan (on cherche), hit (trouvé), error (impossible). Un seul
+     attribut pilote tout l'écran, donc aucun état ne peut en contredire un autre. -->
+<div class="scan-overlay" id="scanOverlay" data-state="start">
+  <video id="scanVideo" playsinline webkit-playsinline muted autoplay></video>
   <div class="scan-mask"></div>
   <div class="scan-frame"><i></i><i></i><i></i><i></i><span class="scan-line"></span></div>
-  <div class="scan-help" data-i18n="scanHelp">Vise le QR code du fournisseur</div>
+  <div class="scan-badge">✓</div>
+  <div class="scan-help" id="scanHelp"></div>
   <div class="scan-bar">
+    <button type="button" class="scan-btn" id="scanTorch" hidden aria-label="Lampe">💡</button>
     <button type="button" class="scan-btn" id="scanFromPhoto" data-i18n="scanFromPhoto">Depuis une photo</button>
     <button type="button" class="scan-btn primary" id="scanClose" data-i18n="cancelBtn">Annuler</button>
   </div>
@@ -2015,6 +2050,11 @@ const I18N = {
     copyWechat:'Copier l\u2019identifiant WeChat', wechatCopied:'WeChat {id} copié',
     wechatCopyFailed:'Copie impossible',
     scanHelp:'Vise le QR code du fournisseur', scanFromPhoto:'Depuis une photo',
+    scanStarting:'Ouverture de la caméra\u2026',
+    scanHit:'QR code lu', scanHitWechat:'QR WeChat lu',
+    scanDenied:'Caméra refusée.\nAutorise-la dans Réglages \u203a Safari, ou choisis une photo.',
+    scanNoCamera:'Pas de caméra disponible ici.\nChoisis une photo à la place.',
+    scanNoLib:'Le lecteur de QR n\u2019a pas pu se charger.\nVérifie ta connexion, ou choisis une photo.',
     cameraDenied:'Caméra refusée. Choisis une photo à la place.',
     openInWechat:'Ouvrir dans WeChat',
     qrExpiryHint:'Ce lien finit par périmer : WeChat renouvelle les codes. L\u2019identifiant, lui, reste valable.',
@@ -2167,6 +2207,11 @@ const I18N = {
     copyWechat:'Copy WeChat ID', wechatCopied:'WeChat {id} copied',
     wechatCopyFailed:'Copy failed',
     scanHelp:'Point at the supplier\u2019s QR code', scanFromPhoto:'From a photo',
+    scanStarting:'Opening the camera\u2026',
+    scanHit:'QR code read', scanHitWechat:'WeChat QR read',
+    scanDenied:'Camera denied.\nAllow it in Settings \u203a Safari, or pick a photo.',
+    scanNoCamera:'No camera available here.\nPick a photo instead.',
+    scanNoLib:'The QR reader could not load.\nCheck your connection, or pick a photo.',
     cameraDenied:'Camera denied. Pick a photo instead.',
     openInWechat:'Open in WeChat',
     qrExpiryHint:'This link eventually expires: WeChat refreshes its codes. The ID stays valid.',
@@ -4301,6 +4346,7 @@ Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
 {"name":"","wechat":"","phone":"","whatsapp":"","address":"","note":""}
 RÈGLES :
 - name : le nom de l'entreprise, sinon celui de la personne. Garde le nom latin s'il existe ; sinon translittère en pinyin et mets les idéogrammes entre parenthèses.
+  Si l'image est un QR de GROUPE WeChat, le NOM DU GROUPE est le nom à mettre ici — ne laisse jamais name vide alors qu'un nom est lisible à l'écran.
 - wechat : l'identifiant WeChat (微信号, WeChat, WX). JAMAIS un numéro de téléphone.
 - phone : le téléphone avec son indicatif s'il est écrit.
 - whatsapp : seulement s'il est écrit noir sur blanc.
@@ -4339,50 +4385,84 @@ async function readBusinessCard(img, qrText){
 // On ne demande plus « prends une photo » : on ouvre la caméra et on cherche en
 // continu. C'est le geste que tout le monde connaît, et il supprime l'étape où
 // l'on doit viser juste du premier coup.
-let scanStream = null, scanTimer = null;
+let scanStream = null, scanTimer = null, scanTrack = null;
+
+function scanState(etat, texte){
+  const o = $('#scanOverlay');
+  o.dataset.state = etat;
+  $('#scanHelp').textContent = texte || '';
+}
 
 function closeQrScanner(){
   if(scanTimer){ clearInterval(scanTimer); scanTimer = null; }
   if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  scanTrack = null;
   const v = $('#scanVideo');
   if(v) v.srcObject = null;
+  $('#scanTorch').hidden = true;
   $('#scanOverlay').classList.remove('open');
 }
 
-async function openQrScanner(){
-  // Sans la bibliothèque ou sans caméra, on retombe sur la photo : mieux vaut
-  // un chemin plus lent qu'un bouton qui ne fait rien.
-  const dispo = await loadJsQR();
-  if(!dispo || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    $('#scanCardInput').click();
+// LE POINT CRITIQUE, et c'est le bug qui a envoyé Massif sur l'appareil photo
+// d'iOS au lieu du scanner : sur iPhone, la permission caméra n'est accordée
+// que si getUserMedia est appelé DANS le geste de l'utilisateur. La moindre
+// attente avant — ici le chargement de jsQR depuis le CDN — consomme ce geste,
+// Safari refuse, et on tombait dans le repli photo sans que rien ne l'explique.
+//
+// D'où l'ordre : la caméra d'abord, sans aucun await avant elle ; la
+// bibliothèque se charge en parallèle pendant que l'objectif s'ouvre.
+function openQrScanner(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    $('#scanOverlay').classList.add('open');
+    scanState('error', t('scanNoCamera'));
     return;
   }
-  try{
-    scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } }, audio: false
-    });
-  }catch(e){
-    // Permission refusée : on le dit, puis on propose l'autre chemin.
-    showToast(t('cameraDenied'));
-    $('#scanCardInput').click();
-    return;
-  }
-  const v = $('#scanVideo');
-  v.srcObject = scanStream;
-  v.setAttribute('playsinline', '');     // sans ça, iOS passe en plein écran natif
-  try{ await v.play(); }catch(e){}
-  $('#scanOverlay').classList.add('open');
+  const demande = navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } },
+    audio: false
+  });
+  const lib = loadJsQR();                       // en parallèle, pas avant
 
+  $('#scanOverlay').classList.add('open');
+  scanState('start', t('scanStarting'));
+
+  demande.then(async (flux)=>{
+    scanStream = flux;
+    scanTrack = flux.getVideoTracks()[0] || null;
+    const v = $('#scanVideo');
+    v.srcObject = flux;
+    try{ await v.play(); }catch(e){}
+
+    // La lampe n'existe que sur certains appareils : on ne montre le bouton
+    // que si la caméra dit savoir le faire.
+    try{
+      const caps = scanTrack && scanTrack.getCapabilities ? scanTrack.getCapabilities() : {};
+      $('#scanTorch').hidden = !caps.torch;
+    }catch(e){ $('#scanTorch').hidden = true; }
+
+    if(!await lib){
+      // Sans le décodeur, on le DIT au lieu de basculer en douce : un bouton
+      // qui fait autre chose que ce qu'il annonce est pire qu'un bouton en panne.
+      scanState('error', t('scanNoLib'));
+      return;
+    }
+    scanState('scan', t('scanHelp'));
+    lanceRecherche(v);
+  }).catch(()=>{
+    scanState('error', t('scanDenied'));
+  });
+}
+
+function lanceRecherche(v){
   const cv = document.createElement('canvas');
   const ctx = cv.getContext('2d', { willReadFrequently:true });
-  // Dix images par seconde suffisent largement et ménagent la batterie ;
-  // analyser chaque image ne trouve pas le code plus vite.
+  let fige = false;
+  // Dix images par seconde suffisent et ménagent la batterie ; analyser chaque
+  // image ne trouve pas le code plus vite.
   scanTimer = setInterval(()=>{
-    if(!scanStream || v.readyState < 2) return;
-    if(!v.videoWidth || !v.videoHeight) return;
-    // Trois tailles par image plutôt qu'une : à dix images par seconde le coût
-    // reste négligeable, et une seule taille laissait passer des codes qu'un
-    // autre cadrage lisait sans peine.
+    if(fige || !scanStream || v.readyState < 2 || !v.videoWidth) return;
+    // Trois tailles par image : une seule laissait passer des codes qu'un autre
+    // cadrage lisait sans peine.
     let trouve = '';
     for(const MAX of [900, 640, 460]){
       const ratio = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
@@ -4393,24 +4473,40 @@ async function openQrScanner(){
       if(f && f.data){ trouve = f.data; break; }
     }
     if(!trouve) return;
-    const found = { data: trouve };
+    fige = true;
 
-    // Trouvé : on fige l'image du moment, qui sert AUSSI de photo à lire.
-    // Un seul geste donne donc le lien, le texte autour et la photo de la fiche.
+    // Trouvé : l'image du moment est figée et sert AUSSI de photo à lire.
+    // Un seul geste donne le lien, le texte autour et la photo de la fiche.
     const plein = document.createElement('canvas');
     plein.width = v.videoWidth; plein.height = v.videoHeight;
     plein.getContext('2d').drawImage(v, 0, 0);
-    closeQrScanner();
-    if(navigator.vibrate) try{ navigator.vibrate(30); }catch(e){}
-    plein.toBlob(blob=>{
-      if(blob) handleScanFile(new File([blob], 'scan.jpg', { type:'image/jpeg' }), found.data);
-    }, 'image/jpeg', 0.9);
+
+    scanState('hit', isWechatQr(trouve) ? t('scanHitWechat') : t('scanHit'));
+    if(navigator.vibrate) try{ navigator.vibrate(40); }catch(e){}
+    clearInterval(scanTimer); scanTimer = null;
+
+    // On laisse voir l'accusé de réception avant de refermer : fermer à
+    // l'instant même donne l'impression que rien ne s'est passé.
+    setTimeout(()=>{
+      closeQrScanner();
+      plein.toBlob(blob=>{
+        if(blob) handleScanFile(new File([blob], 'scan.jpg', { type:'image/jpeg' }), trouve);
+      }, 'image/jpeg', 0.9);
+    }, 620);
   }, 100);
 }
 
 $('#scanCardBtn').addEventListener('click', openQrScanner);
 $('#scanClose').addEventListener('click', closeQrScanner);
 $('#scanFromPhoto').addEventListener('click', ()=>{ closeQrScanner(); $('#scanCardInput').click(); });
+$('#scanTorch').addEventListener('click', async ()=>{
+  if(!scanTrack) return;
+  const on = !$('#scanTorch').classList.contains('on');
+  try{
+    await scanTrack.applyConstraints({ advanced: [{ torch: on }] });
+    $('#scanTorch').classList.toggle('on', on);
+  }catch(e){ $('#scanTorch').hidden = true; }
+});
 $('#scanCardInput').addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
   $('#scanCardInput').value = '';          // sinon rephotographier la même carte ne déclenche rien
