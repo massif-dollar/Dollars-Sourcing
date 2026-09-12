@@ -172,6 +172,8 @@ savoir.
   client, et une adresse de départ fixe les effacerait. Les balises iOS lui
   suffisent.
 
+- `vendor/jsqr.js` — jsQR, **servi depuis notre domaine et plus depuis cdnjs**.
+  Voir le piège 16 : c'est ce CDN qui a paralysé le scanner.
 - `vendor/wechat-qr/` — **l'algorithme du scanner de WeChat lui-même**, en
   WebAssembly (portage MIT de `wechat_qrcode`, que Tencent a ouvert dans
   OpenCV). Deux réseaux de neurones : un détecteur qui trouve le code dans
@@ -183,9 +185,10 @@ savoir.
 
 Tout est en HTML/CSS/JS pur, un seul fichier par app, sans build ni framework.
 Deux bibliothèques extérieures au-delà de Firebase, toutes deux pour lire les QR
-des fournisseurs, et **aucune des deux ne casse quoi que ce soit en son
-absence** : **jsQR** (40 Ko, chargée à la demande depuis cdnjs) et le décodeur
-de **WeChat** ci-dessus (voir « Le carnet de fournisseurs »).
+des fournisseurs, **toutes deux servies depuis notre domaine** et **aucune des
+deux ne casse quoi que ce soit en son absence** : **jsQR** et le décodeur de
+**WeChat** (voir « Le carnet de fournisseurs »). **Plus aucun CDN dans le
+scanner** — le piège 16 dit pourquoi.
 **Ne pas introduire de build, de bundler ou de framework** : la simplicité de
 déploiement est un choix assumé.
 
@@ -1045,6 +1048,55 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    (Snap, TikTok) qui réutilise le même onglet, il pourrait revoir le premier
    colis. À vérifier en vrai ; le correctif serait de passer le numéro aussi en
    paramètre de requête (`?nums=`) pour forcer une vraie navigation.
+
+16. **UN SCRIPT DONT L'HÔTE NE RÉPOND PAS NE DÉCLENCHE NI `onload` NI `onerror`.
+   Il pend.** C'est le bug qui a fait dire trois fois « ça marche toujours pas »
+   alors que trois correctifs successifs étaient bel et bien en ligne, et il
+   valait tous les autres réunis.
+
+   Le scanner chargeait jsQR depuis cdnjs, puis **attendait cette promesse avant
+   de lancer la recherche** — alors que la caméra, elle, était déjà démarrée
+   deux lignes plus haut. Sur un réseau où cdnjs ne répond pas (la Chine,
+   précisément là où on s'en sert), la promesse ne se résolvait jamais. Résultat
+   vu par l'utilisateur : **la caméra s'affiche, le cadre s'affiche, et rien
+   n'est jamais cherché.** Pas d'erreur, pas de message, un scanner qui a l'air
+   de fonctionner. Reproduit au navigateur en faisant pendre cdnjs : bloqué sur
+   « Ouverture de la caméra… » indéfiniment ; corrigé, détection en 0,6 s.
+
+   **Trois règles qui en sortent, et elles dépassent le scanner :**
+
+   - **Ne jamais attendre une ressource optionnelle avant de rendre un écran
+     utilisable.** La recherche démarre dès que la caméra est là et se sert du
+     décodeur qui est chargé *à cet instant*. Un chargement lent ne doit jamais
+     pouvoir geler autre chose que lui-même.
+   - **Tout chargement de script porte un délai maximum** (`chargeScript`).
+     `onerror` n'est pas une garantie de sortie, seul un `setTimeout` en est une.
+   - **Ce qui est indispensable ne vient pas d'un CDN.** jsQR est désormais dans
+     `vendor/`, comme le décodeur de WeChat. Une app utilisée derrière le
+     pare-feu chinois ne peut pas dépendre d'un hôte étranger pour une fonction
+     de base.
+
+   **Et la ligne de diagnostic du scanner sort de la même soirée.** Sur un
+   iPhone il n'y a pas de console : trois allers-retours se sont passés en
+   suppositions parce que rien à l'écran ne disait ce qui se passait. Après six
+   secondes sans résultat — ou sur n'importe quelle erreur — le scanner affiche
+   désormais une ligne discrète :
+
+       v2026-09-12 · jsQR ok · WeChat ok · 1280×720 · 242 img · lum 125
+
+   Version (a-t-il seulement reçu le correctif ?), les deux décodeurs, la taille
+   réelle du flux, le nombre d'images analysées, et la **luminosité moyenne** —
+   une caméra qui rend du noir, le flux gelé d'iOS revenu d'arrière-plan, se
+   reconnaît à ce dernier chiffre et à rien d'autre, parce que l'écran, lui, a
+   l'air normal. **Une capture d'écran de cette ligne remplace une heure de
+   questions.** C'est le piège 13 (« afficher le code d'erreur ») appliqué au
+   scanner, et la règle vaut pour tout nouvel écran qui peut échouer en silence.
+
+   **La leçon de méthode, enfin** : devant « ça ne marche pas », la première
+   question n'est pas « quel code corriger » mais **« la personne a-t-elle seulement
+   la version corrigée, et qu'affiche son écran exactement ? »**. Un symptôme
+   décrit en un mot (« il ne trouve rien ») valait ici trois hypothèses
+   différentes, et c'est la question posée qui a tranché — pas le code relu.
 
 ## Assistant IA
 
