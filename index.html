@@ -721,6 +721,14 @@
   .scan-overlay{ position:fixed; inset:0; z-index:120; display:none; background:#0b0d0c; overflow:hidden; }
   .scan-overlay.open{ display:block; }
   #scanVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  /* Discrète : c'est un outil de dépannage, pas un élément de l'interface. */
+  .scan-diag{
+    position:absolute; left:0; right:0; bottom:74px; z-index:3;
+    text-align:center; font-size:10.5px; line-height:1.5;
+    font-variant-numeric:tabular-nums; letter-spacing:.02em;
+    color:rgba(255,255,255,.5); padding:0 16px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
   /* Le voile assombrit tout SAUF le viseur : ça dit où viser sans l'écrire. */
   .scan-mask{
     position:absolute; inset:0; background:rgba(8,10,9,.66);
@@ -1770,6 +1778,14 @@
   <div class="scan-frame"><i></i><i></i><i></i><i></i><span class="scan-line"></span></div>
   <div class="scan-badge">✓</div>
   <div class="scan-help" id="scanHelp"></div>
+  <!-- La ligne de diagnostic. Cachée tant que tout va bien, elle apparaît avec
+       la consigne des six secondes. Sur un iPhone il n'y a pas de console : sans
+       elle, un scan qui ne trouve rien ne laisse que des suppositions — et on en
+       a déjà payé trois. Une capture d'écran de cette ligne dit tout : la
+       version, les deux décodeurs, la taille réelle du flux, le nombre d'images
+       analysées, et la luminosité moyenne (une caméra qui rend du noir se
+       reconnaît à un chiffre proche de zéro). -->
+  <div class="scan-diag" id="scanDiag" hidden></div>
   <div class="scan-bar">
     <button type="button" class="scan-btn" id="scanTorch" hidden aria-label="Lampe">💡</button>
     <button type="button" class="scan-btn" id="scanFromPhoto" data-i18n="scanFromPhoto">Depuis une photo</button>
@@ -4281,20 +4297,37 @@ function showCardPhoto(){
 }
 
 // jsQR est chargé À LA DEMANDE, au premier scan seulement, et son échec n'est
-// jamais fatal : sans lui la lecture du texte continue, on perd juste le lien
-// WeChat. C'est ce qui autorise une dépendance extérieure dans une app qui n'en
-// a pas — elle ne peut pas casser ce qui marchait avant.
+// jamais fatal.
+//
+// IL EST SERVI DEPUIS NOTRE DOMAINE, PLUS DEPUIS CDNJS, et c'est un vrai bug
+// corrigé, pas une préférence. Un script dont l'hôte ne répond pas — cdnjs
+// depuis la Chine, exactement là où on s'en sert — **ne déclenche ni `onload`
+// ni `onerror`** : il pend. La promesse ne se résolvait donc jamais, et comme on
+// l'attendait avant de lancer la recherche, le scanner affichait la caméra, le
+// cadre, tout l'écran… et ne cherchait rien. Jamais. Sans le moindre message.
+//
+// DEUX VERROUS plutôt qu'un, parce que ce silence-là coûte des heures :
+// le fichier est local, ET le chargement a un délai maximum. Une promesse qui
+// pend ne doit plus jamais pouvoir bloquer quoi que ce soit.
+function chargeScript(src, msMax){
+  return new Promise(resolve=>{
+    let fini = false;
+    const finir = (ok)=>{ if(!fini){ fini = true; resolve(ok); } };
+    const sc = document.createElement('script');
+    sc.src = src;
+    sc.onload  = ()=> finir(true);
+    sc.onerror = ()=> finir(false);
+    document.head.appendChild(sc);
+    setTimeout(()=> finir(false), msMax || 8000);
+  });
+}
+
 let jsQrLoading = null;
 function loadJsQR(){
   if(typeof jsQR === 'function') return Promise.resolve(true);
   if(jsQrLoading) return jsQrLoading;
-  jsQrLoading = new Promise(resolve=>{
-    const sc = document.createElement('script');
-    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
-    sc.onload  = ()=> resolve(typeof jsQR === 'function');
-    sc.onerror = ()=> resolve(false);
-    document.head.appendChild(sc);
-  });
+  jsQrLoading = chargeScript('./vendor/jsqr.js', 8000)
+    .then(()=> typeof jsQR === 'function');
   return jsQrLoading;
 }
 
@@ -4490,7 +4523,7 @@ async function readBusinessCard(img, qrText){
 // continu. C'est le geste que tout le monde connaît, et il supprime l'étape où
 // l'on doit viser juste du premier coup.
 let scanStream = null, scanTimer = null, scanTrack = null;
-let scanHint = null, scanScrollAvant = '';
+let scanHint = null, scanSansLecteur = null, scanScrollAvant = '';
 
 // Quitter l'app doit couper la caméra : iOS gèle le flux sans le libérer, la
 // pastille verte reste allumée et la batterie descend pour rien.
@@ -4505,11 +4538,16 @@ function scanState(etat, texte){
   const o = $('#scanOverlay');
   o.dataset.state = etat;
   $('#scanHelp').textContent = texte || '';
+  // Un échec sans explication ne laisse que des suppositions : sur une erreur,
+  // la ligne de diagnostic s'ouvre d'office.
+  if(etat === 'error'){ $('#scanDiag').hidden = false; majDiag(); }
 }
 
 function closeQrScanner(){
   if(scanTimer){ clearInterval(scanTimer); scanTimer = null; }
   if(scanHint){ clearTimeout(scanHint); scanHint = null; }
+  if(scanSansLecteur){ clearTimeout(scanSansLecteur); scanSansLecteur = null; }
+  $('#scanDiag').hidden = true;
   document.body.style.overflow = scanScrollAvant;
   if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
   scanTrack = null;
@@ -4569,27 +4607,72 @@ function openQrScanner(){
       $('#scanTorch').hidden = !caps.torch;
     }catch(e){ $('#scanTorch').hidden = true; }
 
-    if(!await lib){
-      // Sans le décodeur, on le DIT au lieu de basculer en douce : un bouton
-      // qui fait autre chose que ce qu'il annonce est pire qu'un bouton en panne.
-      scanState('error', t('scanNoLib'));
-      return;
-    }
+    // ON N'ATTEND AUCUN DÉCODEUR ICI. C'est LE correctif : la recherche démarre
+    // dès que la caméra est là, et la boucle se sert de ce qui est chargé à
+    // l'instant où elle tourne. Attendre un décodeur avant de commencer, c'était
+    // laisser un chargement lent geler tout le scanner sans rien afficher.
     scanState('scan', t('scanHelp'));
     // Six secondes sans rien trouver : on donne la bonne consigne plutôt que de
-    // laisser tourner en silence. C'est presque toujours la distance.
+    // laisser tourner en silence. C'est presque toujours la distance — et on
+    // ouvre en même temps la ligne de diagnostic, parce que sur un iPhone il n'y
+    // a pas de console et qu'un scan qui échoue en silence ne laisse que des
+    // suppositions (le piège 13, appliqué au scanner).
     scanHint = setTimeout(()=>{
-      if($('#scanOverlay').dataset.state === 'scan') $('#scanHelp').textContent = t('scanTip');
+      if($('#scanOverlay').dataset.state === 'scan'){
+        $('#scanHelp').textContent = t('scanTip');
+        $('#scanDiag').hidden = false;
+      }
     }, 6000);
     lanceRecherche(v);
+
+    // Si au bout de douze secondes AUCUN des deux décodeurs n'est arrivé, il n'y
+    // a plus rien à espérer : on le dit, au lieu de faire tourner l'objectif
+    // pour rien.
+    scanSansLecteur = setTimeout(()=>{
+      if($('#scanOverlay').dataset.state === 'scan' && typeof jsQR !== 'function' && !wechatScan){
+        scanState('error', t('scanNoLib'));
+      }
+    }, 12000);
+    lib.then(()=>{});   // la promesse existe, on ne bloque simplement plus dessus
   }).catch(()=>{
     scanState('error', t('scanDenied'));
   });
 }
 
+// L'horodatage de la version. C'est la première question à trancher devant
+// « ça ne marche pas » : est-ce que le téléphone a seulement reçu le correctif ?
+// Sans ce repère, chaque échange repart d'une supposition.
+const BUILD = '2026-09-12';
+let imagesVues = 0, luminosite = -1;
+
+// Le flux est-il vraiment en train de rendre une image ? Sur un petit
+// échantillon, c'est quasi gratuit.
+function mesureLuminosite(ctx, v){
+  try{
+    ctx.canvas.width = 32; ctx.canvas.height = 24;
+    ctx.drawImage(v, 0, 0, 32, 24);
+    const d = ctx.getImageData(0, 0, 32, 24).data;
+    let somme = 0;
+    for(let i = 0; i < d.length; i += 4) somme += (d[i] + d[i+1] + d[i+2]) / 3;
+    luminosite = Math.round(somme / (d.length / 4));
+  }catch(e){ luminosite = -1; }
+}
+
+function majDiag(){
+  const el = $('#scanDiag');
+  if(!el || el.hidden) return;      // rien à calculer tant qu'elle est cachée
+  const v = $('#scanVideo');
+  const wc = wechatScan ? 'ok' : (wechatLoading ? '…' : 'non');
+  el.textContent = `v${BUILD} · jsQR ${typeof jsQR === 'function' ? 'ok' : 'non'}`
+    + ` · WeChat ${wc}`
+    + ` · ${v && v.videoWidth ? v.videoWidth + '×' + v.videoHeight : 'pas de flux'}`
+    + ` · ${imagesVues} img · lum ${luminosite < 0 ? '?' : luminosite}`;
+}
+
 function lanceRecherche(v){
   const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently:true });
   let fige = false, tour = 0, wechatOccupe = false;
+  imagesVues = 0; luminosite = -1;
 
   // Trouvé — par jsQR ou par le décodeur de WeChat, le traitement est le même.
   // Une seule sortie : les deux ne peuvent pas se contredire, et le second à
@@ -4629,10 +4712,21 @@ function lanceRecherche(v){
     // cadrages à chaque fois. Un QR tenu devant l'objectif est donc couvert en
     // sept dixièmes de seconde, pour le même coût par image qu'avant.
     const MAX = QR_TAILLES[tour++ % QR_TAILLES.length];
+    imagesVues++;
+    // Une mesure de luminosité de temps en temps : une caméra qui rend du noir
+    // — le flux gelé d'iOS revenu d'arrière-plan — se voit à ce chiffre, et à
+    // rien d'autre. L'écran, lui, a l'air normal.
+    if(imagesVues % 10 === 1) mesureLuminosite(ctx, v);
+    majDiag();
+
+    // jsQR s'il est là. S'il n'est pas encore chargé, on ne bloque pas : la
+    // boucle tourne quand même, le décodeur de WeChat peut suffire.
     let trouve = '';
-    for(const [sx, sy, cw, ch] of cadresQr(v.videoWidth, v.videoHeight)){
-      trouve = decodeAt(ctx, v, sx, sy, cw, ch, MAX);
-      if(trouve) break;
+    if(typeof jsQR === 'function'){
+      for(const [sx, sy, cw, ch] of cadresQr(v.videoWidth, v.videoHeight)){
+        trouve = decodeAt(ctx, v, sx, sy, cw, ch, MAX);
+        if(trouve) break;
+      }
     }
     if(trouve){ traiter(trouve); return; }
 
