@@ -1122,7 +1122,6 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    et fabrique alors un `<a>` au lieu d'un `<button>`. **Règle générale : tout
    ce qui doit réveiller une app native est un lien, jamais un `window.open()`.**
 
-<<<<<<< HEAD
    **Mais le vrai lien n'a pas suffi non plus, et c'est la leçon qui compte :
    AUCUN LIEN WEB N'OUVRE WECHAT SUR iOS.** `weixin.qq.com` n'est pas déclaré
    chez Tencent comme lien-vers-app ; Safari charge donc la page, qui renvoie
@@ -1170,19 +1169,6 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    **La règle de méthode** : devant « ça ne marche pas », comparer d'abord le
    symptôme décrit à ce que le code déployé peut produire. Un symptôme qu'aucun
    chemin n'explique n'est pas un bug — c'est une autre version.
-=======
-   **Deux replis, parce que même un vrai lien peut échouer.** iOS **retient**
-   qu'on a déjà ouvert un domaine dans Safari et cesse alors de proposer l'app :
-   dans ce cas, un **appui long sur le lien → « Ouvrir dans WeChat »** rétablit
-   la passe, et c'est écrit dans la mise en garde sous le bouton. Et un bouton
-   **« Copier le lien »** est posé juste en dessous : collé dans n'importe
-   quelle conversation WeChat, le lien s'ouvre toujours. Le repli
-   `execCommand('copy')` est là parce que Safari refuse le presse-papiers hors
-   geste direct.
-
-   Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
-   WeChat.** Le lien mène à la page d'ajout, il ne fait pas l'ajout.
->>>>>>> origin/main
 
 ## Assistant IA
 
