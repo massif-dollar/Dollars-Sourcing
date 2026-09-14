@@ -722,6 +722,12 @@
   .scan-overlay.open{ display:block; }
   #scanVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   /* Discrète : c'est un outil de dépannage, pas un élément de l'interface. */
+  .build-stamp{
+    text-align:center; padding:18px 16px 26px; font-size:11px;
+    color:var(--muted); opacity:.55; font-variant-numeric:tabular-nums;
+    letter-spacing:.03em; user-select:text; -webkit-user-select:text;
+  }
+
   .scan-diag{
     position:absolute; left:0; right:0; bottom:74px; z-index:3;
     text-align:center; font-size:10.5px; line-height:1.5;
@@ -1575,6 +1581,13 @@
   <div id="requestsView" style="display:none;">
     <div class="list" id="requestsList"></div>
   </div>
+
+  <!-- La version, en bas et en petit. Elle existe pour une raison précise :
+       deux fois de suite, un correctif bien en ligne a été jugé « ça ne marche
+       toujours pas » parce que le téléphone servait la page en cache, et on a
+       cherché dans le code un bug qui n'y était pas. Un numéro qu'on peut lire
+       à voix haute tranche la question en trois secondes. -->
+  <div class="build-stamp" id="buildStamp"></div>
 </div>
 
 <button class="fab fab-assistant" id="assistantFab" data-i18n-title="assistantFabTitle" title="Assistant IA">
@@ -2318,6 +2331,11 @@ const I18N = {
     requestFrom:'New request from {name}'
   }
 };
+// L'horodatage de la version, affiché en bas de l'app ET dans le diagnostic du
+// scanner. C'est la première question à trancher devant « ça ne marche pas » :
+// est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
+// mise en ligne qui corrige quelque chose de visible.
+const BUILD = '2026-09-14';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -2923,6 +2941,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   showWechatQr();   // libellé choisi à la main : personnel ou groupe
+  $('#buildStamp').textContent = 'DOLLAR$ SOURCING · v' + BUILD;
   render();
   if(viewState==='stats'){ buildRangeTabs(); renderStats(); }
   if(viewState==='clients') renderClients();
@@ -4698,7 +4717,6 @@ function openQrScanner(){
 // L'horodatage de la version. C'est la première question à trancher devant
 // « ça ne marche pas » : est-ce que le téléphone a seulement reçu le correctif ?
 // Sans ce repère, chaque échange repart d'une supposition.
-const BUILD = '2026-09-12';
 let imagesVues = 0, luminosite = -1;
 
 // Le flux est-il vraiment en train de rendre une image ? Sur un petit

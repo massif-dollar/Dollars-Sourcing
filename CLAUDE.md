@@ -132,6 +132,14 @@ l'identifiant exact du document — celui qui est dans le lien du client.
 **ouvrir l'app une fois** pour semer les copies. Entre les deux, les portails
 sont vides — sans conséquence tant qu'il n'y a pas de vrais clients, mais à
 savoir.
+- `_headers` — les en-têtes servis par Cloudflare Pages. **Le HTML y est en
+  `no-cache`**, et ce n'est pas une optimisation : deux fois de suite, un
+  correctif bien en ligne a été jugé « ça ne marche toujours pas » parce que
+  l'iPhone reservait la page gardée en cache — et on a cherché dans le code un
+  bug qui n'y était pas. `no-cache` ne veut pas dire « ne garde rien » : le
+  navigateur garde la page et demande si elle a changé ; inchangée, il reçoit un
+  304 de quelques octets. Les décodeurs de `vendor/`, eux, gardent une semaine
+  de cache : 6 Mo qu'on ne veut pas retélécharger à chaque scan en Chine.
 - `netlify.toml` — n'existe que pour éviter les builds inutiles (voir piège 7)
 - `og-client.png` — la bannière 1200×630 que WhatsApp, iMessage et Snapchat
   affichent au-dessus du lien du client. **Un message WhatsApp est du texte
@@ -1114,7 +1122,6 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    et fabrique alors un `<a>` au lieu d'un `<button>`. **Règle générale : tout
    ce qui doit réveiller une app native est un lien, jamais un `window.open()`.**
 
-<<<<<<< HEAD
    **Mais le vrai lien n'a pas suffi non plus, et c'est la leçon qui compte :
    AUCUN LIEN WEB N'OUVRE WECHAT SUR iOS.** `weixin.qq.com` n'est pas déclaré
    chez Tencent comme lien-vers-app ; Safari charge donc la page, qui renvoie
@@ -1141,19 +1148,27 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
 
    Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
    WeChat.** On l'amène sur le bon écran, il fait l'ajout.
-=======
-   **Deux replis, parce que même un vrai lien peut échouer.** iOS **retient**
-   qu'on a déjà ouvert un domaine dans Safari et cesse alors de proposer l'app :
-   dans ce cas, un **appui long sur le lien → « Ouvrir dans WeChat »** rétablit
-   la passe, et c'est écrit dans la mise en garde sous le bouton. Et un bouton
-   **« Copier le lien »** est posé juste en dessous : collé dans n'importe
-   quelle conversation WeChat, le lien s'ouvre toujours. Le repli
-   `execCommand('copy')` est là parce que Safari refuse le presse-papiers hors
-   geste direct.
 
-   Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
-   WeChat.** Le lien mène à la page d'ajout, il ne fait pas l'ajout.
->>>>>>> origin/main
+18. **UNE VERSION QU'ON NE PEUT PAS LIRE COÛTE UN TOUR À CHAQUE FOIS.** Deux
+   allers-retours entiers ont été dépensés à chercher dans le code un bug qui
+   n'y était pas : le correctif était en ligne, le téléphone servait la page
+   d'avant. La troisième fois, la capture d'écran montrait une page (`wechat.com`)
+   qu'**aucun chemin du code déployé ne pouvait produire** — c'est ça qui a
+   tranché, pas une relecture de plus.
+
+   Deux choses en sortent, et elles se complètent :
+
+   - **`_headers` met le HTML en `no-cache`** : une mise en ligne arrive à la
+     seconde suivante, pour le prix d'un 304. La cause est traitée, pas le
+     symptôme.
+   - **`BUILD` s'affiche en bas de l'app** (`#buildStamp`, « DOLLAR$ SOURCING ·
+     v2026-09-14 ») et dans le diagnostic du scanner. **À changer à chaque mise
+     en ligne qui corrige quelque chose de visible.** Un numéro qu'on lit à voix
+     haute règle en trois secondes une question qui a coûté deux soirées.
+
+   **La règle de méthode** : devant « ça ne marche pas », comparer d'abord le
+   symptôme décrit à ce que le code déployé peut produire. Un symptôme qu'aucun
+   chemin n'explique n'est pas un bug — c'est une autre version.
 
 ## Assistant IA
 

@@ -1,0 +1,20 @@
+# Pourquoi ce fichier existe : deux fois de suite, un correctif bien en ligne a
+# été jugé « ça ne marche toujours pas » parce que l'iPhone reservait la page
+# gardée en cache. On ne diagnostique pas un bug sur une version qu'on ne sait
+# pas identifier — c'est le piège 13 dans une autre robe.
+#
+# Le HTML est donc TOUJOURS revalidé. « no-cache » ne veut pas dire « ne garde
+# rien » : le navigateur garde la page mais demande au serveur si elle a changé.
+# Inchangée, il reçoit un 304 de quelques octets. Le coût est nul, et une mise
+# en ligne arrive à la seconde suivante.
+/
+  Cache-Control: no-cache
+/*.html
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Les décodeurs, eux, ne changent presque jamais et pèsent 6 Mo : une semaine de
+# cache, pour ne pas les retélécharger à chaque scan sur une connexion chinoise.
+/vendor/*
+  Cache-Control: public, max-age=604800
