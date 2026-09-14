@@ -1131,11 +1131,21 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    **Ce qui marche, c'est le SCHÉMA D'URL** : `weixin://dl/scan`. Un schéma ne
    dépend d'aucune configuration côté Tencent — il ouvre l'app installée, point.
 
-   Et `dl/scan` plutôt que `weixin://` tout court, parce que c'est **le geste
-   réel** : on vient de scanner le QR du fournisseur, **il l'a encore à l'écran
-   devant nous**. Le scanner de WeChat s'ouvre, on vise le même code, WeChat
-   fait l'ajout lui-même. Deux appuis, et aucune dépendance à un lien qui
-   périme. C'est meilleur que ce qu'on cherchait à réparer.
+   **Mais `weixin://` TOUT COURT, et surtout pas une route interne.**
+   `weixin://dl/scan` a bien ouvert WeChat — le mécanisme du schéma est donc le
+   bon — mais **la route n'existe pas dans la version internationale** : WeChat
+   a ouvert sa vue web sur « Sorry, this page is not available ». Les routes
+   `dl/…` viennent de la version chinoise, ne sont documentées nulle part, et
+   `weixin://scanqrcode` n'est que du folklore de forum. **En essayer une autre
+   au hasard, c'est reproposer la même déception.** Sans route, il n'y a rien à
+   résoudre, donc aucune page d'erreur possible.
+
+   Le libellé dit donc ce que le bouton fait — **« Ouvrir WeChat »** — et la
+   consigne en dessous donne les deux appuis restants (« le + en haut à droite →
+   Scanner »), plus le raccourci qui va encore plus vite et ne passe même pas
+   par nous : **appui long sur l'icône WeChat de l'écran d'accueil → Scanner**.
+   Un bouton qui annonce autre chose que ce qu'il fait est pire qu'un bouton en
+   panne.
 
    Détail qui compte : **un schéma ne part jamais en `target="_blank"`** — il
    laisserait une page blanche derrière lui. `showActionToast()` ne pose la
@@ -1169,6 +1179,12 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    **La règle de méthode** : devant « ça ne marche pas », comparer d'abord le
    symptôme décrit à ce que le code déployé peut produire. Un symptôme qu'aucun
    chemin n'explique n'est pas un bug — c'est une autre version.
+
+   **Et son corollaire, appris au tour suivant** : quand une piste demande de
+   deviner une valeur non documentée (ici la route d'un schéma d'URL), **ne pas
+   enchaîner les devinettes**. La première a coûté un aller-retour ; la seconde
+   aurait coûté le même. On prend le chemin garanti — celui qui n'a aucune
+   valeur à deviner — et on met le reste dans la consigne.
 
 ## Assistant IA
 

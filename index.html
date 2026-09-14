@@ -1847,12 +1847,19 @@
              Un schéma, lui, ne dépend d'aucune configuration : il ouvre l'app
              installée, point. Voir le piège 17.
 
-             Et `dl/scan` plutôt que `weixin://` tout court, parce que c'est le
-             geste réel : on vient de scanner le QR du fournisseur, il l'a
-             ENCORE à l'écran devant nous. Le scanner de WeChat s'ouvre, on
-             vise le même code, WeChat fait l'ajout lui-même. Deux appuis.
+             `weixin://` TOUT COURT, et surtout pas une route interne.
+             `weixin://dl/scan` a bien ouvert WeChat — le mécanisme est donc
+             bon — mais la route n'existe pas dans la version internationale :
+             WeChat a ouvert sa vue web sur « Sorry, this page is not
+             available ». Les routes `dl/…` viennent de la version chinoise et
+             ne sont documentées nulle part ; en essayer une autre au hasard,
+             c'est reproposer la même déception. Sans route, rien à résoudre,
+             donc aucune page d'erreur possible.
+             Le libellé dit donc ce que ça fait — ouvrir WeChat — et la consigne
+             en dessous donne les deux appuis restants. Un bouton qui annonce
+             autre chose que ce qu'il fait est pire qu'un bouton en panne.
              Pas de data-i18n sur le libellé : showWechatQr() le choisit. -->
-        <a class="btn-secondary" id="openWechatBtn" href="weixin://dl/scan"
+        <a class="btn-secondary" id="openWechatBtn" href="weixin://"
            style="width:100%; color:var(--accent); border-color:var(--accent);
                   display:block; text-align:center; text-decoration:none;"
            >Scanner dans WeChat</a>
@@ -2110,15 +2117,14 @@ const I18N = {
     scanNoLib:'Le lecteur de QR n\u2019a pas pu se charger.\nVérifie ta connexion, ou choisis une photo.',
     cameraDenied:'Caméra refusée. Choisis une photo à la place.',
     openInWechat:'Ouvrir dans WeChat',
-    qrExpiryHint:'Le fournisseur a encore son QR \u00e0 l\u2019\u00e9cran : appuie, vise le m\u00eame code, WeChat l\u2019ajoute. Plus tard, copie le lien et colle-le dans WeChat \u2014 mais il p\u00e9rime, l\u2019identifiant non.',
+    qrExpiryHint:'Dans WeChat : le + en haut \u00e0 droite \u2192 Scanner, et vise le QR qu\u2019il a encore \u00e0 l\u2019\u00e9cran. Plus rapide encore : appui long sur l\u2019ic\u00f4ne WeChat de ton \u00e9cran d\u2019accueil \u2192 Scanner. Plus tard, copie le lien et colle-le dans WeChat \u2014 mais il p\u00e9rime, l\u2019identifiant non.',
     qrOnly:'QR WeChat lu. Rien d\u2019autre de lisible : complète à la main.',
     joinWechatGroup:'Rejoindre le groupe WeChat',
-    scanInWechat:'Scanner dans WeChat',
-    scanGroupInWechat:'Scanner le groupe dans WeChat',
+    openWechatApp:'Ouvrir WeChat',
     copyWechatLink:'Copier le lien',
     linkCopied:'Lien copi\u00e9. Colle-le dans WeChat.',
     copyFailed:'Copie impossible.',
-    qrGroupHint:'QR de GROUPE : il fait rejoindre le groupe, il n\u2019ajoute pas le contact, et il p\u00e9rime en quelques jours. Appuie tant que le code est encore \u00e0 l\u2019\u00e9cran devant toi.',
+    qrGroupHint:'QR de GROUPE : il fait rejoindre le groupe, il n\u2019ajoute pas le contact, et il p\u00e9rime en quelques jours. Dans WeChat : le + en haut \u00e0 droite \u2192 Scanner, tant que le code est encore \u00e0 l\u2019\u00e9cran devant toi.',
     cardFilledQr:'QR WeChat lu, {n} champ(s) rempli(s).',
     confirmDeleteOrder:'Supprimer définitivement cette commande ?', confirmDeleteClient:'Supprimer ce client ?',
     confirmDeleteSupplier:'Supprimer ce fournisseur ?',
@@ -2276,15 +2282,14 @@ const I18N = {
     scanNoLib:'The QR reader could not load.\nCheck your connection, or pick a photo.',
     cameraDenied:'Camera denied. Pick a photo instead.',
     openInWechat:'Open in WeChat',
-    qrExpiryHint:'The supplier still has the QR on screen: tap, aim at the same code, WeChat adds them. Later on, copy the link and paste it into WeChat \u2014 but it expires, the ID does not.',
+    qrExpiryHint:'In WeChat: the + at the top right \u2192 Scan, then aim at the QR still on their screen. Even faster: long-press the WeChat icon on your home screen \u2192 Scan. Later on, copy the link and paste it into WeChat \u2014 but it expires, the ID does not.',
     qrOnly:'WeChat QR read. Nothing else readable: fill in by hand.',
     joinWechatGroup:'Join the WeChat group',
-    scanInWechat:'Scan in WeChat',
-    scanGroupInWechat:'Scan the group in WeChat',
+    openWechatApp:'Open WeChat',
     copyWechatLink:'Copy the link',
     linkCopied:'Link copied. Paste it into WeChat.',
     copyFailed:'Copy failed.',
-    qrGroupHint:'GROUP QR: it joins the group, it does not add the contact, and it expires within days. Tap while the code is still on screen in front of you.',
+    qrGroupHint:'GROUP QR: it joins the group, it does not add the contact, and it expires within days. In WeChat: the + at the top right \u2192 Scan, while the code is still on screen in front of you.',
     cardFilledQr:'WeChat QR read, {n} field(s) filled.',
     confirmDeleteOrder:'Permanently delete this order?', confirmDeleteClient:'Delete this client?',
     confirmDeleteSupplier:'Delete this supplier?',
@@ -2335,7 +2340,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-14';
+const BUILD = '2026-09-14b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4525,10 +4530,10 @@ function isWechatGroupQr(txt){
 function showWechatQr(){
   const groupe = isWechatGroupQr(wechatQr);
   $('#wechatQrField').style.display = wechatQr ? 'block' : 'none';
-  // Le bouton pointe TOUJOURS le scanner de WeChat (`weixin://dl/scan`), jamais
-  // le lien du QR : ce dernier n'ouvre pas l'app sur iOS, il finit sur l'App
-  // Store. Seul le texte change selon ce qu'on a lu, pour dire quoi viser.
-  $('#openWechatBtn').textContent = t(groupe ? 'scanGroupInWechat' : 'scanInWechat');
+  // Le bouton ouvre WeChat (`weixin://`), jamais le lien du QR : ce dernier
+  // n'ouvre pas l'app sur iOS, il finit sur l'App Store. Seule la consigne
+  // change selon ce qu'on a lu, pour dire quoi faire une fois dans WeChat.
+  $('#openWechatBtn').textContent = t('openWechatApp');
   $('#wechatQrHint').textContent  = t(groupe ? 'qrGroupHint' : 'qrExpiryHint');
 }
 
@@ -4957,8 +4962,7 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
   closeSupplierSheet();
   if(lienWechat){
     showActionToast(t('toastSupplierSaved'),
-                    t(isWechatGroupQr(lienWechat) ? 'scanGroupInWechat' : 'scanInWechat'),
-                    null, 'weixin://dl/scan');
+                    t('openWechatApp'), null, 'weixin://');
   } else {
     showToast(t('toastSupplierSaved'));
   }
