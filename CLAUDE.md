@@ -1098,6 +1098,34 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    décrit en un mot (« il ne trouve rien ») valait ici trois hypothèses
    différentes, et c'est la question posée qui a tranché — pas le code relu.
 
+17. **UN « UNIVERSAL LINK » NE S'OUVRE JAMAIS DEPUIS `window.open()`.** Sur iOS,
+   le renvoi vers une app native n'est honoré **que sur un lien réellement
+   touché par l'utilisateur** — un vrai `<a href>`. Ouvert en JavaScript, le
+   même lien reste dans Safari.
+
+   Vu du terrain : on appuyait sur « Ouvrir dans WeChat », Safari chargeait la
+   page `weixin.qq.com`, et cette page renvoyait sur **la fiche App Store de
+   WeChat**. Le scan était parfait, l'étape d'après ratait — et le symptôme
+   (« ça m'ouvre l'App Store ») ne dit rien de sa cause.
+
+   Le bouton est donc devenu **un vrai lien** : `<a>` avec son `href` posé par
+   `showWechatQr()`, jamais ouvert par du code. Même correction pour le bouton
+   d'action du toast — `showActionToast()` accepte un quatrième argument `lien`
+   et fabrique alors un `<a>` au lieu d'un `<button>`. **Règle générale : tout
+   ce qui doit réveiller une app native est un lien, jamais un `window.open()`.**
+
+   **Deux replis, parce que même un vrai lien peut échouer.** iOS **retient**
+   qu'on a déjà ouvert un domaine dans Safari et cesse alors de proposer l'app :
+   dans ce cas, un **appui long sur le lien → « Ouvrir dans WeChat »** rétablit
+   la passe, et c'est écrit dans la mise en garde sous le bouton. Et un bouton
+   **« Copier le lien »** est posé juste en dessous : collé dans n'importe
+   quelle conversation WeChat, le lien s'ouvre toujours. Le repli
+   `execCommand('copy')` est là parce que Safari refuse le presse-papiers hors
+   geste direct.
+
+   Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
+   WeChat.** Le lien mène à la page d'ajout, il ne fait pas l'ajout.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,

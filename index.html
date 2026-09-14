@@ -903,10 +903,12 @@
     display:flex; align-items:center; gap:14px;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  /* Bouton OU lien : l'action du toast est parfois un vrai <a> (voir piège 17),
+     d'où text-decoration et white-space, inutiles sur un <button>. */
   .toast-undo{
     background:none; border:none; color:var(--accent); font-family:var(--font-body);
     font-weight:700; font-size:14px; cursor:pointer; padding:2px 4px; letter-spacing:-0.01em;
-    flex-shrink:0;
+    flex-shrink:0; text-decoration:none; white-space:nowrap;
   }
 
   /* --- Écrans de démarrage / connexion / verrou --- */
@@ -1828,9 +1830,18 @@
         <!-- Pas de data-i18n ici : showWechatQr() choisit le libellé selon
              qu'on a lu un code personnel ou un code de groupe, et
              applyTranslations() l'écraserait. Elle rappelle donc showWechatQr(). -->
-        <button type="button" class="btn-secondary" id="openWechatBtn"
-                style="width:100%; color:var(--accent); border-color:var(--accent);"
-                >Ouvrir dans WeChat</button>
+        <!-- UN VRAI LIEN, PAS UN BOUTON, et c'est tout le sujet : sur iOS, un
+             « universal link » n'est honoré QUE sur un lien réellement touché.
+             Un window.open() en JavaScript ne passe jamais la main à l'app —
+             Safari charge la page weixin.qq.com, qui renvoie sur l'App Store.
+             C'est exactement ce qui arrivait. Voir le piège 17. -->
+        <a class="btn-secondary" id="openWechatBtn" target="_blank" rel="noopener"
+           style="width:100%; color:var(--accent); border-color:var(--accent);
+                  display:block; text-align:center; text-decoration:none;"
+           >Ouvrir dans WeChat</a>
+        <button type="button" class="btn-secondary" id="copyWechatQr"
+                style="width:100%; margin-top:8px; color:var(--accent); border-color:var(--accent);"
+                data-i18n="copyWechatLink">Copier le lien</button>
         <div class="hint" id="wechatQrHint">Ce lien finit par périmer : WeChat renouvelle
           les codes. L'identifiant, lui, reste valable.</div>
       </div>
@@ -2082,10 +2093,13 @@ const I18N = {
     scanNoLib:'Le lecteur de QR n\u2019a pas pu se charger.\nVérifie ta connexion, ou choisis une photo.',
     cameraDenied:'Caméra refusée. Choisis une photo à la place.',
     openInWechat:'Ouvrir dans WeChat',
-    qrExpiryHint:'Ce lien finit par périmer : WeChat renouvelle les codes. L\u2019identifiant, lui, reste valable.',
+    qrExpiryHint:'Si l\u2019App Store s\u2019ouvre au lieu de WeChat : appui long sur le lien \u2192 Ouvrir dans WeChat. Ce lien finit par p\u00e9rimer, l\u2019identifiant reste valable.',
     qrOnly:'QR WeChat lu. Rien d\u2019autre de lisible : complète à la main.',
     joinWechatGroup:'Rejoindre le groupe WeChat',
-    qrGroupHint:'C\u2019est un QR de GROUPE : il fait rejoindre le groupe, il n\u2019ajoute pas le contact. Ces liens-l\u00e0 p\u00e9riment vite \u2014 ouvre-le tout de suite.',
+    copyWechatLink:'Copier le lien',
+    linkCopied:'Lien copi\u00e9. Colle-le dans WeChat.',
+    copyFailed:'Copie impossible.',
+    qrGroupHint:'QR de GROUPE : il fait rejoindre le groupe, il n\u2019ajoute pas le contact, et il p\u00e9rime vite \u2014 ouvre-le tout de suite. Si l\u2019App Store s\u2019ouvre : appui long sur le lien \u2192 Ouvrir dans WeChat.',
     cardFilledQr:'QR WeChat lu, {n} champ(s) rempli(s).',
     confirmDeleteOrder:'Supprimer définitivement cette commande ?', confirmDeleteClient:'Supprimer ce client ?',
     confirmDeleteSupplier:'Supprimer ce fournisseur ?',
@@ -2243,10 +2257,13 @@ const I18N = {
     scanNoLib:'The QR reader could not load.\nCheck your connection, or pick a photo.',
     cameraDenied:'Camera denied. Pick a photo instead.',
     openInWechat:'Open in WeChat',
-    qrExpiryHint:'This link eventually expires: WeChat refreshes its codes. The ID stays valid.',
+    qrExpiryHint:'If the App Store opens instead of WeChat: long-press the link \u2192 Open in WeChat. This link eventually expires; the ID stays valid.',
     qrOnly:'WeChat QR read. Nothing else readable: fill in by hand.',
     joinWechatGroup:'Join the WeChat group',
-    qrGroupHint:'This is a GROUP QR: it joins the group, it does not add the contact. These links expire fast \u2014 open it right away.',
+    copyWechatLink:'Copy the link',
+    linkCopied:'Link copied. Paste it into WeChat.',
+    copyFailed:'Copy failed.',
+    qrGroupHint:'GROUP QR: it joins the group, it does not add the contact, and it expires fast \u2014 open it right away. If the App Store opens: long-press the link \u2192 Open in WeChat.',
     cardFilledQr:'WeChat QR read, {n} field(s) filled.',
     confirmDeleteOrder:'Permanently delete this order?', confirmDeleteClient:'Delete this client?',
     confirmDeleteSupplier:'Delete this supplier?',
@@ -2393,19 +2410,28 @@ function showToast(msg){
 // fournisseur scanné. Le clic sur ce bouton est un vrai geste utilisateur,
 // donc window.open n'y est pas bloqué — ce ne serait pas le cas depuis
 // l'enregistrement lui-même.
-function showActionToast(msg, label, onAction){
+// `lien` : quand l'action consiste à ouvrir une adresse, on pose un VRAI lien
+// plutôt qu'un bouton. Sur iOS, un « universal link » n'est honoré que sur un
+// lien touché — un window.open() renvoie sur Safari, donc sur l'App Store pour
+// une adresse WeChat. Voir le piège 17.
+function showActionToast(msg, label, onAction, lien){
   const el = $('#toast');
   el.innerHTML = '';
   const span = document.createElement('span');
   span.textContent = msg;
-  const btn = document.createElement('button');
+  const btn = document.createElement(lien ? 'a' : 'button');
   btn.className = 'toast-undo';
   btn.textContent = label;
-  btn.addEventListener('click', async ()=>{
-    clearTimeout(toastTimer);
-    el.classList.remove('show');
-    await onAction();
-  });
+  if(lien){
+    btn.href = lien; btn.target = '_blank'; btn.rel = 'noopener';
+    btn.addEventListener('click', ()=>{ clearTimeout(toastTimer); el.classList.remove('show'); });
+  } else {
+    btn.addEventListener('click', async ()=>{
+      clearTimeout(toastTimer);
+      el.classList.remove('show');
+      await onAction();
+    });
+  }
   el.appendChild(span);
   el.appendChild(btn);
   el.classList.add('show');
@@ -4469,14 +4495,34 @@ function isWechatGroupQr(txt){
 function showWechatQr(){
   const groupe = isWechatGroupQr(wechatQr);
   $('#wechatQrField').style.display = wechatQr ? 'block' : 'none';
-  $('#openWechatBtn').textContent = t(groupe ? 'joinWechatGroup' : 'openInWechat');
-  $('#wechatQrHint').textContent  = t(groupe ? 'qrGroupHint' : 'qrExpiryHint');
+  const a = $('#openWechatBtn');
+  a.textContent = t(groupe ? 'joinWechatGroup' : 'openInWechat');
+  // Le href est posé ICI, jamais ouvert en JavaScript : c'est la condition pour
+  // qu'iOS passe la main à WeChat au lieu de charger la page dans Safari.
+  if(wechatQr) a.setAttribute('href', wechatQr); else a.removeAttribute('href');
+  $('#wechatQrHint').textContent = t(groupe ? 'qrGroupHint' : 'qrExpiryHint');
 }
-// Le QR ne se « décode » pas en profil : il ne porte qu'un jeton. Mais l'ouvrir
-// amène WeChat sur la page d'ajout du fournisseur, ce qui est tout ce qu'on veut.
-$('#openWechatBtn').addEventListener('click', ()=>{
-  if(wechatQr) window.open(wechatQr, '_blank');
+
+// Le repli, pour le cas où iOS refuse quand même la passe — il garde en mémoire
+// qu'on a déjà ouvert ce domaine dans Safari, et ne propose plus l'app. Le lien
+// collé dans n'importe quelle conversation WeChat, lui, s'ouvre toujours.
+$('#copyWechatQr').addEventListener('click', ()=>{
+  if(!wechatQr) return;
+  const fini = ()=> showToast(t('linkCopied'));
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(wechatQr).then(fini).catch(()=>copieRepli(wechatQr, fini));
+  } else copieRepli(wechatQr, fini);
 });
+// Safari refuse le presse-papiers hors geste direct : un échec silencieux serait
+// pire que pas de bouton.
+function copieRepli(txt, fini){
+  try{
+    const z = document.createElement('textarea');
+    z.value = txt; z.style.position = 'fixed'; z.style.opacity = '0';
+    document.body.appendChild(z); z.select();
+    document.execCommand('copy'); document.body.removeChild(z); fini();
+  }catch(e){ showToast(t('copyFailed')); }
+}
 
 const CARD_PROMPT = `Tu lis la carte de visite d'un fournisseur (souvent chinois) et tu en extrais les informations.
 Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
@@ -4884,7 +4930,7 @@ $('#supplierForm').addEventListener('submit', async (e)=>{
   if(lienWechat){
     showActionToast(t('toastSupplierSaved'),
                     t(isWechatGroupQr(lienWechat) ? 'joinWechatGroup' : 'openInWechat'),
-                    ()=>window.open(lienWechat, '_blank'));
+                    null, lienWechat);
   } else {
     showToast(t('toastSupplierSaved'));
   }
