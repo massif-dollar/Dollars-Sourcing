@@ -1114,6 +1114,34 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    et fabrique alors un `<a>` au lieu d'un `<button>`. **Règle générale : tout
    ce qui doit réveiller une app native est un lien, jamais un `window.open()`.**
 
+<<<<<<< HEAD
+   **Mais le vrai lien n'a pas suffi non plus, et c'est la leçon qui compte :
+   AUCUN LIEN WEB N'OUVRE WECHAT SUR iOS.** `weixin.qq.com` n'est pas déclaré
+   chez Tencent comme lien-vers-app ; Safari charge donc la page, qui renvoie
+   sur l'App Store. Corriger le `window.open()` était nécessaire et
+   insuffisant — deux essais sur le terrain pour l'établir.
+
+   **Ce qui marche, c'est le SCHÉMA D'URL** : `weixin://dl/scan`. Un schéma ne
+   dépend d'aucune configuration côté Tencent — il ouvre l'app installée, point.
+
+   Et `dl/scan` plutôt que `weixin://` tout court, parce que c'est **le geste
+   réel** : on vient de scanner le QR du fournisseur, **il l'a encore à l'écran
+   devant nous**. Le scanner de WeChat s'ouvre, on vise le même code, WeChat
+   fait l'ajout lui-même. Deux appuis, et aucune dépendance à un lien qui
+   périme. C'est meilleur que ce qu'on cherchait à réparer.
+
+   Détail qui compte : **un schéma ne part jamais en `target="_blank"`** — il
+   laisserait une page blanche derrière lui. `showActionToast()` ne pose la
+   cible que sur les adresses `http(s)`.
+
+   **Le repli reste « Copier le lien »**, pour le cas où on n'est plus devant le
+   fournisseur : collé dans n'importe quelle conversation WeChat, le lien
+   s'ouvre. `execCommand('copy')` en secours, Safari refusant le presse-papiers
+   hors geste direct.
+
+   Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
+   WeChat.** On l'amène sur le bon écran, il fait l'ajout.
+=======
    **Deux replis, parce que même un vrai lien peut échouer.** iOS **retient**
    qu'on a déjà ouvert un domaine dans Safari et cesse alors de proposer l'app :
    dans ce cas, un **appui long sur le lien → « Ouvrir dans WeChat »** rétablit
@@ -1125,6 +1153,7 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
 
    Ce que ça ne change pas : **WeChat reste seul à pouvoir ajouter un contact
    WeChat.** Le lien mène à la page d'ajout, il ne fait pas l'ajout.
+>>>>>>> origin/main
 
 ## Assistant IA
 
