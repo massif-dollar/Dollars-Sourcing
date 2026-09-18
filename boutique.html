@@ -136,6 +136,15 @@ main{ position:relative; z-index:1; padding:8px 16px 0; max-width:560px; margin:
   background:var(--surface-2); border:.5px solid var(--line); color:var(--muted);
 }
 .etq.dispo{ color:var(--accent); background:var(--accent-soft); border-color:rgba(255,122,26,.28); }
+.etq.bientot{ color:#d8d8e0; background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14); }
+
+/* Une pièce pas encore arrivée reste visible — elle fait envie et prépare la
+   vente — mais elle ne doit pas se confondre avec ce qui part aujourd'hui.
+   La photo se retire un peu, le bouton perd l'orange. */
+.carte.attente .photo img{ filter:saturate(.55) brightness(.72); }
+.carte.attente .prix{ color:var(--muted); }
+.carte.attente .acheter{ color:#d8d8e0; border-color:rgba(255,255,255,.18); }
+.carte.attente .acheter:active{ background:rgba(255,255,255,.06); }
 
 /* Le bouton de la carte. UN VRAI LIEN, jamais un window.open() : c'est la
    condition pour qu'iOS passe la main à l'application Snapchat au lieu de
@@ -228,27 +237,35 @@ footer{
 
 const SNAP = 'TON_PSEUDO_SNAP';        // ← ton pseudo Snapchat, sans le @
 
-const MARQUE   = 'La sélection';
+const MARQUE   = 'Éditions très limitées';
 const TITRE    = 'Casquettes';
-const SOUSTITRE= 'Pièces choisies une par une. Commande directement sur Snap, je réponds vite.';
-const PIED     = 'Envoi sous 48 h · Paiement à la commande · Écris-moi sur Snap pour toute question';
+const SOUSTITRE= 'Quelques pièces seulement, jamais réassorties. Écris-moi sur Snap avant qu\u2019elles partent.';
+const PIED     = 'Pièces limitées · Premier arrivé, premier servi · Écris-moi sur Snap pour toute question';
 
 const CATALOGUE = [
   {
-    nom: 'Modèle 1',
-    prix: '25 €',
-    desc: 'Décris-la en une ligne : matière, coupe, ce qui la rend bien.',
-    photo: '',                          // ex. 'photos/modele-1.jpg'
+    nom: 'BMW Motorrad S1000RR — Noire',
+    prix: '90 €',
+    desc: 'Logo brodé ton sur ton, patch Motorsport sur le côté. Noir intégral.',
+    photo: '',                          // ← ta photo, ex. 'photos/bmw-noire.jpg'
     etiquettes: ['Taille unique', 'Neuve'],
     dispo: true
   },
   {
-    nom: 'Modèle 2',
-    prix: '25 €',
-    desc: 'Décris-la en une ligne : matière, coupe, ce qui la rend bien.',
+    nom: 'BMW Motorrad S1000RR — Grise',
+    prix: '90 €',
+    desc: 'La même, en gris clair. Broderie ton sur ton, patch Motorsport.',
     photo: '',
     etiquettes: ['Taille unique', 'Neuve'],
     dispo: true
+  },
+  {
+    nom: 'BOSS — Monogramme noir',
+    prix: 'Bientôt',
+    desc: 'Monogramme jacquard ton sur ton, logo brodé en relief. Arrivage en cours.',
+    photo: '',
+    etiquettes: ['Taille unique'],
+    dispo: false
   }
 ];
 
@@ -277,7 +294,9 @@ function poser(el, txt){ el.textContent = txt; }
 
 function carte(article){
   const el = document.createElement('article');
-  el.className = 'carte';
+  // `attente` retire l'orange et calme la photo : une pièce pas encore arrivée
+  // ne doit pas se confondre avec ce qui part aujourd'hui.
+  el.className = 'carte' + (article.dispo ? '' : ' attente');
 
   const media = document.createElement('a');
   media.className = 'photo';
@@ -315,18 +334,16 @@ function carte(article){
   }
 
   const etqs = [];
-  if(article.dispo) etqs.push(['Disponible', true]);
-  (article.etiquettes || []).forEach(t => etqs.push([t, false]));
-  if(etqs.length){
-    const box = document.createElement('div'); box.className = 'etiquettes';
-    etqs.forEach(([t, fort])=>{
-      const s = document.createElement('span');
-      s.className = 'etq' + (fort ? ' dispo' : '');
-      poser(s, t);
-      box.appendChild(s);
-    });
-    corps.appendChild(box);
-  }
+  etqs.push(article.dispo ? ['Disponible', 'dispo'] : ['Bientôt', 'bientot']);
+  (article.etiquettes || []).forEach(t => etqs.push([t, '']));
+  const box = document.createElement('div'); box.className = 'etiquettes';
+  etqs.forEach(([t, genre])=>{
+    const s = document.createElement('span');
+    s.className = 'etq' + (genre ? ' ' + genre : '');
+    poser(s, t);
+    box.appendChild(s);
+  });
+  corps.appendChild(box);
 
   const btn = document.createElement('a');
   btn.className = 'acheter';
@@ -335,7 +352,9 @@ function carte(article){
   btn.rel = 'noopener';
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c2.9 0 5 2.2 5 5.2 0 .9-.1 1.7-.1 2.3.3.2.7.3 1.1.2.5-.1 1 .1 1.1.5.2.5-.2.9-.9 1.2-.7.3-1.5.5-1.5 1 0 .6 1.7 3 4 3.6.3.1.5.3.4.6-.1.5-1 .9-2.3 1.1-.2 0-.3.2-.3.4-.1.3-.1.6-.2.8-.1.2-.2.3-.5.3-.5 0-1.2-.2-2.1-.2-1.4 0-1.9.2-2.8 1-.8.6-1.6 1-2.6 1s-1.8-.4-2.6-1c-.9-.8-1.4-1-2.8-1-.9 0-1.6.2-2.1.2-.3 0-.4-.1-.5-.3-.1-.2-.1-.5-.2-.8 0-.2-.1-.4-.3-.4-1.3-.2-2.2-.6-2.3-1.1-.1-.3.1-.5.4-.6 2.3-.6 4-3 4-3.6 0-.5-.8-.7-1.5-1-.7-.3-1.1-.7-.9-1.2.1-.4.6-.6 1.1-.5.4.1.8 0 1.1-.2 0-.6-.1-1.4-.1-2.3 0-3 2.1-5.2 5-5.2z"/></svg>`;
   const lbl = document.createElement('span');
-  poser(lbl, 'Je la veux — écris-moi');
+  // Le bouton dit ce qu'il fait. Sur une pièce pas encore arrivée, « Je la
+  // veux » mentirait sur ce qui va se passer.
+  poser(lbl, article.dispo ? 'Je la veux — écris-moi' : 'Préviens-moi quand elle arrive');
   btn.appendChild(lbl);
   corps.appendChild(btn);
 
@@ -358,7 +377,13 @@ function rendu(){
   poser($('#titre'),  TITRE);
   poser($('#sous'),   SOUSTITRE);
   poser($('#pied'),   PIED);
-  poser($('#compte'), CATALOGUE.length + (CATALOGUE.length > 1 ? ' modèles disponibles' : ' modèle disponible'));
+  // On ne compte QUE ce qui est réellement disponible : annoncer trois modèles
+  // dont un pas encore arrivé, c'est promettre ce qu'on ne peut pas livrer.
+  const dispo = CATALOGUE.filter(a => a.dispo).length;
+  const attente = CATALOGUE.length - dispo;
+  let texte = dispo + (dispo > 1 ? ' pièces disponibles' : ' pièce disponible');
+  if(attente) texte += ' · ' + attente + (attente > 1 ? ' bientôt' : ' bientôt');
+  poser($('#compte'), texte);
 
   $('#ctaSnap').href = LIEN_SNAP;
   poser($('#ctaTexte'), 'Commander sur Snap');
