@@ -132,6 +132,21 @@ l'identifiant exact du document — celui qui est dans le lien du client.
 **ouvrir l'app une fois** pour semer les copies. Entre les deux, les portails
 sont vides — sans conséquence tant qu'il n'y a pas de vrais clients, mais à
 savoir.
+- `boutique.html` — **une vitrine, rien d'autre.** Une page autonome pour le
+  lien de bio TikTok : les modèles en grand, et un bouton qui ouvre Snap. Aucune
+  base, aucun compte, aucun paiement — elle ne dépend de rien et ne peut donc
+  rien casser. Tout ce qui se modifie (pseudo Snap, titre, articles, photos,
+  prix) tient dans **un seul bloc `CATALOGUE` en bas du fichier** ; le dessin
+  s'adapte au nombre d'articles.
+  Deux choix qui viennent d'ailleurs dans ce projet : le bouton Snap est **un
+  vrai `<a href>`** et jamais un `window.open()` — c'est la condition pour
+  qu'iOS passe la main à l'application (piège 17) — et une photo absente affiche
+  **une icône de photo**, pas une silhouette de casquette : un dessin d'objet se
+  lit comme le produit lui-même, et le premier jet ressemblait à une cloche de
+  restaurant.
+  Une seule action pleine par écran : le bouton de chaque carte est en contour,
+  la barre fixe du bas est la seule pastille orange. Deux boutons pleins
+  identiques qui se superposent, c'est du bruit, pas de l'insistance.
 - `_headers` — les en-têtes servis par Cloudflare Pages. **Le HTML y est en
   `no-cache`**, et ce n'est pas une optimisation : deux fois de suite, un
   correctif bien en ligne a été jugé « ça ne marche toujours pas » parce que
