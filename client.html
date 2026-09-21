@@ -1599,9 +1599,41 @@ function clearFormErrors(){
 }
 
 // ---- Lecture du lien (?id=...&token=...) ----
+// AJOUTÉ À L'ÉCRAN D'ACCUEIL, iOS RELANCE LA PAGE SANS LA CHAÎNE DE REQUÊTE.
+// L'identifiant et le jeton disparaissent donc, et le portail affichait
+// « Lien invalide ou expiré » — l'icône était inutilisable. C'est un
+// comportement connu d'iOS, pas un défaut de notre lien : on ne peut pas le
+// corriger chez Apple, seulement cesser d'en dépendre.
+//
+// Le lien reste la source de vérité et gagne TOUJOURS quand il est complet.
+// Mais une fois qu'il a été validé par la base, on le retient sur l'appareil,
+// et c'est cette mémoire qui sert quand l'adresse arrive nue.
+//
+// Deux précautions : on ne retient QUE ce que le serveur a confirmé — un lien
+// faux ne s'installe jamais — et on efface dès qu'il est rejeté, sinon un
+// client dont le jeton a été renouvelé resterait bloqué pour toujours.
+const MEM_LIEN = 'ds_client_lien';
+function lienMemorise(){
+  try{
+    const v = JSON.parse(localStorage.getItem(MEM_LIEN) || 'null');
+    return (v && v.id && v.token) ? v : null;
+  }catch(e){ return null; }
+}
+function memoriseLien(id, token){
+  try{ localStorage.setItem(MEM_LIEN, JSON.stringify({ id, token })); }catch(e){}
+}
+function oublieLien(){
+  try{ localStorage.removeItem(MEM_LIEN); }catch(e){}
+}
+
 const params = new URLSearchParams(location.search);
-const clientId = params.get('id');
-const clientToken = params.get('token');
+const urlId = params.get('id'), urlToken = params.get('token');
+// Le couple est pris EN BLOC : mélanger l'identifiant d'un lien avec le jeton
+// d'un autre ne donnerait rien de bon.
+const lienComplet = !!(urlId && urlToken);
+const memo = lienComplet ? null : lienMemorise();
+const clientId    = lienComplet ? urlId    : (memo ? memo.id    : null);
+const clientToken = lienComplet ? urlToken : (memo ? memo.token : null);
 
 let clientData = null;
 let ordersUnsub = null;
@@ -1932,10 +1964,16 @@ async function init(){
   try{
     const doc = await db.collection('clients').doc(clientId).get();
     if(!doc.exists || doc.data().token !== clientToken){
+      // Rejeté par la base : on efface la mémoire, sinon un jeton renouvelé
+      // laisserait le client devant cet écran à chaque ouverture.
+      oublieLien();
       showError(t('errExpiredTitle'), t('errExpiredText'));
       return;
     }
     clientData = Object.assign({id:doc.id}, doc.data());
+    // Validé par le serveur : c'est seulement maintenant qu'on le retient, et
+    // c'est ce qui rend l'icône de l'écran d'accueil utilisable.
+    memoriseLien(clientId, clientToken);
 
     if(!clientData.accessCode){ enterApp(); return; }
 
