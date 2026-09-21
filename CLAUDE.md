@@ -178,7 +178,9 @@ savoir.
   fenêtre propre sans barre de navigateur, icône, nom. **`client.html` n'a
   volontairement pas de manifeste** : son lien porte l'identifiant et le jeton du
   client, et une adresse de départ fixe les effacerait. Les balises iOS lui
-  suffisent.
+  suffisent. **Mais ça ne suffisait pas non plus** — voir le piège 19 : iOS
+  relance le raccourci sans la chaîne de requête, et le portail retient donc le
+  lien sur l'appareil une fois validé.
 
 - `vendor/jsqr.js` — jsQR, **servi depuis notre domaine et plus depuis cdnjs**.
   Voir le piège 16 : c'est ce CDN qui a paralysé le scanner.
@@ -1185,6 +1187,38 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    enchaîner les devinettes**. La première a coûté un aller-retour ; la seconde
    aurait coûté le même. On prend le chemin garanti — celui qui n'a aucune
    valeur à deviner — et on met le reste dans la consigne.
+
+19. **iOS RELANCE UN RACCOURCI D'ÉCRAN D'ACCUEIL SANS LA CHAÎNE DE REQUÊTE.**
+   Le client ajoute son espace à son écran d'accueil — ce qu'on l'encourage à
+   faire, c'est même l'objet d'une des trois cartes d'accueil — puis il appuie
+   sur l'icône, et il tombe sur **« Lien invalide ou expiré »**.
+
+   La cause : `client.html?id=…&token=…` porte toute l'identité du client dans
+   son adresse, et iOS ne la conserve pas. C'est un comportement connu d'Apple,
+   pas un défaut du lien : **on ne peut pas le corriger chez eux, seulement
+   cesser d'en dépendre.** Le fait de ne pas avoir de manifeste évitait bien
+   qu'une `start_url` écrase l'adresse, mais ne réglait pas ça.
+
+   **Le portail retient donc le lien sur l'appareil** (`ds_client_lien`), et
+   trois règles encadrent cette mémoire :
+
+   - **Le lien gagne toujours**, et il est pris **en bloc** : si l'adresse porte
+     un identifiant *et* un jeton, c'est elle qui fait foi. Mélanger
+     l'identifiant d'un lien avec le jeton mémorisé d'un autre ne donnerait rien
+     de bon — c'est pour ça que le couple n'est jamais dissocié.
+   - **On ne retient que ce que la base a confirmé.** L'écriture se fait après
+     la vérification du jeton, jamais avant : un lien faux ne s'installe pas.
+   - **On efface dès que la base rejette.** Sans ça, un client dont le vendeur a
+     renouvelé le jeton resterait bloqué sur l'écran d'erreur pour toujours,
+     même avec un lien neuf dans les mains.
+
+   Ce que ça ne change pas : le **code à 6 chiffres est toujours demandé**. La
+   mémoire rend l'icône utilisable, elle n'ouvre aucune porte — un inconnu qui
+   charge l'adresse nue sur son propre téléphone est refusé, c'est vérifié.
+
+   La leçon générale : **une page dont l'identité vit dans l'adresse ne survit
+   pas à un raccourci.** Dès qu'on invite quelqu'un à installer une page, il
+   faut qu'elle sache se retrouver sans son adresse.
 
 ## Assistant IA
 
