@@ -159,6 +159,22 @@
        les boutons répondent au doigt tout de suite. */
     overscroll-behavior:none;
     touch-action:manipulation;
+    /* Et la troisième, qui manquait. Un seul élément décoratif plus large que
+       l'écran — ici les deux lumières derrière le prénom — et toute la page se
+       pousse sur le côté au doigt : l'interface glisse, les bords se découvrent,
+       et on voit que c'est une page web. Mesuré : le portail faisait 474 px de
+       large sur un écran de 390.
+       `overflow-x` sur `body` ne sert à RIEN : le navigateur le propage au
+       viewport et traite alors le body comme `visible`. C'est ici, sur `html`,
+       que ça se joue — et c'est pour ça que le `body{overflow-x:hidden}` déjà
+       présent n'avait jamais rien rogné.
+       `clip` plutôt que `hidden` : il ne crée pas de conteneur de défilement,
+       donc il ne touche ni au `position:fixed` ni au sticky. `hidden` reste
+       écrit au-dessus comme repli pour un iOS d'avant la version 16.
+       Et on clippe ICI, pas sur la carte : rogner `.hello` couperait les
+       lumières net et laisserait deux arêtes droites en travers du halo. */
+    overflow-x:hidden;
+    overflow-x:clip;
   }
   body{
     background:var(--bg); color:var(--text); font-family:var(--font-body);

@@ -1257,6 +1257,50 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    double-tap *et* le délai de 300 ms qui l'accompagne — les boutons répondent
    au doigt tout de suite.
 
+22. **« ÇA DÉCALE SUR LE CÔTÉ » N'EST PAS UN PROBLÈME DE ZOOM**, et confondre
+   les deux a failli coûter un tour de plus. Le verrou du piège 21 marchait
+   dans `index.html` et pas dans `client.html` — même bloc, copié au caractère
+   près dans les deux fichiers. Chercher une différence dans le code du verrou
+   n'aurait rien donné : il n'y en avait pas.
+
+   La mesure a tranché en une commande. Sur un écran de 390 px, `index.html`
+   faisait **390 px de large** ; le portail, **474**. Le portail était donc
+   simplement **plus large que l'écran**, et une page plus large que l'écran se
+   pousse au doigt — sans zoom, sans rien. Poussée : **71 px**.
+
+   Le coupable : `.hello-aura`, les deux lumières qui dérivent derrière le
+   prénom du client. `position:absolute`, parent en `overflow:visible`, elles
+   dépassaient de 84 px à droite et de 55 px à gauche. L'app pro, elle, ne
+   déborde pas : ses onglets qui dépassent sont dans une rangée qui défile,
+   donc déjà rognés par leur conteneur.
+
+   **`overflow-x` sur `body` NE SERT À RIEN**, et c'est le vrai piège : le
+   navigateur le **propage au viewport** et traite alors le `body` comme
+   `visible`. Le `body{overflow-x:hidden}` était là depuis toujours et n'avait
+   jamais rien rogné — mesuré : avec lui seul, 474 px ; la même déclaration sur
+   `html`, 390. Une déclaration qui a l'air de protéger et ne protège pas, c'est
+   le piège du flou oublié appliqué à la mise en page.
+
+   **Et on clippe sur `html`, jamais sur la carte.** Essayé d'abord sur
+   `.hello` : le décalage disparaissait, mais les halos étaient **coupés net**,
+   deux arêtes droites en travers de la lumière. Sur `html`, l'aura garde le
+   droit d'aller jusqu'au bord de l'écran et seul le hors-champ disparaît —
+   rendu strictement identique au témoin, vérifié à l'image.
+
+   **`clip` plutôt que `hidden`** : `clip` ne crée pas de conteneur de
+   défilement, donc il ne touche ni au `position:fixed` ni au sticky. `hidden`
+   reste écrit juste au-dessus comme repli pour un iOS d'avant la version 16 —
+   une propriété inconnue est ignorée, jamais fatale. Vérifié après coup :
+   rideau d'ouverture, `#bgfill`, lightbox et barre compacte couvrent toujours
+   l'écran entier, et le défilement vertical n'a pas bougé.
+
+   **La leçon de méthode** : deux fichiers qui portent le même code et se
+   comportent différemment, ce n'est pas le code qu'il faut relire — c'est la
+   différence qu'il faut **mesurer**. Une ligne de `scrollWidth` contre
+   `innerWidth` a répondu à ce que trois relectures n'auraient pas trouvé.
+   C'est le piège 18 sous un autre jour : comparer le symptôme à ce que le code
+   peut produire, plutôt que chercher un bug là où on s'attend à le trouver.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
