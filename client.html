@@ -2,7 +2,14 @@
 <html lang="fr" data-theme="light" style="background:#fbfcfa;">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<!-- viewport-fit=cover : SANS LUI, les env(safe-area-inset-*) valent ZÉRO, et
+     les vingt-trois endroits qui les utilisent ne servaient à rien. C'est lui
+     qui fait passer le fond sous l'encoche, donc qui donne l'aspect « vraie
+     app » au lieu d'une page posée dans un cadre.
+     user-scalable=no : Safari l'IGNORE volontairement, pour l'accessibilité —
+     et c'est très bien, dans le navigateur tout le monde garde le zoom. Mais
+     le conteneur de l'écran d'accueil, lui, le respecte. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="only light">
 <meta name="theme-color" content="#ffffff">
 <title>Mon espace client — DOLLAR$ SOURCING</title>
@@ -143,7 +150,16 @@
   }
 
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; padding:0;}
+  html,body{
+    margin:0; padding:0;
+    /* Les deux finitions qui font la différence entre une app et une page web.
+       overscroll-behavior coupe le rebond élastique du bas et du haut : c'est
+       lui qui découvre le fond du navigateur et trahit la page. touch-action
+       supprime le zoom au double-tap ET le délai de 300 ms qui va avec, donc
+       les boutons répondent au doigt tout de suite. */
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
   body{
     background:var(--bg); color:var(--text); font-family:var(--font-body);
     font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
@@ -1241,6 +1257,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
+
+// ---- L'app installée se comporte comme une app ----
+// Le zoom à deux doigts est ce qui trahit le plus une page web : on l'écarte,
+// l'interface se décale, et l'illusion tombe. On le bloque donc — mais
+// UNIQUEMENT quand la page tourne depuis l'écran d'accueil.
+//
+// Dans Safari, on n'y touche pas : Apple ignore volontairement `user-scalable`
+// dans le navigateur, pour l'accessibilité, et c'est une bonne chose. Quelqu'un
+// qui ouvre le lien depuis WhatsApp garde donc son zoom. Le conteneur de
+// l'écran d'accueil, lui, respecte la consigne — d'où ce verrou ciblé.
+(function(){
+  const installee = window.navigator.standalone === true ||
+                    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if(!installee) return;
+  document.documentElement.classList.add('installee');
+  // `gesturestart` est propre à Safari : c'est le pincement à deux doigts.
+  ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+    document.addEventListener(ev, function(e){ e.preventDefault(); }, { passive:false });
+  });
+})();
 // ==== Même projet Firebase que l'app pro ====
 const firebaseConfig = {
   apiKey: "AIzaSyC6nhGHP2WlM_vFKbL-GUG6_qErMrv9Dfs",

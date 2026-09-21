@@ -2,7 +2,14 @@
 <html lang="fr" data-theme="light" style="background:#fbfcfa;">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<!-- viewport-fit=cover : SANS LUI, les env(safe-area-inset-*) valent ZÉRO, et
+     les vingt-trois endroits qui les utilisent ne servaient à rien. C'est lui
+     qui fait passer le fond sous l'encoche, donc qui donne l'aspect « vraie
+     app » au lieu d'une page posée dans un cadre.
+     user-scalable=no : Safari l'IGNORE volontairement, pour l'accessibilité —
+     et c'est très bien, dans le navigateur tout le monde garde le zoom. Mais
+     le conteneur de l'écran d'accueil, lui, le respecte. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="only light">
 <meta name="theme-color" content="#ffffff">
 <title>Mes informations — DOLLAR$ SOURCING</title>

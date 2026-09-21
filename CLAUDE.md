@@ -1220,6 +1220,43 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    pas à un raccourci.** Dès qu'on invite quelqu'un à installer une page, il
    faut qu'elle sache se retrouver sans son adresse.
 
+20. **`viewport-fit=cover` MANQUAIT, donc les vingt-trois zones sûres ne
+   servaient à rien.** Les trois pages écrivent consciencieusement
+   `calc(env(safe-area-inset-top) + 24px)` un peu partout — mais **sans
+   `viewport-fit=cover` dans la balise viewport, `env()` vaut zéro**. Tout ce
+   travail sur l'encoche était mort, et personne ne pouvait s'en apercevoir :
+   une valeur de zéro ne casse rien, elle ne fait rien.
+
+   C'est aussi ce qui donne l'aspect « vraie app » : le fond passe **sous**
+   l'encoche et sous la barre du bas au lieu de s'arrêter dans un cadre. Vérifié
+   en remplaçant `env()` par les vraies valeurs d'un iPhone (59 px / 34 px) :
+   aucun élément ne finit sous l'encoche, et la barre compacte du portail se
+   comporte exactement comme prévu — **sa boîte démarre à 0** (son fond couvre
+   l'encoche, c'est voulu) et **son texte à 70 px**.
+
+   Piège de vérification, d'ailleurs : tester la position de la *boîte* d'une
+   barre fixe donne un faux positif. C'est la position de son **contenu** qu'il
+   faut mesurer.
+
+21. **LE ZOOM À DEUX DOIGTS EST CE QUI TRAHIT LE PLUS UNE PAGE WEB**, et on ne
+   le bloque que dans l'app installée.
+
+   Écarter deux doigts décale l'interface, découvre les bords, et l'illusion
+   tombe — même avec l'icône sur l'écran d'accueil. Mais **Safari ignore
+   délibérément `user-scalable=no`**, pour l'accessibilité, et c'est une bonne
+   chose : quelqu'un qui ouvre le lien depuis WhatsApp doit garder son zoom.
+
+   Le conteneur de l'écran d'accueil, lui, respecte la consigne. D'où un verrou
+   **ciblé** : on teste `navigator.standalone` ou `display-mode: standalone`, et
+   on n'annule les événements `gesturestart` de Safari que là. Dans le
+   navigateur, rien ne change.
+
+   Deux finitions CSS vont avec, et chacune retire un signe distinctif :
+   **`overscroll-behavior:none`** coupe le rebond élastique qui découvre le fond
+   du navigateur, et **`touch-action:manipulation`** supprime le zoom au
+   double-tap *et* le délai de 300 ms qui l'accompagne — les boutons répondent
+   au doigt tout de suite.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
