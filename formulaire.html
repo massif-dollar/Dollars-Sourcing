@@ -117,7 +117,11 @@
   }
 
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; padding:0;}
+  /* Rien ne déborde ici aujourd'hui, mais le garde-fou coûte une ligne :
+     un décor plus large que l'écran rendrait la page poussable sur le
+     côté, et l'illusion de l'app tomberait. Voir le même bloc dans
+     client.html pour le détail. */
+  html,body{margin:0; padding:0; overflow-x:hidden; overflow-x:clip;}
   body{
     background:var(--bg); color:var(--text); font-family:var(--font-body);
     font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
