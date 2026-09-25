@@ -88,6 +88,26 @@ service cloud.firestore {
       allow delete: if isOwner() || isMine();
     }
 
+    // ── CATALOGUE ──
+    // La vitrine que le client parcourt avant de commander. Un document par
+    // fiche (une fiche = un coloris précis) : les photos sont en base64 DANS le
+    // document et Firestore plafonne à 1 Mo, donc tout regrouper serait
+    // impossible dès une vingtaine de modèles.
+    //
+    // LECTURE OUVERTE, et c'est voulu : le portail client n'est jamais connecté
+    // à Firebase, Firestore le voit comme un visiteur anonyme. Sans `list`
+    // ouvert il ne verrait rien — et un portail vide ne lève aucune erreur
+    // visible, c'est le piège qui a déjà coûté une soirée.
+    //
+    // CE QUE ÇA IMPOSE : le catalogue ne doit JAMAIS porter de prix d'achat ni
+    // de nom de fournisseur. Ce qui est ici est public, point.
+    // L'écriture, elle, reste au propriétaire de la fiche.
+    match /catalog/{itemId} {
+      allow read: if true;
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isOwner() || isMine();
+    }
+
     // ── RÉGLAGES ──
     // La liste des accès : lisible par tout compte connecté (nécessaire pour qu'un
     // invité vérifie sa propre autorisation), modifiable uniquement par le propriétaire.

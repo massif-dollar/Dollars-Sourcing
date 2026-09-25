@@ -547,6 +547,109 @@
   .photos-fold .req-photos, .photos-fold > .req-photo{
     animation:foldIn .3s var(--ease-out) both;
   }
+
+  /* ===== Le recadreur carré =====
+     Le même que celui du portail, avec la rotation en plus. Le cadre est FIXE
+     et l'image glisse dessous : c'est le geste de la photo de profil d'iOS.
+     Le carré est imposé, et ce n'est pas une limite ici — une grille de
+     catalogue aux formats mélangés devient un escalier, et on ne compare plus
+     rien. C'est exactement ce qui fait qu'un catalogue se lit. */
+  .cropper{ position:fixed; inset:0; z-index:70; display:none; flex-direction:column; background:#000; }
+  .cropper.open{ display:flex; }
+  .crop-head{ padding:calc(env(safe-area-inset-top) + 14px) 16px 8px; text-align:center; color:#fff; flex:none; }
+  .crop-head h3{ margin:0; font-family:var(--font-display); font-size:16px; font-weight:700; }
+  .crop-head p{ margin:4px 0 0; font-size:12.5px; opacity:.62; }
+  .crop-head .crop-step{ font-variant-numeric:tabular-nums; opacity:.5; }
+  .crop-head .crop-step:empty{ display:none; }
+  .crop-stage{
+    position:relative; flex:1; overflow:hidden;
+    /* Sans ça le navigateur s'empare du geste et l'image ne bouge pas. Et le
+       verrou anti-zoom de l'app installée annule `gesturestart`, donc le
+       pincement est calculé ici à la main, à deux doigts. */
+    touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  .crop-img{ position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; pointer-events:none; }
+  /* Le voile percé d'un carré : une seule ombre immense, plutôt que quatre
+     rectangles à tenir alignés. */
+  .crop-hole{
+    position:absolute; pointer-events:none; border-radius:4px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.62); outline:1.5px solid rgba(255,255,255,.9);
+  }
+  .crop-tools{ flex:none; display:flex; justify-content:center; gap:12px; padding:16px 16px 6px; }
+  .crop-tools button{
+    width:46px; height:40px; border-radius:11px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.12); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .crop-tools button:active{ background:rgba(255,255,255,.22); }
+  .crop-tools svg{ width:19px; height:19px; }
+  .crop-bar{ flex:none; display:flex; gap:10px; padding:10px 16px calc(env(safe-area-inset-bottom) + 14px); background:#000; }
+  .crop-bar button{
+    flex:1; padding:13px; border-radius:12px; font-family:var(--font-body);
+    font-size:14.5px; font-weight:700; cursor:pointer; border:none;
+  }
+  .crop-cancel{ background:rgba(255,255,255,.12); color:#fff; }
+  .crop-ok{ background:var(--accent); color:#fff; }
+
+  /* ===== Catalogue : marques et modèles ===== */
+  .brand-card{ display:flex; align-items:center; gap:12px; }
+  .brand-card .brand-thumbs{ display:flex; flex:none; }
+  /* Trois vignettes qui se chevauchent : on reconnaît la marque à l'œil avant
+     même de lire son nom. */
+  .brand-card .brand-thumbs img{
+    width:40px; height:40px; border-radius:9px; object-fit:cover;
+    border:1.5px solid var(--card); margin-left:-12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.14);
+  }
+  .brand-card .brand-thumbs img:first-child{ margin-left:0; }
+  .brand-card .brand-info{ flex:1; min-width:0; }
+  .brand-card .brand-title{ font-weight:700; letter-spacing:-0.01em; }
+  .brand-card .brand-count{ font-size:12.5px; color:var(--text-faint); margin-top:2px; }
+  .brand-card .brand-go{ flex:none; color:var(--text-faint); display:flex; }
+  .brand-card .brand-go svg{ width:17px; height:17px; }
+
+  /* La grille des modèles, dans la feuille d'une marque. */
+  .cat-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:9px; margin-top:4px; }
+  .cat-item{ position:relative; }
+  .cat-item .cat-img{
+    width:100%; aspect-ratio:1; object-fit:cover; display:block;
+    border-radius:12px; border:0.5px solid var(--hairline); background:var(--fill);
+  }
+  .cat-item .cat-name{
+    font-size:11.5px; line-height:1.25; margin-top:5px; color:var(--text-muted);
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .cat-item .cat-del{
+    position:absolute; top:5px; right:5px; width:25px; height:25px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.6); color:#fff; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  /* Masqué pour les clients : la fiche reste, la vitrine ne la montre plus.
+     Ce n'est pas du stock — le catalogue n'en a pas — c'est de la publication. */
+  .cat-item.hidden-item .cat-img{ opacity:.34; }
+  .cat-item .cat-eye{
+    position:absolute; top:5px; left:5px; width:25px; height:25px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.6); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .cat-item .cat-eye svg{ width:13px; height:13px; }
+  .cat-add{
+    width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer;
+    border:1px dashed var(--hairline-strong); background:transparent; color:var(--text-faint);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+    font-family:var(--font-body); font-size:11.5px; font-weight:600;
+    transition:transform .3s var(--spring), color .2s ease, border-color .2s ease;
+  }
+  .cat-add:active{ transform:scale(.97); }
+  /* Le nom se tape sous la vignette, pas dans une fenêtre à part : on
+     photographie cinq modèles d'affilée, puis on nomme les cinq d'un trait. */
+  .cat-name-input{
+    width:100%; margin-top:5px; padding:6px 8px; border-radius:8px;
+    border:0.5px solid var(--hairline); background:var(--fill); color:var(--text);
+    font-family:var(--font-body); font-size:11.5px; text-align:center;
+  }
+  .cat-name-input:focus{ border-color:var(--accent); outline:none; }
+  .cat-add svg{ width:20px; height:20px; }
   @keyframes foldIn{
     from{ opacity:0; transform:translateY(-5px); }
     to{ opacity:1; transform:none; }
@@ -1569,6 +1672,7 @@
     <button id="viewBtnCommandes" class="active"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6"/></svg></span><span data-i18n="navOrders">Commandes</span></button>
     <button id="viewBtnClients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><span data-i18n="navClients">Clients</span></button>
     <button id="viewBtnSuppliers"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9l5 3V9l5 3V9l4 2.5V21"/><path d="M3 21h18"/></svg></span><span data-i18n="navSuppliers">Fournisseurs</span></button>
+    <button id="viewBtnCatalogue"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg></span><span data-i18n="navCatalogue">Catalogue</span></button>
     <button id="viewBtnStats"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span data-i18n="navStats">Stats</span></button>
     <button id="viewBtnRequests"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-2 9H6L4 4Z"/><path d="M4 4 3 2M20 4l1-2"/><path d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg></span><span data-i18n="navRequests">Demandes</span><span class="nav-badge" id="requestsBadge" style="display:none;">0</span></button>
   </div>
@@ -1623,6 +1727,13 @@
   <div id="suppliersView" style="display:none;">
     <div class="search"><input type="text" id="supplierSearchInput" data-i18n-placeholder="searchSuppliers" placeholder="Rechercher un fournisseur..."></div>
     <div class="list" id="supplierList"></div>
+  </div>
+
+  <!-- Le catalogue : les marques, puis les modèles de la marque ouverte.
+       Comme un dossier qu'on ouvre. -->
+  <div id="catalogueView" style="display:none;">
+    <div class="search"><input type="text" id="catSearchInput" data-i18n-placeholder="searchCatalogue" placeholder="Rechercher une marque, un modèle..."></div>
+    <div class="list" id="catalogueList"></div>
   </div>
 
   <div id="statsView" style="display:none;">
@@ -1982,6 +2093,29 @@
   </div>
 </div>
 
+<!-- La feuille d'une marque : son nom en tête, ses modèles en dessous.
+     La marque n'est stockée nulle part — elle se déduit des fiches. Une marque
+     vide n'existe donc jamais, et il n'y a pas de dossier fantôme à nettoyer
+     après une suppression. Même principe que le solde en Dollarz. -->
+<div class="overlay" id="brandOverlay">
+  <div class="sheet">
+    <button class="icon-btn close-x" id="closeBrandSheet">✕</button>
+    <h2 id="brandSheetTitle">Marque</h2>
+    <div class="field">
+      <label data-i18n="brandName">Nom de la marque</label>
+      <input type="text" id="b_name" data-i18n-placeholder="brandNamePh" placeholder="Ex: Asics">
+      <div class="field-error"></div>
+    </div>
+    <p class="section-title" data-i18n="brandModels">Modèles</p>
+    <div class="cat-grid" id="brandGrid"></div>
+    <input type="file" id="catPhotoInput" accept="image/*" multiple style="display:none;">
+    <div class="sheet-actions">
+      <button type="button" class="btn-primary" id="saveBrandBtn" data-i18n="save">Enregistrer</button>
+      <button type="button" class="btn-secondary" id="deleteBrandBtn" data-i18n="deleteBrand">Supprimer la marque</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="trashOverlay">
   <div class="sheet">
     <button class="icon-btn close-x" id="closeTrashSheet">✕</button>
@@ -2020,6 +2154,35 @@
       <button type="button" class="btn-secondary" id="confirmCancelBtn" data-i18n="cancelBtn" style="color:var(--text-muted);">Annuler</button>
       <button type="button" class="btn-primary" id="confirmOkBtn" data-i18n="confirmBtn" style="background:var(--danger);">Confirmer</button>
     </div>
+  </div>
+</div>
+
+<!-- Le recadreur carré du catalogue. Le cadre ne bouge pas, l'image glisse
+     dessous ; la rotation par quarts de tour est là parce qu'une photo de
+     produit prise de travers, c'est la règle et pas l'exception. -->
+<div class="cropper" id="cropper" role="dialog" aria-modal="true">
+  <div class="crop-head">
+    <h3 data-i18n="cropTitle">Cadre le modèle</h3>
+    <p data-i18n="cropHint">Fais glisser pour placer, pince pour zoomer</p>
+    <p class="crop-step" id="cropStep"></p>
+  </div>
+  <div class="crop-stage" id="cropStage">
+    <!-- Un CANVAS et non une <img> : pivoter revient alors à redessiner, sans
+         jamais repasser par une compression JPEG qui abîmerait la photo. -->
+    <canvas class="crop-img" id="cropImg"></canvas>
+    <div class="crop-hole" id="cropHole"></div>
+  </div>
+  <div class="crop-tools">
+    <button type="button" id="cropRotL" data-i18n-title="cropRotLeft" title="Pivoter à gauche" aria-label="Pivoter à gauche">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h10a5 5 0 0 1 0 10H9"/><path d="M7 5 3 9l4 4"/></svg>
+    </button>
+    <button type="button" id="cropRotR" data-i18n-title="cropRotRight" title="Pivoter à droite" aria-label="Pivoter à droite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9H11a5 5 0 0 0 0 10h4"/><path d="m17 5 4 4-4 4"/></svg>
+    </button>
+  </div>
+  <div class="crop-bar">
+    <button type="button" class="crop-cancel" id="cropCancel" data-i18n="cropCancel">Annuler</button>
+    <button type="button" class="crop-ok" id="cropOk" data-i18n="cropOk">Valider</button>
   </div>
 </div>
 
@@ -2194,6 +2357,22 @@ const I18N = {
     supplierTitle:'Fournisseur', fieldSupplierContact:'Contact (WeChat, tél...)', fieldSupplierNote:'Note',
     fieldWechat:'WeChat', fieldPhone:'Téléphone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Adresse / marché',
     placeholderWechatId:'Identifiant WeChat', placeholderMarket:'Ex: Marché Baima, étage 3, stand 217',
+    navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
+    emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
+    emptyCatalogueSearch:'Aucune marque ne correspond.',
+    newBrand:'Nouvelle marque', brandName:'Nom de la marque', brandNamePh:'Ex: Asics',
+    brandModels:'Modèles', modelNamePh:'Nom du modèle',
+    catAdd:'Ajouter', catRemove:'Retirer ce modèle',
+    catVisible:'Visible par les clients', catHidden:'Masqué aux clients', catHiddenCount:'masqué',
+    deleteBrand:'Supprimer la marque',
+    confirmDeleteBrandAll:'Supprimer cette marque et ses {n} modèles ?',
+    errNoModel:'Ajoute au moins un modèle.',
+    errBrandName:'Indique le nom de la marque.',
+    toastBrandSaved:'Marque enregistrée.', toastBrandDeleted:'Marque supprimée.',
+    cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
+    cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
+    cropRotLeft:'Pivoter à gauche', cropRotRight:'Pivoter à droite',
+    toastPhotoUnreadable:'Impossible de lire cette image.',
     brandsTitle:'Marques & modèles', addBrand:'+ Marque', addModel:'+ Ajouter un modèle',
     modelSingular:'modèle', modelsPlural:'modèles',
     brandNamePlaceholder:'Nom de la marque', modelNamePlaceholder:'Nom du modèle',
@@ -2359,6 +2538,22 @@ const I18N = {
     supplierTitle:'Supplier', fieldSupplierContact:'Contact (WeChat, phone...)', fieldSupplierNote:'Note',
     fieldWechat:'WeChat', fieldPhone:'Phone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Address / market',
     placeholderWechatId:'WeChat ID', placeholderMarket:'E.g. Baima Market, floor 3, stall 217',
+    navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
+    emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
+    emptyCatalogueSearch:'No brand matches.',
+    newBrand:'New brand', brandName:'Brand name', brandNamePh:'e.g. Asics',
+    brandModels:'Models', modelNamePh:'Model name',
+    catAdd:'Add', catRemove:'Remove this model',
+    catVisible:'Visible to clients', catHidden:'Hidden from clients', catHiddenCount:'hidden',
+    deleteBrand:'Delete brand',
+    confirmDeleteBrandAll:'Delete this brand and its {n} models?',
+    errNoModel:'Add at least one model.',
+    errBrandName:'Enter the brand name.',
+    toastBrandSaved:'Brand saved.', toastBrandDeleted:'Brand deleted.',
+    cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
+    cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
+    cropRotLeft:'Rotate left', cropRotRight:'Rotate right',
+    toastPhotoUnreadable:'This image could not be read.',
     brandsTitle:'Brands & models', addBrand:'+ Brand', addModel:'+ Add a model',
     modelSingular:'model', modelsPlural:'models',
     brandNamePlaceholder:'Brand name', modelNamePlaceholder:'Model name',
@@ -2439,7 +2634,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-25c';
+const BUILD = '2026-09-26';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -2453,14 +2648,15 @@ const STATUS_META = {
   annule:    { key:'statusAnnule',   color:'var(--st-annule)'   }
 };
 const STATUS_FLOW = ['nouveau','devis','paye','commande','expedie','livre'];
-const VIEW_BTN_IDS = { commandes:'viewBtnCommandes', clients:'viewBtnClients', suppliers:'viewBtnSuppliers', stats:'viewBtnStats', requests:'viewBtnRequests' };
-const VIEW_IDS = { commandes:'commandesView', clients:'clientsView', suppliers:'suppliersView', stats:'statsView', requests:'requestsView' };
+const VIEW_BTN_IDS = { commandes:'viewBtnCommandes', clients:'viewBtnClients', suppliers:'viewBtnSuppliers', catalogue:'viewBtnCatalogue', stats:'viewBtnStats', requests:'viewBtnRequests' };
+const VIEW_IDS = { commandes:'commandesView', clients:'clientsView', suppliers:'suppliersView', catalogue:'catalogueView', stats:'statsView', requests:'requestsView' };
 const ICONS = {
   orders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6"/></svg>',
   clients: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>',
   suppliers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9l5 3V9l5 3V9l4 2.5V21"/><path d="M3 21h18"/></svg>',
   stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
+  catalogue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg>',
   requests: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-2 9H6L4 4Z"/><path d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>'
 };
 
@@ -2481,6 +2677,7 @@ function emptyHtml(icon, text){ return `<div class="empty"><div class="empty-ico
 let orders = [];
 let clients = [];
 let suppliers = [];
+let catalogItems = [];   // une fiche = un coloris précis, pas un modèle abstrait
 let pendingRequests = [];
 let currentTab = 'tous';
 let searchTerm = '';
@@ -2811,6 +3008,13 @@ function startListeners(){
     // c'était ne jamais suivre les changements de statut. La double écriture
     // que ce garde-fou évitait est déjà évitée par l'empreinte publicMirror.
     syncPublicOrders(all);
+  }, ()=>showToast(t('toastSaveError')));
+  // Le catalogue. Un document PAR MODÈLE, et c'est ce qui le rend possible :
+  // les photos sont en base64 dans le document, et Firestore plafonne à 1 Mo.
+  // Vingt modèles dans un seul document feraient déjà 2 Mo (piège 23).
+  db.collection('catalog').where('ownerId','==',currentUid).onSnapshot(snap=>{
+    catalogItems = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    if(viewState === 'catalogue') renderCatalogue();
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
@@ -3351,6 +3555,432 @@ function imgPhoto(p){
        + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
 }
 
+// ================= CATALOGUE =================
+// Une fiche = un coloris précis (« Gel-Kayano 31 bleue »), pas un modèle
+// abstrait : c'est ce qui permet au client de commander 5 bleues et 5 noires
+// en tapant deux quantités, au lieu d'écrire une phrase qu'il faudrait relire.
+//
+// AUCUN STOCK. Le catalogue est une vitrine fixe : pas de quantité disponible,
+// pas de décompte, pas de rupture. Massif achète chez le fournisseur après la
+// commande. `active` n'est pas du stock, c'est de la PUBLICATION : masquer une
+// fiche sans perdre la photo qu'on a recadrée.
+//
+// Le catalogue sera lu par le portail, qui n'est pas connecté à Firebase et que
+// Firestore voit comme un visiteur anonyme (piège 11). Donc : jamais de prix
+// d'achat, jamais de nom de fournisseur ici.
+
+// Les marques ne sont stockées nulle part : elles se déduisent des fiches.
+// Rien à maintenir, et une marque vide ne peut pas exister.
+function marquesDuCatalogue(){
+  const par = new Map();
+  catalogItems.forEach(it=>{
+    const m = (it.brand || '').trim();
+    if(!m) return;
+    if(!par.has(m)) par.set(m, []);
+    par.get(m).push(it);
+  });
+  return [...par.entries()]
+    .map(([nom, items])=>({ nom, items: items.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)) }))
+    .sort((a,b)=>a.nom.localeCompare(b.nom));
+}
+
+function renderCatalogue(){
+  const el = $('#catalogueList');
+  if(!el) return;
+  let marques = marquesDuCatalogue();
+  const terme = ($('#catSearchInput').value || '').trim().toLowerCase();
+  if(terme){
+    // On cherche dans la marque ET dans les modèles : « kayano » doit trouver
+    // Asics même si on ne se souvient plus de la marque.
+    marques = marques.filter(m => m.nom.toLowerCase().includes(terme)
+      || m.items.some(i=>(i.name||'').toLowerCase().includes(terme)));
+  }
+  if(!marques.length){
+    el.innerHTML = emptyHtml('catalogue', t(terme ? 'emptyCatalogueSearch' : 'emptyCatalogue'));
+    return;
+  }
+  el.innerHTML = marques.map(m=>{
+    const apercus = m.items.filter(i=>i.thumb).slice(0,3).map(i=>
+      '<img src="data:' + (i.thumbType||'image/jpeg') + ';base64,' + i.thumb + '" alt="">').join('');
+    const n = m.items.length;
+    const caches = m.items.filter(i=>i.active === false).length;
+    return '<div class="order-card brand-card" data-brand="' + escapeHtml(m.nom) + '">'
+      + (apercus ? '<div class="brand-thumbs">' + apercus + '</div>' : '')
+      + '<div class="brand-info">'
+      +   '<div class="brand-title">' + escapeHtml(m.nom) + '</div>'
+      +   '<div class="brand-count">' + n + ' ' + escapeHtml(t(n > 1 ? 'modelsPlural' : 'modelSingular'))
+      +     (caches ? ' · ' + caches + ' ' + escapeHtml(t('catHiddenCount')) : '') + '</div>'
+      + '</div>'
+      + '<span class="brand-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>'
+      + '</div>';
+  }).join('');
+}
+
+$('#catSearchInput').addEventListener('input', renderCatalogue);
+$('#catalogueList').addEventListener('click', (e)=>{
+  const card = e.target.closest('.brand-card');
+  if(card) openBrandSheet(card.dataset.brand);
+});
+
+// ---- La feuille d'une marque ----
+// `brandDraft` porte le travail en cours : les fiches existantes ET celles
+// qu'on vient d'ajouter mais qui ne sont pas encore écrites. Rien ne part dans
+// la base avant « Enregistrer » — un modèle photographié par erreur se retire
+// d'un tap, sans laisser de trace.
+let brandOrigine = null;   // le nom de la marque à l'ouverture (null = nouvelle)
+let brandDraft = [];
+
+function openBrandSheet(nom){
+  brandOrigine = nom || null;
+  const trouvee = nom ? marquesDuCatalogue().find(m=>m.nom === nom) : null;
+  brandDraft = trouvee ? trouvee.items.map(i=>Object.assign({}, i)) : [];
+  $('#brandSheetTitle').textContent = nom || t('newBrand');
+  $('#b_name').value = nom || '';
+  $('#deleteBrandBtn').style.display = nom ? 'block' : 'none';
+  clearFieldError($('#b_name'));
+  renderBrandGrid();
+  $('#brandOverlay').classList.add('open');
+}
+function closeBrandSheet(){
+  $('#brandOverlay').classList.remove('open');
+  brandOrigine = null; brandDraft = [];
+}
+$('#closeBrandSheet').addEventListener('click', closeBrandSheet);
+$('#brandOverlay').addEventListener('click', (e)=>{ if(e.target===$('#brandOverlay')) closeBrandSheet(); });
+
+const OEIL_OUVERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const OEIL_BARRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 3.6-.7"/></svg>';
+
+function renderBrandGrid(){
+  const vues = escapeHtml(t('catVisible')), masq = escapeHtml(t('catHidden'));
+  const cases = brandDraft.map((it, i)=>{
+    const cache = it.active === false;
+    return '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
+      + '<img class="cat-img" src="data:' + (it.thumbType||'image/jpeg') + ';base64,' + it.thumb + '" alt="">'
+      + '<button type="button" class="cat-eye" data-eye="' + i + '" title="' + (cache?masq:vues) + '" aria-label="' + (cache?masq:vues) + '">'
+      +   (cache ? OEIL_BARRE : OEIL_OUVERT) + '</button>'
+      + '<button type="button" class="cat-del" data-del="' + i + '" aria-label="' + escapeHtml(t('catRemove')) + '">\u2715</button>'
+      + '<input type="text" class="cat-name-input" value="' + escapeHtml(it.name || '') + '" data-name="' + i + '"'
+      +   ' placeholder="' + escapeHtml(t('modelNamePh')) + '">'
+      + '</div>';
+  }).join('');
+  $('#brandGrid').innerHTML = cases
+    + '<button type="button" class="cat-add" id="catAddBtn">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+    + escapeHtml(t('catAdd')) + '</button>';
+}
+
+$('#brandGrid').addEventListener('click', (e)=>{
+  if(e.target.closest('#catAddBtn')){ $('#catPhotoInput').click(); return; }
+  const del = e.target.closest('button[data-del]');
+  if(del){ brandDraft.splice(Number(del.dataset.del), 1); renderBrandGrid(); return; }
+  const eye = e.target.closest('button[data-eye]');
+  if(eye){
+    const it = brandDraft[Number(eye.dataset.eye)];
+    it.active = (it.active === false);   // masqué ↔ visible
+    renderBrandGrid();
+  }
+});
+$('#brandGrid').addEventListener('input', (e)=>{
+  const inp = e.target.closest('input[data-name]');
+  if(inp) brandDraft[Number(inp.dataset.name)].name = inp.value;
+});
+
+// Chaque photo passe par le recadreur, l'une après l'autre.
+$('#catPhotoInput').addEventListener('change', async (e)=>{
+  const fichiers = [...(e.target.files || [])];
+  e.target.value = '';
+  if(!fichiers.length) return;
+  for(let i = 0; i < fichiers.length; i++){
+    let src;
+    try{ src = await chargeImageFichier(fichiers[i]); }
+    catch(err){ showToast(t('toastPhotoUnreadable')); continue; }
+    $('#cropStep').textContent = fichiers.length > 1
+      ? t('cropStep').replace('{i}', i+1).replace('{n}', fichiers.length) : '';
+    const out = await ouvreRecadreur(src);
+    if(out){
+      brandDraft.push({
+        name: '', active: true,
+        photo: out.photo.data, photoType: out.photo.media_type,
+        thumb: out.thumb.data, thumbType: out.thumb.media_type,
+        createdAt: Date.now() + i
+      });
+      renderBrandGrid();
+    }
+  }
+  $('#cropStep').textContent = '';
+});
+
+$('#saveBrandBtn').addEventListener('click', async ()=>{
+  const nom = $('#b_name').value.trim();
+  // setFieldError, pas un textContent à la main : c'est la classe `.invalid`
+  // qu'il pose qui rend le message visible — sans elle il reste en display:none.
+  clearFieldError($('#b_name'));
+  if(!nom){ setFieldError($('#b_name'), t('errBrandName')); return; }
+  if(!brandDraft.length){ showToast(t('errNoModel')); return; }
+
+  const btn = $('#saveBrandBtn');
+  btn.disabled = true;
+  try{
+    // Un document par fiche. On écrit en lot : cinq modèles, une seule
+    // opération — et si une écriture échoue, aucune ne passe.
+    const lot = db.batch();
+    const avant = brandOrigine
+      ? catalogItems.filter(i => (i.brand||'').trim() === brandOrigine) : [];
+    const gardes = new Set(brandDraft.filter(i=>i.id).map(i=>i.id));
+    // ce qui a disparu du brouillon est supprimé
+    avant.filter(i=>!gardes.has(i.id)).forEach(i=>lot.delete(db.collection('catalog').doc(i.id)));
+    brandDraft.forEach((it, rang)=>{
+      const donnees = {
+        ownerId: currentUid, brand: nom,
+        name: (it.name || '').trim(),
+        photo: it.photo, photoType: it.photoType,
+        thumb: it.thumb, thumbType: it.thumbType,
+        active: it.active !== false,
+        rang,
+        createdAt: it.createdAt || Date.now()
+      };
+      if(it.id) lot.set(db.collection('catalog').doc(it.id), donnees);
+      else      lot.set(db.collection('catalog').doc(), donnees);
+    });
+    await lot.commit();
+    closeBrandSheet();
+    showToast(t('toastBrandSaved'));
+  }catch(err){
+    // Le code d'erreur s'affiche : sur un iPhone il n'y a pas de console, et
+    // « permission-denied » se lit à voix haute (piège 13).
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }
+  btn.disabled = false;
+});
+
+$('#deleteBrandBtn').addEventListener('click', async ()=>{
+  if(!brandOrigine) return;
+  if(!(await showConfirm(t('confirmDeleteBrandAll').replace('{n}', brandDraft.length)))) return;
+  try{
+    const lot = db.batch();
+    catalogItems.filter(i => (i.brand||'').trim() === brandOrigine)
+                .forEach(i => lot.delete(db.collection('catalog').doc(i.id)));
+    await lot.commit();
+    closeBrandSheet();
+    showToast(t('toastBrandDeleted'));
+  }catch(err){
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }
+});
+
+// ================= Le recadreur carré =================
+// Le cadre est fixe, l'image glisse et se zoome dessous — le geste de la photo
+// de profil d'iOS. Le carré est imposé : une grille de catalogue aux formats
+// mélangés devient un escalier, et c'est justement le format constant qui fait
+// qu'un catalogue se lit.
+//
+// La source est un CANVAS, jamais une <img>. Pivoter revient donc à redessiner,
+// sans repasser par une compression JPEG : dix quarts de tour n'abîment rien.
+const CAT_PLEINE = 900;   // la photo qu'on ouvre
+const CAT_VIGNETTE = 400; // celle de la grille — c'est elle qui décide du poids
+
+function chargeImageFichier(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c);
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Exporte la portion carrée choisie, à la taille demandée. La qualité descend
+// tant que c'est trop lourd : les photos sont écrites EN BASE64 DANS le
+// document Firestore, qui plafonne à 1 Mo (piège 23).
+function exporteCarre(source, sx, sy, taille, cote, viseKo){
+  const c = document.createElement('canvas');
+  c.width = cote; c.height = cote;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, cote, cote);
+  x.drawImage(source, sx, sy, taille, taille, 0, 0, cote, cote);
+  let q = 0.72;
+  let url = c.toDataURL('image/jpeg', q);
+  while(url.length > viseKo * 1024 && q > 0.35){
+    q -= 0.08;
+    url = c.toDataURL('image/jpeg', q);
+  }
+  return { media_type:'image/jpeg', data:url.split(',')[1], url };
+}
+
+let cropEtat = null;    // {src, iw, ih, S, cx, cy, min, scale, x, y}
+let cropRendu = null;
+
+function placeCrop(src){
+  const e = cropEtat;
+  const stage = document.getElementById('cropStage');
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const S = Math.round(Math.min(W, H) * 0.86);
+  const cx = Math.round((W - S) / 2), cy = Math.round((H - S) / 2);
+  const trou = document.getElementById('cropHole');
+  trou.style.width = S + 'px';  trou.style.height = S + 'px';
+  trou.style.left  = cx + 'px'; trou.style.top    = cy + 'px';
+  // le canvas affiché est une copie à l'échelle 1 : c'est la transform qui zoome
+  const vue = document.getElementById('cropImg');
+  vue.width = src.width; vue.height = src.height;
+  vue.getContext('2d').drawImage(src, 0, 0);
+  // L'image doit toujours COUVRIR le cadre : en dessous, on exporterait du vide.
+  const min = Math.max(S / src.width, S / src.height);
+  cropEtat = Object.assign(e || {}, {
+    src, iw:src.width, ih:src.height, S, cx, cy, min, scale:min,
+    x: cx + (S - src.width  * min) / 2,
+    y: cy + (S - src.height * min) / 2
+  });
+  appliqueCrop();
+}
+
+function ouvreRecadreur(src){
+  return new Promise((resolve)=>{
+    cropRendu = resolve;
+    cropEtat = {};
+    document.getElementById('cropper').classList.add('open');
+    placeCrop(src);
+  });
+}
+
+function appliqueCrop(){
+  const e = cropEtat; if(!e || !e.src) return;
+  const w = e.iw * e.scale, h = e.ih * e.scale;
+  e.x = Math.min(e.cx, Math.max(e.cx + e.S - w, e.x));
+  e.y = Math.min(e.cy, Math.max(e.cy + e.S - h, e.y));
+  document.getElementById('cropImg').style.transform =
+    'translate(' + e.x + 'px,' + e.y + 'px) scale(' + e.scale + ')';
+}
+
+// Pivoter, c'est redessiner la source dans un canvas retourné puis replacer.
+// Tout le reste du code (bornes, export) reste alors inchangé — c'est pour ça
+// qu'on ne gère PAS la rotation dans les transforms d'affichage.
+function tourneCrop(sens){
+  const e = cropEtat; if(!e || !e.src) return;
+  const src = e.src;
+  const c = document.createElement('canvas');
+  c.width = src.height; c.height = src.width;
+  const x = c.getContext('2d');
+  x.translate(c.width / 2, c.height / 2);
+  x.rotate(sens * Math.PI / 2);
+  x.drawImage(src, -src.width / 2, -src.height / 2);
+  placeCrop(c);
+}
+
+function fermeCrop(resultat){
+  document.getElementById('cropper').classList.remove('open');
+  cropEtat = null;
+  const rendre = cropRendu; cropRendu = null;
+  if(rendre) rendre(resultat || null);
+}
+
+// Le même cadrage donne les DEUX tailles : la vignette de la grille et la
+// photo pleine. Deux appels, un seul geste de l'utilisateur.
+function valideCrop(){
+  const e = cropEtat; if(!e || !e.src) return;
+  const sx = (e.cx - e.x) / e.scale;
+  const sy = (e.cy - e.y) / e.scale;
+  const taille = e.S / e.scale;
+  fermeCrop({
+    photo: exporteCarre(e.src, sx, sy, taille, CAT_PLEINE, 150),
+    thumb: exporteCarre(e.src, sx, sy, taille, CAT_VIGNETTE, 40)
+  });
+}
+
+// --- Les gestes ---
+// Le pincement est calculé à la main : le verrou anti-zoom de l'app installée
+// annule le `gesturestart` de Safari, on ne peut pas s'appuyer dessus.
+(function(){
+  const stage = document.getElementById('cropStage');
+  let mode = null, ecart0 = 0, echelle0 = 1, mx = 0, my = 0, x0 = 0, y0 = 0;
+  const ecart  = (a,b)=>Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+  const milieu = (a,b)=>({ x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 });
+  function local(px, py){
+    const r = stage.getBoundingClientRect();
+    return { x: px - r.left, y: py - r.top };
+  }
+  function prend(px, py){
+    const p = local(px, py);
+    mx = p.x; my = p.y; x0 = cropEtat.x; y0 = cropEtat.y; echelle0 = cropEtat.scale;
+  }
+  stage.addEventListener('touchstart', (ev)=>{
+    if(!cropEtat || !cropEtat.src) return;
+    ev.preventDefault();
+    if(ev.touches.length === 1){ mode='glisse'; prend(ev.touches[0].clientX, ev.touches[0].clientY); }
+    else{
+      mode = 'pince';
+      ecart0 = ecart(ev.touches[0], ev.touches[1]) || 1;
+      const m = milieu(ev.touches[0], ev.touches[1]);
+      prend(m.x, m.y);
+    }
+  }, { passive:false });
+  stage.addEventListener('touchmove', (ev)=>{
+    if(!cropEtat || !cropEtat.src || !mode) return;
+    ev.preventDefault();
+    if(mode === 'glisse' && ev.touches.length === 1){
+      const p = local(ev.touches[0].clientX, ev.touches[0].clientY);
+      cropEtat.x = x0 + (p.x - mx);
+      cropEtat.y = y0 + (p.y - my);
+    } else if(ev.touches.length >= 2){
+      const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+                  echelle0 * (ecart(ev.touches[0], ev.touches[1]) / ecart0)));
+      const c = milieu(ev.touches[0], ev.touches[1]);
+      const m = local(c.x, c.y);
+      cropEtat.x = m.x - (mx - x0) * (s / echelle0);
+      cropEtat.y = m.y - (my - y0) * (s / echelle0);
+      cropEtat.scale = s;
+    }
+    appliqueCrop();
+  }, { passive:false });
+  stage.addEventListener('touchend', ()=>{ mode=null; }, { passive:true });
+  stage.addEventListener('touchcancel', ()=>{ mode=null; }, { passive:true });
+
+  // La souris, pour le navigateur de bureau — et pour pouvoir le tester.
+  stage.addEventListener('mousedown', (ev)=>{
+    if(!cropEtat || !cropEtat.src) return;
+    ev.preventDefault(); mode='glisse'; prend(ev.clientX, ev.clientY);
+  });
+  window.addEventListener('mousemove', (ev)=>{
+    if(!cropEtat || !cropEtat.src || mode !== 'glisse') return;
+    const p = local(ev.clientX, ev.clientY);
+    cropEtat.x = x0 + (p.x - mx);
+    cropEtat.y = y0 + (p.y - my);
+    appliqueCrop();
+  });
+  window.addEventListener('mouseup', ()=>{ mode=null; });
+  stage.addEventListener('wheel', (ev)=>{
+    if(!cropEtat || !cropEtat.src) return;
+    ev.preventDefault();
+    const p = local(ev.clientX, ev.clientY);
+    const avant = cropEtat.scale;
+    const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+                avant * (ev.deltaY < 0 ? 1.12 : 1/1.12)));
+    cropEtat.x = p.x - (p.x - cropEtat.x) * (s / avant);
+    cropEtat.y = p.y - (p.y - cropEtat.y) * (s / avant);
+    cropEtat.scale = s;
+    appliqueCrop();
+  }, { passive:false });
+})();
+
+document.getElementById('cropOk').addEventListener('click', valideCrop);
+document.getElementById('cropCancel').addEventListener('click', ()=>fermeCrop(null));
+document.getElementById('cropRotL').addEventListener('click', ()=>tourneCrop(-1));
+document.getElementById('cropRotR').addEventListener('click', ()=>tourneCrop(1));
+document.addEventListener('keydown', (e)=>{
+  if(!cropEtat || !cropEtat.src) return;
+  if(e.key === 'Escape') fermeCrop(null);
+  if(e.key === 'Enter')  valideCrop();
+});
+
 function blocReqPhotos(o){
   const ps = photosDe(o);
   if(!ps.length) return '';
@@ -3455,7 +4085,7 @@ function renderGuestWelcome(){
   observeReveals();
 }
 
-const VIEW_ORDER = ['commandes','clients','suppliers','stats','requests'];
+const VIEW_ORDER = ['commandes','clients','suppliers','catalogue','stats','requests'];
 function switchView(view){
   const from = VIEW_ORDER.indexOf(viewState);
   const to = VIEW_ORDER.indexOf(view);
@@ -3476,6 +4106,7 @@ function switchView(view){
   if(view==='stats'){ buildRangeTabs(); renderStats(); }
   if(view==='clients') renderClients();
   if(view==='suppliers') renderSuppliers();
+  if(view==='catalogue') renderCatalogue();
   if(view==='requests') renderRequests();
 }
 
@@ -3936,6 +4567,7 @@ $('#welcomeSeeSuppliers').addEventListener('click', ()=>switchView('suppliers'))
 $('#viewBtnCommandes').addEventListener('click', ()=>switchView('commandes'));
 $('#viewBtnClients').addEventListener('click', ()=>switchView('clients'));
 $('#viewBtnSuppliers').addEventListener('click', ()=>switchView('suppliers'));
+$('#viewBtnCatalogue').addEventListener('click', ()=>switchView('catalogue'));
 $('#viewBtnStats').addEventListener('click', ()=>switchView('stats'));
 $('#viewBtnRequests').addEventListener('click', ()=>switchView('requests'));
 
@@ -3943,6 +4575,7 @@ $('#fabAdd').addEventListener('click', ()=>{
   if(viewState==='commandes') openSheet(null);
   else if(viewState==='clients') openClientSheet(null);
   else if(viewState==='suppliers') openNewSupplierSheet();
+  else if(viewState==='catalogue') openBrandSheet(null);
 });
 $('#closeSheet').addEventListener('click', closeSheet);
 overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeSheet(); });
@@ -6453,11 +7086,13 @@ function applyRoleUI(){
   ownerOnly('assistantFab', 'flex');   // l'assistant IA : c'est sa clé qui paie
   ownerOnly('accessBtn', 'flex');      // la liste des invités
   ownerOnly('viewBtnRequests', 'flex');// les demandes viennent du portail
+  ownerOnly('viewBtnCatalogue', 'flex'); // le catalogue est vu par LES clients du propriétaire
   ownerOnly('waFormBtn');              // le formulaire porte la marque du propriétaire
   if(!isOwner){
     // Si un invité était resté sur l'onglet Demandes, on le ramène chez lui.
     const rv = document.getElementById('requestsView');
-    if(rv && rv.style.display !== 'none') switchView('commandes');
+    const cv = document.getElementById('catalogueView');
+    if((rv && rv.style.display !== 'none') || (cv && cv.style.display !== 'none')) switchView('commandes');
   }
 }
 
