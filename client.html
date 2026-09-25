@@ -363,19 +363,38 @@
   }
   .photo-pick:active{ transform:scale(.98); }
   .photo-pick svg{ width:19px; height:19px; }
-  .photo-chosen{ position:relative; margin-top:10px; }
-  .photo-chosen img{
-    max-width:100%; max-height:300px; width:auto; height:auto;
-    border-radius:12px; display:block; margin:0 auto; cursor:zoom-in;
-    border:0.5px solid var(--hairline);
+  /* Les photos choisies, en grille. Elles sont toutes CARRÉES parce qu'elles
+     sortent du recadreur : cinq photos aux formats d'origine donneraient une
+     grille en escalier, et on ne verrait plus qu'il y en a cinq. */
+  .photo-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+    gap:8px; margin-top:10px;
+  }
+  .photo-grid:empty{ display:none; }
+  .photo-item{ position:relative; aspect-ratio:1; }
+  .photo-item img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    border-radius:11px; border:0.5px solid var(--hairline); cursor:zoom-in;
     transition:transform .34s var(--spring);
   }
-  .photo-chosen img:active{ transform:scale(.985); }
-  .photo-chosen button{
-    position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%;
-    border:none; background:rgba(0,0,0,.55); color:#fff; font-size:15px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
+  .photo-item img:active{ transform:scale(.97); }
+  .photo-item button{
+    position:absolute; top:5px; right:5px; width:25px; height:25px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.6); color:#fff; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; line-height:1;
   }
+  .photo-count{
+    margin-top:7px; font-size:12px; color:var(--text-faint); text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* Les photos d'une commande : même grille, parce qu'une demande peut porter
+     plusieurs modèles et qu'on doit les voir d'un coup d'œil. */
+  .card-photos{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
+    gap:7px; margin-top:9px;
+  }
+  .card-photos .card-photo{ aspect-ratio:1; width:100%; height:100%; object-fit:cover; margin:0; }
   .card-photo{
     max-width:100%; max-height:320px; width:auto; height:auto;
     border-radius:11px; margin:9px auto 0; display:block; cursor:zoom-in;
@@ -383,6 +402,58 @@
     transition:transform .34s var(--spring);
   }
   .card-photo:active{ transform:scale(.985); }
+
+  /* ===== Le recadreur carré =====
+     Le client cadre lui-même le modèle qu'il veut. Ce n'est pas pour le poids
+     — la compression fait déjà tomber une photo d'iPhone de 4,7 Mo à 66 Ko —
+     c'est pour lever l'ambiguïté : sur une demande à trois modèles, un carré
+     cadré sur le bon article évite de commander le mauvais.
+     Le cadre est FIXE et c'est l'image qui glisse dessous, comme la photo de
+     profil d'iOS : c'est le geste que la main du client connaît déjà. */
+  .cropper{
+    position:fixed; inset:0; z-index:70; display:none;
+    flex-direction:column; background:#000;
+  }
+  .cropper.open{ display:flex; }
+  .crop-head{
+    padding:calc(env(safe-area-inset-top) + 14px) 16px 10px;
+    text-align:center; color:#fff; flex:none;
+  }
+  .crop-head h3{ margin:0; font-family:var(--font-display); font-size:16px; font-weight:700; }
+  .crop-head p{ margin:4px 0 0; font-size:12.5px; opacity:.62; }
+  /* Le pas « Photo 2 sur 3 » a sa propre ligne, et son propre élément : collé
+     au bout de la consigne il la faisait déborder, et un élément porteur de
+     data-i18n se ferait écraser par applyTranslations(). */
+  .crop-head .crop-step{ font-variant-numeric:tabular-nums; opacity:.5; min-height:1em; }
+  .crop-head .crop-step:empty{ display:none; }
+  .crop-stage{
+    position:relative; flex:1; overflow:hidden;
+    /* Sans ça, le navigateur s'empare du geste et l'image ne bouge pas. Et le
+       verrou anti-zoom de l'app installée annule `gesturestart`, donc le
+       pincement est géré ici à la main, à deux doigts. */
+    touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  .crop-img{
+    position:absolute; top:0; left:0; transform-origin:0 0;
+    will-change:transform; pointer-events:none; -webkit-user-drag:none;
+  }
+  /* Le voile percé d'un carré : une seule ombre portée immense, plutôt que
+     quatre rectangles à tenir alignés. */
+  .crop-hole{
+    position:absolute; pointer-events:none; border-radius:4px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.62);
+    outline:1.5px solid rgba(255,255,255,.9);
+  }
+  .crop-bar{
+    flex:none; display:flex; gap:10px; padding:12px 16px calc(env(safe-area-inset-bottom) + 14px);
+    background:#000;
+  }
+  .crop-bar button{
+    flex:1; padding:13px; border-radius:12px; font-family:var(--font-body);
+    font-size:14.5px; font-weight:700; cursor:pointer; border:none;
+  }
+  .crop-cancel{ background:rgba(255,255,255,.12); color:#fff; }
+  .crop-ok{ background:var(--accent); color:#fff; }
 
   /* --- Photo en plein écran --- */
   .lightbox{
@@ -1221,13 +1292,14 @@
           <label data-i18n="fieldPhoto">Photo du produit</label>
           <button type="button" class="photo-pick" id="photoPick">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.4-2h7.2L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg>
-            <span id="photoPickLabel" data-i18n="photoAdd">Ajouter une photo</span>
+            <span id="photoPickLabel" data-i18n="photoAdd">Ajouter des photos</span>
           </button>
-          <input type="file" id="photoInput" accept="image/*" style="display:none;">
-          <div class="photo-chosen" id="photoChosen" style="display:none;">
-            <img id="photoThumb" alt="">
-            <button type="button" id="photoClear" aria-label="Retirer">✕</button>
-          </div>
+          <!-- `multiple` pour en prendre plusieurs d'un coup. Toujours pas de
+               `capture=` : il forcerait l'appareil photo et supprimerait
+               l'entrée « Photothèque » sur iOS. -->
+          <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+          <div class="photo-grid" id="photoGrid"></div>
+          <div class="photo-count" id="photoCount" style="display:none;"></div>
         </div>
         <div class="field">
           <label data-i18n="fieldDetails">Précisions (taille, couleur, référence...)</label>
@@ -1261,6 +1333,24 @@
 </div>
 
 <div id="loadingScreen" data-i18n="loading">Chargement...</div>
+<!-- Le recadreur carré. Il s'ouvre pour CHAQUE photo choisie, l'une après
+     l'autre : c'est le client qui désigne le modèle, pas nous qui devinons. -->
+<div class="cropper" id="cropper" role="dialog" aria-modal="true">
+  <div class="crop-head">
+    <h3 id="cropTitle" data-i18n="cropTitle">Cadre le modèle</h3>
+    <p data-i18n="cropHint">Fais glisser pour placer, pince pour zoomer</p>
+    <p class="crop-step" id="cropStep"></p>
+  </div>
+  <div class="crop-stage" id="cropStage">
+    <img class="crop-img" id="cropImg" alt="">
+    <div class="crop-hole" id="cropHole"></div>
+  </div>
+  <div class="crop-bar">
+    <button type="button" class="crop-cancel" id="cropCancel" data-i18n="cropCancel">Annuler</button>
+    <button type="button" class="crop-ok" id="cropOk" data-i18n="cropOk">Valider</button>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox">
   <button type="button" class="lightbox-close" id="lightboxClose" data-i18n-title="photoCloseTitle" title="Fermer la photo" aria-label="Fermer la photo">
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -1348,16 +1438,20 @@ const I18N = {
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
     shopSent:'Échange envoyé ! Ton vendeur va le valider.',
     dollarsRules:"Tu gagnes 1 Dollarz par euro dépensé, crédité à la livraison. Un seul coupon par commande, sans date d'expiration. Les Dollarz ne sont ni transférables ni convertibles en euros.",
-    fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photo du produit',
+    fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photos du produit',
     fieldDetails:'Précisions (taille, couleur, référence...)', yourDetails:'Tes précisions',
     phProduct:'Ex: paire de chaussures, sac...', phOptional:'Optionnel',
-    photoAdd:'Ajouter une photo', photoChange:'Changer la photo', photoPreparing:'Préparation...',
+    photoAdd:'Ajouter des photos', photoAddMore:'Ajouter une autre photo',
+    photoRemove:'Retirer cette photo',
+    cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
+    cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
     photoCloseTitle:'Fermer la photo', photoOpenTitle:'Voir la photo en plein écran',
     submitOrder:'Envoyer ma demande', sending:'Envoi...',
     errProduct:'Indique un produit', errQty:'Quantité invalide',
     toastSent:'Demande envoyée ! Ton vendeur va la valider.',
     toastSendError:"Erreur d'envoi, réessaie.",
-    toastPhotoHeavy:'Photo trop lourde, essaie une image plus légère.',
+    toastPhotoHeavy:'Photos trop lourdes. Retires-en une, ou cadre plus serré.',
+    toastPhotoMax:'{n} photos au maximum.',
     toastPhotoUnreadable:'Impossible de lire cette image.',
     codeTitle:"Code d'accès", codeSubtitle:'Saisis le code à 6 chiffres reçu de ton vendeur.',
     codeOkTitle:'Code validé', codeOkSubtitle:'Active Face ID pour ne plus avoir à saisir ton code.',
@@ -1427,16 +1521,20 @@ const I18N = {
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
     shopSent:'Exchange sent! Your seller will confirm it.',
     dollarsRules:'You earn 1 Dollarz per euro spent, credited on delivery. One coupon per order, no expiry date. Dollarz are neither transferable nor convertible into euros.',
-    fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photo',
+    fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photos',
     fieldDetails:'Details (size, colour, reference...)', yourDetails:'Your details',
     phProduct:'E.g. pair of shoes, bag...', phOptional:'Optional',
-    photoAdd:'Add a photo', photoChange:'Change photo', photoPreparing:'Preparing...',
+    photoAdd:'Add photos', photoAddMore:'Add another photo',
+    photoRemove:'Remove this photo',
+    cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
+    cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
     photoCloseTitle:'Close photo', photoOpenTitle:'View photo fullscreen',
     submitOrder:'Send my request', sending:'Sending...',
     errProduct:'Tell us the product', errQty:'Invalid quantity',
     toastSent:'Request sent! Your seller will confirm it.',
     toastSendError:'Sending failed, try again.',
-    toastPhotoHeavy:'Photo too heavy, try a lighter image.',
+    toastPhotoHeavy:'Photos too heavy. Remove one, or crop tighter.',
+    toastPhotoMax:'{n} photos maximum.',
     toastPhotoUnreadable:'This image could not be read.',
     codeTitle:'Access code', codeSubtitle:'Enter the 6-digit code your seller gave you.',
     codeOkTitle:'Code accepted', codeOkSubtitle:'Turn on Face ID so you never have to type it again.',
@@ -1539,7 +1637,7 @@ function closeLightbox(){
   lightboxImg.removeAttribute('src');
 }
 document.addEventListener('click', (e)=>{
-  const img = e.target.closest && e.target.closest('.card-photo, .photo-chosen img');
+  const img = e.target.closest && e.target.closest('.card-photo, .photo-item img');
   if(!img) return;
   e.preventDefault();
   e.stopPropagation();
@@ -1878,6 +1976,29 @@ function dismissInstall(){
 }
 const ICON_SHARE = '<svg class="ins-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 const ICON_MENU = '<svg class="ins-ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
+
+// Une commande peut porter plusieurs photos depuis qu'une demande peut
+// contenir plusieurs modèles. Les commandes d'AVANT n'ont qu'un champ `photo`
+// au singulier : on lit les deux et on ne migre rien, exactement comme
+// carrier/forwarder. Rien à réécrire dans la base.
+function photosDe(o){
+  if(Array.isArray(o.photos) && o.photos.length)
+    return o.photos.filter(p=>p && p.data).map(p=>({ data:p.data, type:p.type || 'image/jpeg' }));
+  if(o.photo) return [{ data:o.photo, type:o.photoType || 'image/jpeg' }];
+  return [];
+}
+
+function blocPhotos(o){
+  const ps = photosDe(o);
+  if(!ps.length) return '';
+  const titre = escapeHtml(t('photoOpenTitle'));
+  const img = p => '<img class="card-photo" src="data:' + p.type + ';base64,' + p.data
+                 + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
+  // Une seule photo garde son grand format ; plusieurs passent en grille, sinon
+  // on ne verrait pas d'un coup d'œil qu'il y a trois modèles à chiffrer.
+  return ps.length === 1 ? img(ps[0])
+       : '<div class="card-photos">' + ps.map(img).join('') + '</div>';
+}
 
 function renderInstallCard(){
   const box = $('#installCard');
@@ -2322,7 +2443,7 @@ function orderCardHtml(o, archived){
         <div class="product">${escapeHtml(o.product)} × ${o.qty}</div>
         <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>
       </div>
-      ${o.photo ? `<img class="card-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
+      ${blocPhotos(o)}
       ${trackHtml(o.status, o)}
       ${amountsHtml(o)}
       ${shippingHtml(o)}
@@ -2346,7 +2467,7 @@ function renderHistory(){
         <div class="product">${escapeHtml(p.product)} × ${p.qty}</div>
         <div class="badge" style="background:var(--warn-soft); color:var(--warn);">${escapeHtml(t('stWaiting'))}</div>
       </div>
-      ${p.photo ? `<img class="card-photo" src="data:${p.photoType||'image/jpeg'};base64,${p.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
+      ${blocPhotos(p)}
       ${trackHtml('nouveau', p)}
       ${p.note ? `<div class="card-note"><span class="k">${escapeHtml(t('yourDetails'))}</span>${escapeHtml(p.note)}</div>` : ''}
       <div class="card-bottom">${fmtDate(p.createdAt)}</div>
@@ -2531,33 +2652,17 @@ function renderSummary(){
 }
 
 // ---- Photo du produit ----
-let orderPhoto = null;   // { media_type, data, url }
+let orderPhotos = [];    // jusqu'à MAX_PHOTOS carrés { media_type, data, url }
 
-function compressImage(file){
+const MAX_PHOTOS = 5;
+const CARRE = 900;          // le côté du carré exporté, en pixels
+
+function chargeImage(file){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = ()=>{
       const img = new Image();
-      img.onload = () => {
-        const MAX = 900;                     // suffisant pour identifier un produit
-        let { width, height } = img;
-        if(width > MAX || height > MAX){
-          const ratio = Math.min(MAX / width, MAX / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        let quality = 0.7;
-        let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        // on descend la qualité tant que l'image dépasse ~450 Ko
-        while(dataUrl.length > 600000 && quality > 0.35){
-          quality -= 0.1;
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
-        }
-        resolve({ media_type:'image/jpeg', data:dataUrl.split(',')[1], url:dataUrl });
-      };
+      img.onload = ()=>resolve(img);
       img.onerror = reject;
       img.src = reader.result;
     };
@@ -2566,34 +2671,232 @@ function compressImage(file){
   });
 }
 
-$('#photoPick').addEventListener('click', ()=> $('#photoInput').click());
-$('#photoClear').addEventListener('click', ()=>{
-  orderPhoto = null;
-  $('#photoChosen').style.display = 'none';
-  $('#photoThumb').removeAttribute('src');
-  $('#photoInput').value = '';
-  $('#photoPickLabel').textContent = t('photoAdd');
-});
-$('#photoInput').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
-  if(!file) return;
-  $('#photoPickLabel').textContent = t('photoPreparing');
-  try{
-    const img = await compressImage(file);
-    if(img.data.length > 700000){
-      showToast(t('toastPhotoHeavy'));
-      $('#photoPickLabel').textContent = t('photoAdd');
-      return;
-    }
-    orderPhoto = img;
-    $('#photoThumb').src = img.url;
-    $('#photoChosen').style.display = 'block';
-    $('#photoPickLabel').textContent = t('photoChange');
-  }catch(err){
-    showToast(t('toastPhotoUnreadable'));
-    $('#photoPickLabel').textContent = t('photoAdd');
+// Exporte la portion carrée choisie. La qualité descend tant que c'est trop
+// lourd, et ce plafond n'est pas décoratif : les cinq photos sont écrites EN
+// BASE64 DANS le document Firestore, qui refuse tout document au-dessus de
+// 1 Mo. Mesuré sur de vraies photos d'iPhone : 66 à 80 Ko pièce, donc la
+// boucle ne se déclenche presque jamais — elle est là pour le cas tordu.
+function exporteCarre(img, sx, sy, taille){
+  const c = document.createElement('canvas');
+  c.width = CARRE; c.height = CARRE;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, CARRE, CARRE);
+  x.drawImage(img, sx, sy, taille, taille, 0, 0, CARRE, CARRE);
+  let q = 0.72;
+  let url = c.toDataURL('image/jpeg', q);
+  while(url.length > 150000 && q > 0.35){
+    q -= 0.08;
+    url = c.toDataURL('image/jpeg', q);
   }
+  return { media_type:'image/jpeg', data:url.split(',')[1], url };
+}
+
+// ================= Le recadreur carré =================
+// Le cadre ne bouge pas, l'image glisse dessous : c'est le geste de la photo
+// de profil d'iOS, celui que la main du client connaît déjà.
+let cropEtat = null;      // {img, S, cx, cy, min, scale, x, y}
+let cropRendu = null;     // la promesse à résoudre quand il ferme
+
+function ouvreRecadreur(img){
+  return new Promise((resolve)=>{
+    cropRendu = resolve;
+    const boite = document.getElementById('cropper');
+    boite.classList.add('open');
+    // la scène doit être affichée pour avoir une taille mesurable
+    const stage = document.getElementById('cropStage');
+    const W = stage.clientWidth, H = stage.clientHeight;
+    const S = Math.round(Math.min(W, H) * 0.86);
+    const cx = Math.round((W - S) / 2), cy = Math.round((H - S) / 2);
+    const trou = document.getElementById('cropHole');
+    trou.style.width = S + 'px';  trou.style.height = S + 'px';
+    trou.style.left  = cx + 'px'; trou.style.top    = cy + 'px';
+    const el = document.getElementById('cropImg');
+    el.src = img.src;
+    el.style.width  = img.naturalWidth + 'px';
+    el.style.height = img.naturalHeight + 'px';
+    // L'image doit toujours COUVRIR le carré : en dessous, on exporterait du vide.
+    const min = Math.max(S / img.naturalWidth, S / img.naturalHeight);
+    cropEtat = {
+      img, S, cx, cy, min, scale:min,
+      x: cx + (S - img.naturalWidth  * min) / 2,
+      y: cy + (S - img.naturalHeight * min) / 2
+    };
+    appliqueCrop();
+  });
+}
+
+function appliqueCrop(){
+  const e = cropEtat; if(!e) return;
+  const w = e.img.naturalWidth * e.scale, h = e.img.naturalHeight * e.scale;
+  // on ne laisse jamais un bord vide entrer dans le carré
+  e.x = Math.min(e.cx, Math.max(e.cx + e.S - w, e.x));
+  e.y = Math.min(e.cy, Math.max(e.cy + e.S - h, e.y));
+  document.getElementById('cropImg').style.transform =
+    'translate(' + e.x + 'px,' + e.y + 'px) scale(' + e.scale + ')';
+}
+
+function fermeCrop(resultat){
+  document.getElementById('cropper').classList.remove('open');
+  document.getElementById('cropImg').removeAttribute('src');
+  cropEtat = null;
+  const rendre = cropRendu; cropRendu = null;
+  if(rendre) rendre(resultat || null);
+}
+
+function valideCrop(){
+  const e = cropEtat; if(!e) return;
+  // du repère de l'écran vers les pixels de l'image d'origine
+  const sx = (e.cx - e.x) / e.scale;
+  const sy = (e.cy - e.y) / e.scale;
+  fermeCrop(exporteCarre(e.img, sx, sy, e.S / e.scale));
+}
+
+// --- Les gestes ---
+// Le pincement est calculé ICI, à la main. On ne peut pas s'appuyer sur le
+// `gesturestart` de Safari : le verrou anti-zoom de l'app installée l'annule.
+// D'où aussi `touch-action:none` sur la scène, sans quoi le navigateur
+// s'emparerait du geste et l'image ne bougerait pas.
+(function(){
+  const stage = document.getElementById('cropStage');
+  let mode = null, ecart0 = 0, echelle0 = 1, mx = 0, my = 0, x0 = 0, y0 = 0;
+  const ecart  = (a,b)=>Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+  const milieu = (a,b)=>({ x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 });
+  function local(px, py){
+    const r = stage.getBoundingClientRect();
+    return { x: px - r.left, y: py - r.top };
+  }
+  function prend(px, py){
+    const p = local(px, py);
+    mx = p.x; my = p.y; x0 = cropEtat.x; y0 = cropEtat.y; echelle0 = cropEtat.scale;
+  }
+  stage.addEventListener('touchstart', (ev)=>{
+    if(!cropEtat) return;
+    ev.preventDefault();
+    if(ev.touches.length === 1){ mode = 'glisse'; prend(ev.touches[0].clientX, ev.touches[0].clientY); }
+    else{
+      mode = 'pince';
+      ecart0 = ecart(ev.touches[0], ev.touches[1]) || 1;
+      const m = milieu(ev.touches[0], ev.touches[1]);
+      prend(m.x, m.y);
+    }
+  }, { passive:false });
+  stage.addEventListener('touchmove', (ev)=>{
+    if(!cropEtat || !mode) return;
+    ev.preventDefault();
+    if(mode === 'glisse' && ev.touches.length === 1){
+      const p = local(ev.touches[0].clientX, ev.touches[0].clientY);
+      cropEtat.x = x0 + (p.x - mx);
+      cropEtat.y = y0 + (p.y - my);
+    } else if(ev.touches.length >= 2){
+      const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+                  echelle0 * (ecart(ev.touches[0], ev.touches[1]) / ecart0)));
+      const c = milieu(ev.touches[0], ev.touches[1]);
+      const m = local(c.x, c.y);
+      // le point pincé reste sous les doigts, et le milieu peut aussi se déplacer
+      cropEtat.x = m.x - (mx - x0) * (s / echelle0);
+      cropEtat.y = m.y - (my - y0) * (s / echelle0);
+      cropEtat.scale = s;
+    }
+    appliqueCrop();
+  }, { passive:false });
+  stage.addEventListener('touchend', ()=>{ mode = null; }, { passive:true });
+  stage.addEventListener('touchcancel', ()=>{ mode = null; }, { passive:true });
+
+  // La souris, pour le navigateur de bureau — et pour pouvoir le tester.
+  stage.addEventListener('mousedown', (ev)=>{
+    if(!cropEtat) return;
+    ev.preventDefault(); mode = 'glisse'; prend(ev.clientX, ev.clientY);
+  });
+  window.addEventListener('mousemove', (ev)=>{
+    if(!cropEtat || mode !== 'glisse') return;
+    const p = local(ev.clientX, ev.clientY);
+    cropEtat.x = x0 + (p.x - mx);
+    cropEtat.y = y0 + (p.y - my);
+    appliqueCrop();
+  });
+  window.addEventListener('mouseup', ()=>{ mode = null; });
+  stage.addEventListener('wheel', (ev)=>{
+    if(!cropEtat) return;
+    ev.preventDefault();
+    const p = local(ev.clientX, ev.clientY);
+    const avant = cropEtat.scale;
+    const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+                avant * (ev.deltaY < 0 ? 1.12 : 1/1.12)));
+    cropEtat.x = p.x - (p.x - cropEtat.x) * (s / avant);
+    cropEtat.y = p.y - (p.y - cropEtat.y) * (s / avant);
+    cropEtat.scale = s;
+    appliqueCrop();
+  }, { passive:false });
+})();
+
+document.getElementById('cropOk').addEventListener('click', valideCrop);
+document.getElementById('cropCancel').addEventListener('click', ()=>fermeCrop(null));
+document.addEventListener('keydown', (e)=>{
+  if(!cropEtat) return;
+  if(e.key === 'Escape') fermeCrop(null);
+  if(e.key === 'Enter')  valideCrop();
 });
+
+$('#photoPick').addEventListener('click', ()=> $('#photoInput').click());
+
+// Chaque photo choisie passe par le recadreur, l'une après l'autre : c'est le
+// client qui désigne le modèle qu'il veut, on ne devine pas à sa place.
+$('#photoInput').addEventListener('change', async (e)=>{
+  const fichiers = [...(e.target.files || [])];
+  e.target.value = '';                    // pour pouvoir rechoisir le même fichier
+  if(!fichiers.length) return;
+
+  const place = MAX_PHOTOS - orderPhotos.length;
+  if(place <= 0){ showToast(t('toastPhotoMax').replace('{n}', MAX_PHOTOS)); return; }
+  const aTraiter = fichiers.slice(0, place);
+  if(fichiers.length > place) showToast(t('toastPhotoMax').replace('{n}', MAX_PHOTOS));
+
+  for(let i = 0; i < aTraiter.length; i++){
+    let img;
+    try{ img = await chargeImage(aTraiter[i]); }
+    catch(err){ showToast(t('toastPhotoUnreadable')); continue; }
+    // « Photo 2 sur 3 » n'apparaît que s'il y en a plusieurs à cadrer.
+    $('#cropStep').textContent = aTraiter.length > 1
+      ? t('cropStep').replace('{i}', i + 1).replace('{n}', aTraiter.length)
+      : '';
+    const carre = await ouvreRecadreur(img);
+    if(carre){
+      // Garde sur le TOTAL, pas seulement sur chaque photo. La boucle de
+      // qualité vise 150 Ko pièce mais n'y arrive pas toujours (une image
+      // vraiment incompressible sort à 0,35 de qualité et pèse encore).
+      // Sans ça, Firestore refuserait le document au-dessus de 1 Mo et le
+      // client ne lirait qu'un « erreur d'envoi » qui ne lui apprend rien.
+      const total = orderPhotos.reduce((n,p)=>n + p.data.length, 0) + carre.data.length;
+      if(total > 900000) showToast(t('toastPhotoHeavy'));
+      else orderPhotos.push(carre);
+    }
+    rendPhotos();
+  }
+  $('#cropStep').textContent = '';
+});
+
+function rendPhotos(){
+  const titre = escapeHtml(t('photoOpenTitle'));
+  const retirer = escapeHtml(t('photoRemove'));
+  $('#photoGrid').innerHTML = orderPhotos.map((p, i)=>
+    '<div class="photo-item">'
+    + '<img src="' + p.url + '" alt="" title="' + titre + '" aria-label="' + titre + '">'
+    + '<button type="button" data-i="' + i + '" title="' + retirer + '" aria-label="' + retirer + '">\u2715</button>'
+    + '</div>'
+  ).join('');
+  const compteur = $('#photoCount');
+  compteur.style.display = orderPhotos.length ? 'block' : 'none';
+  compteur.textContent = orderPhotos.length + ' / ' + MAX_PHOTOS;
+  $('#photoPickLabel').textContent = orderPhotos.length ? t('photoAddMore') : t('photoAdd');
+}
+
+$('#photoGrid').addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('button[data-i]');
+  if(!b) return;
+  orderPhotos.splice(Number(b.dataset.i), 1);
+  rendPhotos();
+});
+
 
 // ---- Onglets ----
 const TABS = ['history','order','dollars'];
@@ -2669,17 +2972,19 @@ $('#orderForm').addEventListener('submit', async (e)=>{
       note: $('#f_note').value.trim(),
       createdAt: Date.now()
     };
-    if(orderPhoto){
-      payload.photo = orderPhoto.data;
-      payload.photoType = orderPhoto.media_type;
+    if(orderPhotos.length){
+      // Un tableau, parce qu'une demande peut porter plusieurs modèles. On
+      // n'écrit plus l'ancien champ `photo` : le vendeur reçoit la nouvelle
+      // version en même temps que le client, les deux fichiers sont déployés
+      // ensemble. La compatibilité dont on a besoin est en LECTURE, pour les
+      // commandes d'avant — voir photosDe().
+      payload.photos = orderPhotos.map(p=>({ data:p.data, type:p.media_type }));
     }
     await db.collection('pendingOrders').add(payload);
     $('#orderForm').reset();
     $('#f_qty').value = 1;
-    orderPhoto = null;
-    $('#photoChosen').style.display = 'none';
-    $('#photoThumb').removeAttribute('src');
-    $('#photoPickLabel').textContent = t('photoAdd');
+    orderPhotos = [];
+    rendPhotos();
     showToast(t('toastSent'));
     switchTab('history');
   }catch(e){

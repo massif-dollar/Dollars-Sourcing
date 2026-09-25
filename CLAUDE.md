@@ -307,8 +307,29 @@ Lien de la forme `client.html?id=CLIENT_ID&token=TOKEN` + code d'accès à
 « Profil créé », avec son lien, son code et le bouton WhatsApp sous la main —
 sans ça il fallait ressortir de la liste et rouvrir le client pour les
 retrouver. Le message d'invitation (`waLinkMessage`) accueille, donne le lien
-et le code, et explique comment ajouter l'espace à l'écran d'accueil. Le client peut envoyer une demande avec photo ; elle arrive dans
-l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
+et le code, et explique comment ajouter l'espace à l'écran d'accueil. Le client peut envoyer une demande avec **jusqu'à cinq photos** ; elle arrive
+dans l'onglet « Demandes » du vendeur, qui la valide en fixant ses prix.
+
+**Chaque photo passe par un recadreur carré, et ce n'est pas pour le poids.**
+La compression fait déjà tomber une photo d'iPhone de 4,7 Mo à 66 Ko : le
+recadrage ne gagnerait presque rien. Il sert à **lever l'ambiguïté** — une
+demande peut porter plusieurs modèles, et un carré cadré sur le bon article
+évite d'acheter le mauvais. C'est le client qui désigne, on ne devine pas.
+
+Le cadre est **fixe** et c'est l'image qui glisse et se zoome dessous, comme la
+photo de profil d'iOS : c'est le geste que sa main connaît déjà. Deux points
+techniques qui ne s'inventent pas :
+
+- **Le pincement est calculé à la main.** On ne peut pas s'appuyer sur le
+  `gesturestart` de Safari : le verrou du piège 21 l'annule dans l'app
+  installée. D'où aussi `touch-action:none` sur la scène, sans quoi le
+  navigateur s'empare du geste et l'image ne bouge pas.
+- **L'image doit toujours COUVRIR le cadre**, à l'échelle minimale comme après
+  un déplacement. En dessous, on exporterait du vide.
+
+Le pas (« Photo 2 sur 3 ») a son **propre élément, sans `data-i18n`** : collé au
+bout de la consigne il la faisait déborder, et `applyTranslations()` écraserait
+un élément traduit — le même piège que le libellé du bouton WeChat.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
 Ses commandes terminées (livrées ou annulées) ne disparaissent jamais toutes
@@ -1301,6 +1322,64 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    C'est le piège 18 sous un autre jour : comparer le symptôme à ce que le code
    peut produire, plutôt que chercher un bug là où on s'attend à le trouver.
 
+23. **UNE PHOTO EST ÉCRITE DANS LE DOCUMENT, ET UN DOCUMENT FIRESTORE PLAFONNE
+   À 1 Mo.** Il n'y a pas de Firebase Storage dans ce projet : les photos
+   partent en base64 **dans** le document. Et la même photo est stockée **trois
+   fois** — dans `pendingOrders` (la demande), dans `orders` (la commande), et
+   dans `publicOrders` (la copie que lit le portail). Chacun a son propre
+   plafond.
+
+   C'est ce chiffre qui a décidé du nombre de photos, pas une intuition.
+   Mesuré sur de vraies photos d'iPhone 4032×3024 passées dans la compression
+   du portail :
+
+   | l'image | avant | après |
+   |---|---|---|
+   | photo nette | 2 971 Ko | **65 Ko** |
+   | photo normale | 4 730 Ko | **66 Ko** |
+   | photo sombre et bruitée | 6 182 Ko | **80 Ko** |
+
+   D'où **cinq photos**, vérifié à 583 Ko dans le pire cas fabriqué (des images
+   volontairement incompressibles) : 43 % de marge. Le bruit pur, lui, sort à
+   561 Ko **la photo** — mais ça n'existe pas dans un appareil photo.
+
+   **Deux gardes, et la seconde porte sur le TOTAL.** La boucle de qualité vise
+   150 Ko par photo, mais elle s'arrête à 0,35 de qualité : ce n'est donc pas
+   une garantie. Une seconde garde refuse la photo qui ferait passer
+   l'ensemble au-dessus de 900 Ko. Sans elle, Firestore rejetterait le document
+   et le client ne lirait qu'un « erreur d'envoi » qui ne lui apprend rien —
+   c'est le piège 9 appliqué à l'écriture. Le message dit donc quoi faire
+   (« retires-en une, ou cadre plus serré »), pas seulement que ça a raté.
+
+   **Le jour où ça ne suffira plus**, la réponse n'est pas de baisser encore la
+   qualité : c'est Firebase Storage, qui ne met qu'une URL dans le document.
+   Ça n'en vaut pas la peine tant que cinq photos tiennent dans la moitié du
+   plafond.
+
+24. **UN CHAMP QUI DEVIENT UN TABLEAU NE SE MIGRE PAS, IL SE LIT EN DOUBLE.**
+   Les commandes d'avant portent `photo` / `photoType` au singulier, les
+   nouvelles portent `photos[]`. Aucun script de migration, aucune réécriture :
+   `photosDe()` lit le tableau, et retombe sur le champ unique s'il n'y a pas
+   de tableau. Exactement ce qu'on avait fait pour `carrier`/`forwarder`.
+
+   **La fonction existe à l'identique dans les deux fichiers**, comme
+   `freshRef()` : si l'une des deux change, le vendeur et le client ne verraient
+   plus les mêmes photos.
+
+   Et **on n'écrit plus l'ancien champ** : les deux fichiers sont déployés
+   ensemble, la compatibilité dont on a besoin est en lecture, pas en écriture.
+   Écrire les deux aurait doublé le poids de la première photo pour rien.
+
+25. **LE VENDEUR PERDAIT LES PHOTOS AU MOMENT PRÉCIS OÙ IL EN A BESOIN.**
+   Elles ne vivaient que dans l'onglet « Demandes » — qui disparaît dès la
+   validation. La commande, elle, n'en affichait aucune. Avec une seule photo
+   c'était supportable ; avec trois modèles à acheter chez le fournisseur,
+   c'est le bon article ou le mauvais. La fiche commande montre donc les photos
+   du client, en grille.
+
+   La leçon : **ajouter une donnée ne sert à rien si elle n'est pas visible là
+   où la décision se prend.** Ici la décision, c'est l'achat au stand.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1327,7 +1406,7 @@ sinon l'assistant crée des fiches amputées sans que rien ne signale l'erreur.
 Commandes, clients, fournisseurs (avec marques et modèles), statistiques,
 demandes clients, thèmes clair/sombre, bilingue, connexion Google, verrou PIN
 et biométrie, multi-utilisateur, corbeille, mode hors ligne, assistant IA
-(texte, vocal, photo), portail client avec photo, autocomplétion d'adresses
+(texte, vocal, photo), portail client avec jusqu'à cinq photos recadrées en carré par le client, autocomplétion d'adresses
 françaises, suivi des acomptes, photos au format d'origine avec ouverture en
 plein écran, écran d'ouverture animé, mouvement du tableau de bord, écran
 d'accueil des comptes invités, portail client repensé (frise de suivi,
