@@ -514,6 +514,13 @@
     transition:transform .34s var(--spring);
   }
   .req-photo:active{ transform:scale(.985); }
+  /* Une demande peut porter plusieurs modèles : ils passent en grille, sinon
+     on ne verrait pas d'un coup d'œil combien il y a d'articles à chiffrer. */
+  .req-photos{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+    gap:7px; margin-top:10px;
+  }
+  .req-photos .req-photo{ aspect-ratio:1; width:100%; height:100%; object-fit:cover; margin:0; }
 
   /* --- Photo en plein écran --- */
   .lightbox{
@@ -1702,6 +1709,16 @@
         <textarea id="f_note" rows="2"></textarea>
       </div>
 
+      <!-- Les photos envoyées par le client. Elles vivaient seulement dans
+           l'onglet « Demandes », qui disparaît dès la validation : le vendeur
+           perdait la vue sur les modèles au moment précis où il va les
+           acheter. Sur une demande à trois modèles, c'est le bon article ou le
+           mauvais. -->
+      <div class="field" id="sheetPhotosZone" style="display:none;">
+        <label data-i18n="fieldClientPhotos">Photos du client</label>
+        <div class="req-photos" id="sheetPhotos"></div>
+      </div>
+
       <div id="shippingZone" style="display:none;">
         <p class="section-title" data-i18n="shipSection">Expédition</p>
         <p class="field-hint" data-i18n="shipHint">Ces informations s'affichent dans l'espace du client.</p>
@@ -2139,7 +2156,7 @@ const I18N = {
     discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
-    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)',
+    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)', fieldClientPhotos:'Photos du client',
     save:'Enregistrer', cancelOrder:'Annuler la commande', reactivateOrder:'Réactiver la commande', deleteOrder:'Supprimer',
     clientProfile:'Profil client', fieldName:'Nom', fieldAddress:'Adresse de livraison',
     ordersSectionTitle:'Commandes', addOrderForClient:'+ Commande', deleteClient:'Supprimer ce client', newClientTitle:'Nouveau client',
@@ -2304,7 +2321,7 @@ const I18N = {
     discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
-    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)',
+    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)', fieldClientPhotos:'Client photos',
     save:'Save', cancelOrder:'Cancel order', reactivateOrder:'Reactivate order', deleteOrder:'Delete',
     clientProfile:'Client profile', fieldName:'Name', fieldAddress:'Delivery address',
     ordersSectionTitle:'Orders', addOrderForClient:'+ Order', deleteClient:'Delete this client', newClientTitle:'New client',
@@ -2392,7 +2409,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-21';
+const BUILD = '2026-09-25';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -2822,6 +2839,9 @@ function publicOrderData(o){
     carrier:   o.carrier || o.forwarder || '',
     tracking:  o.tracking || o.trackingNumber || '',
     eta:       o.eta || o.estimatedDelivery || '',
+    // Le tableau pour les demandes à plusieurs modèles, et les deux anciens
+    // champs tant que des commandes d'avant les portent. On ne migre rien.
+    photos:    Array.isArray(o.photos) ? o.photos : [],
     photo:     o.photo || '',
     photoType: o.photoType || '',
     createdAt: o.createdAt || Date.now(),
@@ -3110,7 +3130,7 @@ function renderList(){
           <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
         </div>
         <div class="card-mid">${escapeHtml(o.product)} × ${o.qty}</div>
-        ${o.photo ? `<img class="req-photo" src="data:${o.photoType||'image/jpeg'};base64,${o.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
+        ${blocReqPhotos(o)}
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
           ? `<div class="due-line private">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
@@ -3195,7 +3215,7 @@ function renderRequests(){
         </div>
         <div class="card-mid">${escapeHtml(r.product||'')} × ${r.qty||1}</div>
         ${r.note ? `<div class="card-mid" style="margin-top:4px; font-style:italic;">"${escapeHtml(r.note)}"</div>` : ''}
-        ${r.photo ? `<img class="req-photo" src="data:${r.photoType||'image/jpeg'};base64,${r.photo}" alt="" title="${escapeHtml(t('photoOpenTitle'))}" aria-label="${escapeHtml(t('photoOpenTitle'))}">` : ''}
+        ${blocReqPhotos(r)}
         <div class="request-actions">
           <button type="button" class="req-reject" data-action="reject">${t('rejectRequest')}</button>
           <button type="button" class="req-validate" data-action="validate">${t('validateRequest')}</button>
@@ -3256,8 +3276,29 @@ async function grantCoupon(req){
   return await updateClientDoc(req.clientId, { coupons: list });
 }
 
+// Les photos d'une commande ou d'une demande. Le tableau `photos` est le
+// format actuel ; `photo` au singulier est celui des commandes d'avant. On lit
+// les deux et on ne réécrit rien dans la base — même principe que
+// carrier/forwarder. La MÊME fonction existe dans client.html : si l'une des
+// deux change, le vendeur et le client ne verraient plus la même chose.
+function photosDe(o){
+  if(Array.isArray(o.photos) && o.photos.length)
+    return o.photos.filter(p=>p && p.data).map(p=>({ data:p.data, type:p.type || 'image/jpeg' }));
+  if(o.photo) return [{ data:o.photo, type:o.photoType || 'image/jpeg' }];
+  return [];
+}
+function blocReqPhotos(o){
+  const ps = photosDe(o);
+  if(!ps.length) return '';
+  const titre = escapeHtml(t('photoOpenTitle'));
+  const img = p => '<img class="req-photo" src="data:' + p.type + ';base64,' + p.data
+                 + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
+  return ps.length === 1 ? img(ps[0])
+       : '<div class="req-photos">' + ps.map(img).join('') + '</div>';
+}
+
 let pendingSourceId = null;
-let pendingPhoto = null;
+let pendingPhotos = [];
 $('#requestsList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('button[data-action]');
   if(!btn) return;
@@ -3284,7 +3325,7 @@ $('#requestsList').addEventListener('click', async (e)=>{
     showToast(t('toastRequestRejected'));
   } else {
     pendingSourceId = reqId;
-    pendingPhoto = req.photo ? { data:req.photo, type:req.photoType||'image/jpeg' } : null;
+    pendingPhotos = photosDe(req);   // toutes les photos suivent sur la commande
     openSheet(null, req.clientId, { product:req.product, qty:req.qty, note:req.note });
   }
 });
@@ -3666,6 +3707,14 @@ function openSheet(order, presetClientId, prefill){
   $('#f_unitCost').value = order ? order.unitCost : '';
   $('#f_unitPrice').value = order ? order.unitPrice : '';
   $('#f_note').value = order ? order.note : (prefill ? (prefill.note||'') : '');
+  // Sur une commande existante on montre ses photos ; sur une création depuis
+  // une demande, celles que la demande transporte et qui vont être écrites.
+  const sesPhotos = order ? photosDe(order) : pendingPhotos;
+  $('#sheetPhotosZone').style.display = sesPhotos.length ? 'block' : 'none';
+  $('#sheetPhotos').innerHTML = sesPhotos.map(p=>
+    '<img class="req-photo" src="data:' + p.type + ';base64,' + p.data + '" alt=""'
+    + ' title="' + escapeHtml(t('photoOpenTitle')) + '"'
+    + ' aria-label="' + escapeHtml(t('photoOpenTitle')) + '">').join('');
   // Sans ça, rouvrir une commande remettait l'acompte déjà encaissé à zéro.
   $('#f_paid').value = order ? (order.paidAmount || '') : '';
   buildStatusSelect($('#f_status'), order ? order.status : 'nouveau');
@@ -3690,7 +3739,7 @@ function closeSheet(){
   overlay.classList.remove('open');
   editingId = null;
   pendingSourceId = null;
-  pendingPhoto = null;
+  pendingPhotos = [];
 }
 
 // ===== « Il a payé ? » =====
@@ -3950,7 +3999,7 @@ form.addEventListener('submit', async (e)=>{
                  eta:$('#f_eta').value || '',
                  couponId:$('#f_coupon').value || '',
                  discount:selectedCouponValue() };
-  if(pendingPhoto){ data.photo = pendingPhoto.data; data.photoType = pendingPhoto.type; }
+  if(pendingPhotos.length) data.photos = pendingPhotos.map(p=>({ data:p.data, type:p.type }));
   if(editingId){
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
   } else {
