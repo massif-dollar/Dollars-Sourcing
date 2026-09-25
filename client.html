@@ -403,6 +403,39 @@
   }
   .card-photo:active{ transform:scale(.985); }
 
+  /* ===== Les photos se replient =====
+     Cinq photos par commande et trois commandes, et le portail devient un
+     couloir. Elles vivent donc derrière un repli, comme les éléments d'un
+     dossier. Replié par défaut : on garde la hauteur pour ce qui se lit —
+     le produit, le statut, les montants.
+     `<details>` natif plutôt qu'un bouton : l'ouverture est gérée par le
+     navigateur, elle marche au clavier et elle reste lisible sans JS. */
+  .photos-fold{ margin-top:9px; }
+  .photos-fold > summary{
+    list-style:none; cursor:pointer; user-select:none; -webkit-user-select:none;
+    display:flex; align-items:center; gap:7px; padding:9px 12px; border-radius:11px;
+    background:var(--fill); border:0.5px solid var(--hairline);
+    font-size:12.5px; font-weight:600; color:var(--text-muted);
+    letter-spacing:-0.01em; transition:color .2s ease, border-color .2s ease;
+  }
+  /* Safari dessine son propre triangle : on le retire dans les deux syntaxes. */
+  .photos-fold > summary::-webkit-details-marker{ display:none; }
+  .photos-fold > summary::marker{ content:''; }
+  .photos-fold > summary:active{ color:var(--text); }
+  .photos-fold > summary .fold-arrow{
+    width:13px; height:13px; flex:none;
+    transition:transform .28s var(--ease-out);
+  }
+  .photos-fold[open] > summary .fold-arrow{ transform:rotate(90deg); }
+  .photos-fold[open] > summary{ color:var(--text); }
+  .photos-fold .card-photos, .photos-fold > .card-photo{
+    animation:foldIn .3s var(--ease-out) both;
+  }
+  @keyframes foldIn{
+    from{ opacity:0; transform:translateY(-5px); }
+    to{ opacity:1; transform:none; }
+  }
+
   /* ===== Le recadreur carré =====
      Le client cadre lui-même le modèle qu'il veut. Ce n'est pas pour le poids
      — la compression fait déjà tomber une photo d'iPhone de 4,7 Mo à 66 Ko —
@@ -1443,6 +1476,7 @@ const I18N = {
     phProduct:'Ex: paire de chaussures, sac...', phOptional:'Optionnel',
     photoAdd:'Ajouter des photos', photoAddMore:'Ajouter une autre photo',
     photoRemove:'Retirer cette photo',
+    photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
     cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
     photoCloseTitle:'Fermer la photo', photoOpenTitle:'Voir la photo en plein écran',
@@ -1526,6 +1560,7 @@ const I18N = {
     phProduct:'E.g. pair of shoes, bag...', phOptional:'Optional',
     photoAdd:'Add photos', photoAddMore:'Add another photo',
     photoRemove:'Remove this photo',
+    photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
     cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
     photoCloseTitle:'Close photo', photoOpenTitle:'View photo fullscreen',
@@ -1988,6 +2023,23 @@ function photosDe(o){
   return [];
 }
 
+// Quels replis sont ouverts, par identifiant de commande. En mémoire, pas en
+// localStorage : c'est l'état d'un geste en cours, pas une préférence.
+// Sans ce Set, le repli se refermerait sous les doigts du client au premier
+// snapshot Firestore — la liste est redessinée en entier à chaque mise à jour.
+const foldsOuverts = new Set();
+document.addEventListener('toggle', (e)=>{
+  const d = e.target;
+  if(!d || !d.classList || !d.classList.contains('photos-fold')) return;
+  const cle = d.dataset.fold;
+  if(!cle) return;
+  if(d.open) foldsOuverts.add(cle); else foldsOuverts.delete(cle);
+}, true);   // en capture : `toggle` ne remonte pas jusqu'au document
+
+const FLECHE = '<svg class="fold-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+             + ' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+             + '<path d="M9 6l6 6-6 6"/></svg>';
+
 function blocPhotos(o){
   const ps = photosDe(o);
   if(!ps.length) return '';
@@ -1996,8 +2048,15 @@ function blocPhotos(o){
                  + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
   // Une seule photo garde son grand format ; plusieurs passent en grille, sinon
   // on ne verrait pas d'un coup d'œil qu'il y a trois modèles à chiffrer.
-  return ps.length === 1 ? img(ps[0])
-       : '<div class="card-photos">' + ps.map(img).join('') + '</div>';
+  const dedans = ps.length === 1 ? img(ps[0])
+               : '<div class="card-photos">' + ps.map(img).join('') + '</div>';
+  const cle = String(o.id || '');
+  const libelle = ps.length === 1 ? t('photoCountOne')
+                                  : t('photoCountMany').replace('{n}', ps.length);
+  return '<details class="photos-fold" data-fold="' + escapeHtml(cle) + '"'
+       + (foldsOuverts.has(cle) ? ' open' : '') + '>'
+       + '<summary>' + FLECHE + '<span>' + escapeHtml(libelle) + '</span></summary>'
+       + dedans + '</details>';
 }
 
 function renderInstallCard(){

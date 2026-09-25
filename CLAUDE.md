@@ -330,6 +330,31 @@ techniques qui ne s'inventent pas :
 Le pas (« Photo 2 sur 3 ») a son **propre élément, sans `data-i18n`** : collé au
 bout de la consigne il la faisait déborder, et `applyTranslations()` écraserait
 un élément traduit — le même piège que le libellé du bouton WeChat.
+
+**Les photos se replient**, comme les éléments d'un dossier : un `<details>`
+natif, fermé par défaut, dont l'en-tête annonce « 3 photos ». Cinq photos par
+commande et trois commandes, et le portail devenait un couloir ; la hauteur
+revient à ce qui se lit — produit, statut, montants. Le même repli existe côté
+vendeur, dans la liste des demandes et dans la fiche commande.
+
+`<details>` plutôt qu'un bouton : l'ouverture est gérée par le navigateur, elle
+marche au clavier, et elle ne dépend d'aucun état à nous. **Mais l'état ouvert,
+lui, est à nous** : la liste est redessinée en entier à chaque snapshot
+Firestore, et le repli se refermerait sous les doigts. Un `Set` en mémoire
+(`foldsOuverts`) retient les identifiants ouverts et le rendu les réapplique.
+En mémoire et pas en localStorage : c'est l'état d'un geste en cours, pas une
+préférence.
+
+Deux détails qui coûtent une reprise si on les oublie : l'événement `toggle`
+**ne remonte pas** jusqu'au document, il faut l'écouter **en capture** ; et
+Safari dessine son propre triangle sur `<summary>`, à retirer dans les deux
+syntaxes (`::-webkit-details-marker` et `::marker`).
+
+Piège de vérification, aussi : dans un `<details>` fermé, Chromium laisse une
+hauteur mesurable aux images. Tester `getBoundingClientRect().height > 0` dit
+qu'elles sont visibles alors qu'elles ne sont pas rendues. C'est
+`checkVisibility()` qui répond — ou la hauteur du `<details>`, égale à celle de
+son `<summary>` quand il est fermé.
 **Le client ne voit jamais les coûts d'achat ni les marges.**
 
 Ses commandes terminées (livrées ou annulées) ne disparaissent jamais toutes
