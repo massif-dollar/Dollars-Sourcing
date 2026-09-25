@@ -412,6 +412,71 @@ ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart de
 transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
 en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
 
+### Le catalogue
+
+Une vitrine que le client parcourt avant de commander : les marques, puis les
+modèles de la marque ouverte — comme un dossier. **Rien à voir avec le carnet de
+fournisseurs**, qui reste l'outil de terrain en Chine et n'est jamais montré au
+client.
+
+**Une fiche = un coloris précis** (« Gel-Kayano 31 bleue »), pas un modèle
+abstrait. C'est ce qui permettra au client de commander cinq bleues et cinq
+noires en tapant deux quantités, au lieu d'écrire une phrase qu'il faudrait
+relire à chaque colis.
+
+**AUCUN STOCK.** Le catalogue est fixe : pas de quantité disponible, pas de
+décompte à la commande, pas de rupture. Massif achète chez le fournisseur
+*après*. Le seul interrupteur qui pourrait y ressembler, `active`, n'est pas du
+stock mais de la **publication** : masquer une fiche aux clients sans perdre la
+photo qu'on a recadrée.
+
+**UN DOCUMENT PAR FICHE, et ce n'est pas un détail de rangement.** Les photos
+sont en base64 dans le document et Firestore plafonne à 1 Mo (piège 23) :
+mesuré, vingt modèles dans un seul document feraient déjà 2 040 Ko, cent en
+feraient 10 200. Le découpage marque → modèle n'est donc pas qu'une jolie
+navigation, **c'est ce qui rend le catalogue possible**.
+
+**Deux tailles par fiche**, pour la même raison : une vignette de 400 px
+(~25 Ko) pour la grille, la photo pleine de 900 px (~102 Ko) seulement à
+l'ouverture. Sans ça, ouvrir une marque de dix modèles téléchargerait 1 Mo au
+lieu de 250 Ko. Le même cadrage produit les deux, en un seul geste.
+
+**Les marques ne sont stockées nulle part** : elles se déduisent des fiches.
+Rien à maintenir, et une marque vide ne peut pas exister — pas de dossier
+fantôme après une suppression. Même principe que le solde en Dollarz.
+
+**La lecture de `catalog` est OUVERTE dans les règles**, et il faut savoir
+pourquoi : le portail n'est jamais connecté à Firebase, Firestore le voit comme
+un visiteur anonyme (piège 11), et sans `list` ouvert il ne verrait rien — sans
+la moindre erreur visible. **Conséquence non négociable : jamais de prix
+d'achat ni de nom de fournisseur dans le catalogue.** Ce qui est là est public.
+
+Le catalogue est réservé au **propriétaire**, comme tout ce qui touche au client
+final (voir le tableau des invités).
+
+### Le recadreur carré
+
+Le même dans les deux fichiers, et il sert au catalogue comme aux photos du
+client. Le cadre est **fixe**, l'image glisse et se zoome dessous : le geste de
+la photo de profil d'iOS.
+
+**Le carré est imposé, et c'est un choix, pas une limite.** Une grille aux
+formats mélangés devient un escalier et on ne compare plus rien — or un
+catalogue ne sert qu'à comparer. Si un second format devient nécessaire un
+jour, ce sera un format **fixe** de plus (portrait 4:5), jamais du recadrage
+libre.
+
+**La source est un CANVAS, jamais une `<img>`.** Pivoter revient donc à
+redessiner : dix quarts de tour n'abîment rien, alors qu'un aller-retour par
+`toDataURL` recompresserait à chaque fois. C'est aussi pour ça que la rotation
+n'est **pas** gérée dans les transforms d'affichage — en redessinant la source,
+les bornes et l'export restent inchangés.
+
+Deux points qui ne s'inventent pas : **le pincement est calculé à la main**
+(le verrou du piège 21 annule le `gesturestart` de Safari), et `touch-action:none`
+sur la scène, sans quoi le navigateur s'empare du geste et l'image ne bouge pas.
+**L'image doit toujours couvrir le cadre** : en dessous, on exporterait du vide.
+
 ### Référence de commande
 
 Chaque commande porte une **référence de quatre signes** (`#A7F3`) : c'est ce
@@ -1433,6 +1498,25 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    chercher qui écoute déjà le clic au-dessus. Ici il y avait quatre
    `closest('.order-card')` dans le fichier.
 
+27. **LE MOCK DE TEST PEUT MENTIR PAR OMISSION.** L'enregistrement du catalogue
+   écrivait zéro document, et le code était juste : le Firestore simulé des
+   tests avait un `batch()` qui ne connaissait que `delete`, pas `set`. Une
+   écriture par lot passait donc en silence sans rien écrire.
+
+   Le réflexe à avoir : devant un test qui échoue sur une API peu courante
+   (`batch`, `transaction`, `arrayUnion`…), **vérifier que le mock la
+   supporte avant de soupçonner le code** — et compléter le mock plutôt que
+   d'abaisser le code à ce qu'il sait faire. Un batch est le bon outil ici :
+   cinq modèles s'écrivent en une opération, et si une écriture échoue, aucune
+   ne passe.
+
+28. **UN MESSAGE D'ERREUR DE FORMULAIRE EST INVISIBLE SANS SA CLASSE.**
+   `.field-error` est en `display:none` ; c'est `.field.invalid` qui le montre.
+   Écrire le texte dans le `.field-error` à la main donne donc un message que
+   personne ne lit jamais — et rien ne le signale, puisque le texte est bien
+   là dans le DOM. `setFieldError()` / `clearFieldError()` existent pour ça :
+   **toujours passer par elles.**
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1469,7 +1553,8 @@ historique par client dans sa fiche, archivage volontaire côté client,
 référence de commande à écrire sur le carton avec recherche par référence et
 par numéro de suivi,
 page de formulaire client avec bannière propre et renvoi WhatsApp,
-mode discret qui masque montants et marges, scan de carte de visite
+mode discret qui masque montants et marges, catalogue par marques et modèles
+avec photos recadrées en carré (côté vendeur), scan de carte de visite
 fournisseur, scanner de QR avec l'algorithme de WeChat lui-même, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
@@ -1481,6 +1566,11 @@ fidélité dans les statistiques.
   pré-remplir la date de livraison estimée
 - Photo du stand dans la fiche fournisseur (le champ `photo` existe déjà,
   rempli par le scan de carte : il reste à pouvoir en ajouter une à la main)
+- Catalogue côté client : le parcourir depuis « Nouvelle demande », choisir des
+  modèles avec une quantité chacun, et les indications qui guident le client.
+  **La question à trancher à ce moment-là** : une demande à plusieurs lignes
+  donne-t-elle une commande par modèle (plusieurs références, plusieurs suivis)
+  ou une commande unique à plusieurs lignes ?
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
 - Plus tard : abonnement payant, inscription autonome

@@ -477,8 +477,16 @@
     box-shadow:0 0 0 9999px rgba(0,0,0,.62);
     outline:1.5px solid rgba(255,255,255,.9);
   }
+  .crop-tools{ flex:none; display:flex; justify-content:center; gap:12px; padding:16px 16px 6px; }
+  .crop-tools button{
+    width:46px; height:40px; border-radius:11px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.12); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .crop-tools button:active{ background:rgba(255,255,255,.22); }
+  .crop-tools svg{ width:19px; height:19px; }
   .crop-bar{
-    flex:none; display:flex; gap:10px; padding:12px 16px calc(env(safe-area-inset-bottom) + 14px);
+    flex:none; display:flex; gap:10px; padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);
     background:#000;
   }
   .crop-bar button{
@@ -1375,8 +1383,18 @@
     <p class="crop-step" id="cropStep"></p>
   </div>
   <div class="crop-stage" id="cropStage">
-    <img class="crop-img" id="cropImg" alt="">
+    <!-- Un CANVAS et non une <img> : pivoter revient alors à redessiner, sans
+         jamais repasser par une compression JPEG qui abîmerait la photo. -->
+    <canvas class="crop-img" id="cropImg"></canvas>
     <div class="crop-hole" id="cropHole"></div>
+  </div>
+  <div class="crop-tools">
+    <button type="button" id="cropRotL" data-i18n-title="cropRotLeft" title="Pivoter à gauche" aria-label="Pivoter à gauche">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h10a5 5 0 0 1 0 10H9"/><path d="M7 5 3 9l4 4"/></svg>
+    </button>
+    <button type="button" id="cropRotR" data-i18n-title="cropRotRight" title="Pivoter à droite" aria-label="Pivoter à droite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9H11a5 5 0 0 0 0 10h4"/><path d="m17 5 4 4-4 4"/></svg>
+    </button>
   </div>
   <div class="crop-bar">
     <button type="button" class="crop-cancel" id="cropCancel" data-i18n="cropCancel">Annuler</button>
@@ -1479,6 +1497,7 @@ const I18N = {
     photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
     cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
+    cropRotLeft:'Pivoter à gauche', cropRotRight:'Pivoter à droite',
     photoCloseTitle:'Fermer la photo', photoOpenTitle:'Voir la photo en plein écran',
     submitOrder:'Envoyer ma demande', sending:'Envoi...',
     errProduct:'Indique un produit', errQty:'Quantité invalide',
@@ -1563,6 +1582,7 @@ const I18N = {
     photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
     cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
+    cropRotLeft:'Rotate left', cropRotRight:'Rotate right',
     photoCloseTitle:'Close photo', photoOpenTitle:'View photo fullscreen',
     submitOrder:'Send my request', sending:'Sending...',
     errProduct:'Tell us the product', errQty:'Invalid quantity',
@@ -2716,12 +2736,21 @@ let orderPhotos = [];    // jusqu'à MAX_PHOTOS carrés { media_type, data, url 
 const MAX_PHOTOS = 5;
 const CARRE = 900;          // le côté du carré exporté, en pixels
 
+// Rend un CANVAS et non une <img> : pivoter revient alors à redessiner, sans
+// jamais repasser par une compression JPEG. Le même choix que dans index.html —
+// les deux recadreurs doivent rester identiques, sinon ils divergeront comme
+// l'avaient fait le scan en direct et le scan par photo.
 function chargeImage(file){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onload = ()=>{
       const img = new Image();
-      img.onload = ()=>resolve(img);
+      img.onload = ()=>{
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c);
+      };
       img.onerror = reject;
       img.src = reader.result;
     };
@@ -2756,37 +2785,54 @@ function exporteCarre(img, sx, sy, taille){
 let cropEtat = null;      // {img, S, cx, cy, min, scale, x, y}
 let cropRendu = null;     // la promesse à résoudre quand il ferme
 
-function ouvreRecadreur(img){
+function placeCrop(src){
+  const stage = document.getElementById('cropStage');
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const S = Math.round(Math.min(W, H) * 0.86);
+  const cx = Math.round((W - S) / 2), cy = Math.round((H - S) / 2);
+  const trou = document.getElementById('cropHole');
+  trou.style.width = S + 'px';  trou.style.height = S + 'px';
+  trou.style.left  = cx + 'px'; trou.style.top    = cy + 'px';
+  const vue = document.getElementById('cropImg');
+  vue.width = src.width; vue.height = src.height;
+  vue.getContext('2d').drawImage(src, 0, 0);
+  // L'image doit toujours COUVRIR le carré : en dessous, on exporterait du vide.
+  const min = Math.max(S / src.width, S / src.height);
+  cropEtat = Object.assign(cropEtat || {}, {
+    src, iw:src.width, ih:src.height, S, cx, cy, min, scale:min,
+    x: cx + (S - src.width  * min) / 2,
+    y: cy + (S - src.height * min) / 2
+  });
+  appliqueCrop();
+}
+
+function ouvreRecadreur(src){
   return new Promise((resolve)=>{
     cropRendu = resolve;
-    const boite = document.getElementById('cropper');
-    boite.classList.add('open');
-    // la scène doit être affichée pour avoir une taille mesurable
-    const stage = document.getElementById('cropStage');
-    const W = stage.clientWidth, H = stage.clientHeight;
-    const S = Math.round(Math.min(W, H) * 0.86);
-    const cx = Math.round((W - S) / 2), cy = Math.round((H - S) / 2);
-    const trou = document.getElementById('cropHole');
-    trou.style.width = S + 'px';  trou.style.height = S + 'px';
-    trou.style.left  = cx + 'px'; trou.style.top    = cy + 'px';
-    const el = document.getElementById('cropImg');
-    el.src = img.src;
-    el.style.width  = img.naturalWidth + 'px';
-    el.style.height = img.naturalHeight + 'px';
-    // L'image doit toujours COUVRIR le carré : en dessous, on exporterait du vide.
-    const min = Math.max(S / img.naturalWidth, S / img.naturalHeight);
-    cropEtat = {
-      img, S, cx, cy, min, scale:min,
-      x: cx + (S - img.naturalWidth  * min) / 2,
-      y: cy + (S - img.naturalHeight * min) / 2
-    };
-    appliqueCrop();
+    cropEtat = {};
+    document.getElementById('cropper').classList.add('open');
+    placeCrop(src);
   });
 }
 
+// Pivoter, c'est redessiner la source dans un canvas retourné puis replacer.
+// Tout le reste (bornes, export) reste alors inchangé — c'est pour ça qu'on ne
+// gère PAS la rotation dans les transforms d'affichage.
+function tourneCrop(sens){
+  const e = cropEtat; if(!e || !e.src) return;
+  const src = e.src;
+  const c = document.createElement('canvas');
+  c.width = src.height; c.height = src.width;
+  const x = c.getContext('2d');
+  x.translate(c.width / 2, c.height / 2);
+  x.rotate(sens * Math.PI / 2);
+  x.drawImage(src, -src.width / 2, -src.height / 2);
+  placeCrop(c);
+}
+
 function appliqueCrop(){
-  const e = cropEtat; if(!e) return;
-  const w = e.img.naturalWidth * e.scale, h = e.img.naturalHeight * e.scale;
+  const e = cropEtat; if(!e || !e.src) return;
+  const w = e.iw * e.scale, h = e.ih * e.scale;
   // on ne laisse jamais un bord vide entrer dans le carré
   e.x = Math.min(e.cx, Math.max(e.cx + e.S - w, e.x));
   e.y = Math.min(e.cy, Math.max(e.cy + e.S - h, e.y));
@@ -2796,18 +2842,17 @@ function appliqueCrop(){
 
 function fermeCrop(resultat){
   document.getElementById('cropper').classList.remove('open');
-  document.getElementById('cropImg').removeAttribute('src');
   cropEtat = null;
   const rendre = cropRendu; cropRendu = null;
   if(rendre) rendre(resultat || null);
 }
 
 function valideCrop(){
-  const e = cropEtat; if(!e) return;
+  const e = cropEtat; if(!e || !e.src) return;
   // du repère de l'écran vers les pixels de l'image d'origine
   const sx = (e.cx - e.x) / e.scale;
   const sy = (e.cy - e.y) / e.scale;
-  fermeCrop(exporteCarre(e.img, sx, sy, e.S / e.scale));
+  fermeCrop(exporteCarre(e.src, sx, sy, e.S / e.scale));
 }
 
 // --- Les gestes ---
@@ -2829,7 +2874,7 @@ function valideCrop(){
     mx = p.x; my = p.y; x0 = cropEtat.x; y0 = cropEtat.y; echelle0 = cropEtat.scale;
   }
   stage.addEventListener('touchstart', (ev)=>{
-    if(!cropEtat) return;
+    if(!cropEtat || !cropEtat.src) return;
     ev.preventDefault();
     if(ev.touches.length === 1){ mode = 'glisse'; prend(ev.touches[0].clientX, ev.touches[0].clientY); }
     else{
@@ -2840,7 +2885,7 @@ function valideCrop(){
     }
   }, { passive:false });
   stage.addEventListener('touchmove', (ev)=>{
-    if(!cropEtat || !mode) return;
+    if(!cropEtat || !cropEtat.src || !mode) return;
     ev.preventDefault();
     if(mode === 'glisse' && ev.touches.length === 1){
       const p = local(ev.touches[0].clientX, ev.touches[0].clientY);
@@ -2863,11 +2908,11 @@ function valideCrop(){
 
   // La souris, pour le navigateur de bureau — et pour pouvoir le tester.
   stage.addEventListener('mousedown', (ev)=>{
-    if(!cropEtat) return;
+    if(!cropEtat || !cropEtat.src) return;
     ev.preventDefault(); mode = 'glisse'; prend(ev.clientX, ev.clientY);
   });
   window.addEventListener('mousemove', (ev)=>{
-    if(!cropEtat || mode !== 'glisse') return;
+    if(!cropEtat || !cropEtat.src || mode !== 'glisse') return;
     const p = local(ev.clientX, ev.clientY);
     cropEtat.x = x0 + (p.x - mx);
     cropEtat.y = y0 + (p.y - my);
@@ -2875,7 +2920,7 @@ function valideCrop(){
   });
   window.addEventListener('mouseup', ()=>{ mode = null; });
   stage.addEventListener('wheel', (ev)=>{
-    if(!cropEtat) return;
+    if(!cropEtat || !cropEtat.src) return;
     ev.preventDefault();
     const p = local(ev.clientX, ev.clientY);
     const avant = cropEtat.scale;
@@ -2890,8 +2935,10 @@ function valideCrop(){
 
 document.getElementById('cropOk').addEventListener('click', valideCrop);
 document.getElementById('cropCancel').addEventListener('click', ()=>fermeCrop(null));
+document.getElementById('cropRotL').addEventListener('click', ()=>tourneCrop(-1));
+document.getElementById('cropRotR').addEventListener('click', ()=>tourneCrop(1));
 document.addEventListener('keydown', (e)=>{
-  if(!cropEtat) return;
+  if(!cropEtat || !cropEtat.src) return;
   if(e.key === 'Escape') fermeCrop(null);
   if(e.key === 'Enter')  valideCrop();
 });
