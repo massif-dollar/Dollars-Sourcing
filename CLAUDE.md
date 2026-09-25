@@ -1405,6 +1405,34 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    La leçon : **ajouter une donnée ne sert à rien si elle n'est pas visible là
    où la décision se prend.** Ici la décision, c'est l'achat au stand.
 
+26. **UN REPLI POSÉ DANS UNE CARTE CLIQUABLE OUVRE LES DEUX À LA FOIS.**
+   Le repli des photos vit dans la carte de commande, et cliquer une carte
+   ouvre sa fiche de modification. Un tap sur la flèche ouvrait donc les
+   photos **et** la fiche par-dessus. Vu du doigt : « comme si ça avait cliqué
+   sur deux boutons en même temps ».
+
+   Reproduit avant de corriger, et c'est ce qui donne la certitude d'avoir pris
+   la bonne cause : sur la version d'avant, un tap donnait
+   `repli_ouvert:true, fiche_ouverte:true`, et le tap suivant **échouait** parce
+   que la fiche recouvrait déjà la flèche.
+
+   Le correctif ne s'invente pas, il existait déjà dix lignes plus haut : la
+   photo en plein écran coupe la propagation **en phase de capture** pour ne
+   pas déclencher le clic de la carte. Le repli fait pareil — avec une
+   différence qui compte : **`stopPropagation()` sans `preventDefault()`**. Le
+   `<details>` doit continuer de s'ouvrir tout seul, et c'est l'action par
+   défaut qui le fait. Couper les deux aurait donné un repli qui ne s'ouvre
+   plus.
+
+   L'effet tactile a le même piège : `.order-card` est dans `TAP_SELECTOR`,
+   donc toucher la flèche enfonçait la carte entière. Un geste qui ment sur ce
+   qu'on touche, c'est la même famille que le bouton qui fait autre chose que
+   ce qu'il annonce.
+
+   **La règle générale** : avant d'ajouter un élément interactif dans une carte,
+   chercher qui écoute déjà le clic au-dessus. Ici il y avait quatre
+   `closest('.order-card')` dans le fichier.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
