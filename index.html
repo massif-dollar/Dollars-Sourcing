@@ -522,6 +522,36 @@
   }
   .req-photos .req-photo{ aspect-ratio:1; width:100%; height:100%; object-fit:cover; margin:0; }
 
+  /* Les photos se replient, comme les éléments d'un dossier. Avec cinq photos
+     par demande et dix demandes en attente, la liste devient un couloir.
+     Replié par défaut : on garde la hauteur pour ce qui se lit d'abord — le
+     client, le produit, les boutons. Un tap les ouvre pour chiffrer.
+     `<details>` natif : l'ouverture est gérée par le navigateur, elle marche
+     au clavier, et elle reste lisible sans JS. */
+  .photos-fold{ margin-top:10px; }
+  .photos-fold > summary{
+    list-style:none; cursor:pointer; user-select:none; -webkit-user-select:none;
+    display:flex; align-items:center; gap:7px; padding:9px 12px; border-radius:11px;
+    background:var(--fill); border:0.5px solid var(--hairline);
+    font-size:12.5px; font-weight:600; color:var(--text-muted);
+    letter-spacing:-0.01em; transition:color .2s ease;
+  }
+  .photos-fold > summary::-webkit-details-marker{ display:none; }
+  .photos-fold > summary::marker{ content:''; }
+  .photos-fold > summary:active{ color:var(--text); }
+  .photos-fold[open] > summary{ color:var(--text); }
+  .photos-fold > summary .fold-arrow{
+    width:13px; height:13px; flex:none; transition:transform .28s var(--ease-out);
+  }
+  .photos-fold[open] > summary .fold-arrow{ transform:rotate(90deg); }
+  .photos-fold .req-photos, .photos-fold > .req-photo{
+    animation:foldIn .3s var(--ease-out) both;
+  }
+  @keyframes foldIn{
+    from{ opacity:0; transform:translateY(-5px); }
+    to{ opacity:1; transform:none; }
+  }
+
   /* --- Photo en plein écran --- */
   .lightbox{
     position:fixed; inset:0; z-index:65; display:none;
@@ -1716,7 +1746,7 @@
            mauvais. -->
       <div class="field" id="sheetPhotosZone" style="display:none;">
         <label data-i18n="fieldClientPhotos">Photos du client</label>
-        <div class="req-photos" id="sheetPhotos"></div>
+        <div id="sheetPhotos"></div>
       </div>
 
       <div id="shippingZone" style="display:none;">
@@ -2156,7 +2186,7 @@ const I18N = {
     discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
-    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)', fieldClientPhotos:'Photos du client',
+    fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)', fieldClientPhotos:'Photos du client', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Enregistrer', cancelOrder:'Annuler la commande', reactivateOrder:'Réactiver la commande', deleteOrder:'Supprimer',
     clientProfile:'Profil client', fieldName:'Nom', fieldAddress:'Adresse de livraison',
     ordersSectionTitle:'Commandes', addOrderForClient:'+ Commande', deleteClient:'Supprimer ce client', newClientTitle:'Nouveau client',
@@ -2321,7 +2351,7 @@ const I18N = {
     discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
-    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)', fieldClientPhotos:'Client photos',
+    fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)', fieldClientPhotos:'Client photos', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Save', cancelOrder:'Cancel order', reactivateOrder:'Reactivate order', deleteOrder:'Delete',
     clientProfile:'Client profile', fieldName:'Name', fieldAddress:'Delivery address',
     ordersSectionTitle:'Orders', addOrderForClient:'+ Order', deleteClient:'Delete this client', newClientTitle:'New client',
@@ -2409,7 +2439,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-25';
+const BUILD = '2026-09-25b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3287,14 +3317,46 @@ function photosDe(o){
   if(o.photo) return [{ data:o.photo, type:o.photoType || 'image/jpeg' }];
   return [];
 }
+// Quels replis sont ouverts, par identifiant. En mémoire, pas en localStorage :
+// c'est l'état d'un geste en cours, pas une préférence. Sans ce Set, le repli
+// se refermerait tout seul au premier snapshot Firestore — la liste des
+// demandes est redessinée en entier à chaque mise à jour.
+const foldsOuverts = new Set();
+document.addEventListener('toggle', (e)=>{
+  const d = e.target;
+  if(!d || !d.classList || !d.classList.contains('photos-fold')) return;
+  const cle = d.dataset.fold;
+  if(!cle) return;
+  if(d.open) foldsOuverts.add(cle); else foldsOuverts.delete(cle);
+}, true);   // en capture : `toggle` ne remonte pas jusqu'au document
+
+const FLECHE = '<svg class="fold-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+             + ' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+             + '<path d="M9 6l6 6-6 6"/></svg>';
+
+// Le repli, autour de n'importe quel paquet de photos. Une seule fonction pour
+// la liste des demandes et pour la fiche commande : deux rendus qui doivent se
+// ressembler partagent le code, jamais le gabarit recopié.
+function replie(cle, nb, dedans){
+  const libelle = nb === 1 ? t('photoCountOne') : t('photoCountMany').replace('{n}', nb);
+  return '<details class="photos-fold" data-fold="' + escapeHtml(String(cle)) + '"'
+       + (foldsOuverts.has(String(cle)) ? ' open' : '') + '>'
+       + '<summary>' + FLECHE + '<span>' + escapeHtml(libelle) + '</span></summary>'
+       + dedans + '</details>';
+}
+
+function imgPhoto(p){
+  const titre = escapeHtml(t('photoOpenTitle'));
+  return '<img class="req-photo" src="data:' + p.type + ';base64,' + p.data
+       + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
+}
+
 function blocReqPhotos(o){
   const ps = photosDe(o);
   if(!ps.length) return '';
-  const titre = escapeHtml(t('photoOpenTitle'));
-  const img = p => '<img class="req-photo" src="data:' + p.type + ';base64,' + p.data
-                 + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
-  return ps.length === 1 ? img(ps[0])
-       : '<div class="req-photos">' + ps.map(img).join('') + '</div>';
+  const dedans = ps.length === 1 ? imgPhoto(ps[0])
+               : '<div class="req-photos">' + ps.map(imgPhoto).join('') + '</div>';
+  return replie(o.id || '', ps.length, dedans);
 }
 
 let pendingSourceId = null;
@@ -3711,10 +3773,10 @@ function openSheet(order, presetClientId, prefill){
   // une demande, celles que la demande transporte et qui vont être écrites.
   const sesPhotos = order ? photosDe(order) : pendingPhotos;
   $('#sheetPhotosZone').style.display = sesPhotos.length ? 'block' : 'none';
-  $('#sheetPhotos').innerHTML = sesPhotos.map(p=>
-    '<img class="req-photo" src="data:' + p.type + ';base64,' + p.data + '" alt=""'
-    + ' title="' + escapeHtml(t('photoOpenTitle')) + '"'
-    + ' aria-label="' + escapeHtml(t('photoOpenTitle')) + '">').join('');
+  $('#sheetPhotos').innerHTML = sesPhotos.length
+    ? replie('sheet', sesPhotos.length,
+        '<div class="req-photos">' + sesPhotos.map(imgPhoto).join('') + '</div>')
+    : '';
   // Sans ça, rouvrir une commande remettait l'acompte déjà encaissé à zéro.
   $('#f_paid').value = order ? (order.paidAmount || '') : '';
   buildStatusSelect($('#f_status'), order ? order.status : 'nouveau');
