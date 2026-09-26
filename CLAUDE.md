@@ -997,6 +997,31 @@ La monnaie reprend l'identité de l'icône de l'app : dégradé vert (orange en
 thème sombre) et glyphe `$`, classe `.ds-coin`. En mode discret, le solde d'un
 client se cache comme les marges : il révèle ce qu'il a dépensé.
 
+### Ranger les commandes par client
+
+Dans « Tout », cinquante commandes de dix clients se lisent comme une pile. Un
+bouton **« Ranger par client »** sous les onglets de statut bascule la liste en
+**dossiers repliés** : un par client, avec son nom, ce qu'il doit et son nombre
+de commandes. On ouvre celui qu'on cherche — exactement le geste des photos, et
+le même `<details>` natif.
+
+Trois points :
+
+- **Les deux dispositions partagent la même carte** (`carteCommande`). Une liste
+  à plat et une liste rangée qui afficheraient deux cartes différentes
+  finiraient par se contredire, et c'est la carte qu'on lit tous les jours.
+- **L'état ouvert passe par le même `foldsOuverts`**, préfixé `cli:`. La liste
+  est redessinée à chaque snapshot Firestore : sans ça le dossier se refermerait
+  sous les doigts.
+- **Dans un dossier, le nom du client disparaît des cartes** et c'est le produit
+  qui prend la première ligne. Le répéter trois fois sous son propre nom, c'est
+  du bruit.
+
+Le choix est une **préférence** (`ds_group_client` en localStorage), contrairement
+à l'état d'un repli qui reste en mémoire : elle doit survivre à la fermeture.
+Le filtre par statut, la recherche et le mode discret continuent de s'appliquer
+à l'intérieur des dossiers.
+
 ### Corbeille
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
 bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
@@ -1714,6 +1739,34 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    défilement qu'on n'a pas déclenchée du doigt se lit comme une app qui bouge
    seule, pas comme une app qui aide.
 
+32. **UN CALQUE PLEIN ÉCRAN NE SUIT PAS LE `max-width` DE L'APP**, et ça ne se
+   voit que sur tablette. Le portail borne `#app` à 600 px au-delà de 700 px de
+   large — mais la visionneuse et la fenêtre de choix sont en
+   `position:fixed; inset:0`, donc hors de ce conteneur. Sur un iPad en
+   paysage, le bouton « Passer commande » s'étalait sur **992 px**.
+
+   Le correctif garde le fond plein écran et ramène le **contenu** à la colonne
+   de lecture, sans ajouter un seul élément au balisage :
+   `padding-left: max(16px, calc((100% - 600px) / 2))`, et pareil à droite.
+
+   **Et dans le même écran, un second bug que seul le paysage révélait :
+   `place-items:center` sur une grille fait dimensionner la piste sur son
+   contenu, donc le `max-height:100%` de l'image se résout contre elle-même et
+   ne borne rien.** Mesuré : une image de 900 px dans une zone de 560, qui
+   débordait et passait sous le texte. En **flex**, la hauteur du conteneur est
+   définie (il est `flex:1` dans une colonne à hauteur fixe) et le
+   `max-height:100%` mord enfin.
+
+   | | image | zone | avant | après |
+   |---|---|---|---|---|
+   | iPad portrait | 802 | 802×986 | correct | correct |
+   | **iPad paysage** | **900** | **992×560** | **déborde** | 560, tenu |
+   | iPhone | 358 | 358×636 | correct | correct |
+
+   La leçon de méthode : **une mise en page se vérifie à plusieurs tailles, pas
+   à une seule.** Le portrait passait, le paysage non, et c'est la même feuille
+   de style.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1774,6 +1827,25 @@ fidélité dans les statistiques.
   une commande par modèle (plusieurs références #A7F3, plusieurs suivis) ou une
   commande unique à plusieurs lignes ? C'est elle qui décidera s'il faut porter
   `items` jusqu'à `orders`.
+- **LE CATALOGUE TÉLÉCHARGE LES PHOTOS PLEINES POUR RIEN, ET C'EST MESURÉ.**
+  Le découpage en deux tailles (vignette 400 px / photo 900 px) devait faire que
+  la grille ne coûte que les vignettes. **Il ne marche pas** : Firestore renvoie
+  des documents ENTIERS, on ne peut pas demander un champ. Le portail télécharge
+  donc les deux, à chaque ouverture. Relevé sur les vraies données du 26
+  septembre, cinq coloris d'une seule marque :
+
+  | | poids |
+  |---|---|
+  | vignettes | 155 Ko |
+  | **photos pleines, jamais regardées à ce moment-là** | **524 Ko** |
+  | **total téléchargé** | **679 Ko** |
+
+  À cent fiches, ça ferait plus de 13 Mo à chaque ouverture du portail. C'est la
+  lenteur constatée sur tablette, et ça rend le catalogue inutilisable dès
+  qu'il grossit. **Le correctif est de sortir la photo pleine dans sa propre
+  collection** (`catalogPhotos/{id}`), lue seulement à l'ouverture d'un coloris.
+  Nouvelle collection = nouvelles règles à publier (piège 29).
+
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
 - Plus tard : abonnement payant, inscription autonome
