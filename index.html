@@ -2539,6 +2539,7 @@ const I18N = {
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
     groupByClient:'Ranger par client',
+    warnBrandUsed:"Attention : {n} commande(s) montrent ces photos. En les supprimant, elles perdront leur image. Pour retirer la marque de la vitrine sans rien perdre, masque ses coloris avec l'œil.",
     groupFlat:'Par date',
     cmdOne:'1 commande', cmdMany:'{n} commandes',
     previewTitle:'Aperçu client',
@@ -2732,6 +2733,7 @@ const I18N = {
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
     groupByClient:'Group by client',
+    warnBrandUsed:'Careful: {n} order(s) show these photos. Deleting them will leave those orders without an image. To remove the brand from the shop window without losing anything, hide its colours with the eye.',
     groupFlat:'By date',
     cmdOne:'1 order', cmdMany:'{n} orders',
     previewTitle:'Client preview',
@@ -2836,7 +2838,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27a';
+const BUILD = '2026-09-27b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3216,7 +3218,10 @@ function startListeners(){
   // Vingt modèles dans un seul document feraient déjà 2 Mo (piège 23).
   db.collection('catalog').where('ownerId','==',currentUid).onSnapshot(snap=>{
     catalogItems = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
-    if(viewState === 'catalogue') renderCatalogue();
+    // Les photos des commandes venues du catalogue sont résolues par
+    // `photosItems()` : tant que les fiches ne sont pas chargées, elles
+    // manquent. On redessine donc l'écran courant quand elles arrivent.
+    if(viewState === 'catalogue') renderCatalogue(); else renderCurrentView();
     sortLesPhotos(catalogItems);
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
@@ -3279,6 +3284,9 @@ function publicOrderData(o){
     // Le tableau pour les demandes à plusieurs modèles, et les deux anciens
     // champs tant que des commandes d'avant les portent. On ne migre rien.
     photos:    Array.isArray(o.photos) ? o.photos : [],
+    // Les lignes du catalogue : le portail y retrouve les photos et le détail
+    // coloris par coloris, sans qu'aucune image soit recopiée.
+    items:     Array.isArray(o.items) ? o.items : [],
     photo:     o.photo || '',
     photoType: o.photoType || '',
     createdAt: o.createdAt || Date.now(),
@@ -3771,11 +3779,27 @@ async function grantCoupon(req){
 // les deux et on ne réécrit rien dans la base — même principe que
 // carrier/forwarder. La MÊME fonction existe dans client.html : si l'une des
 // deux change, le vendeur et le client ne verraient plus la même chose.
+// Les coloris commandés au catalogue n'ont pas de photo DANS la commande :
+// ils pointent la fiche (`items[].catalogId`). C'est ce qui a levé la limite
+// de cinq articles — le poids ne dépend plus du nombre de coloris. On les
+// résout ici, une seule fois, pour que tous les affichages en profitent.
+// Même fonction, au mot près, dans `client.html` : si l'une change, le vendeur
+// et le client ne verraient plus les mêmes photos.
+function photosItems(o){
+  return (Array.isArray(o.items) ? o.items : []).map(it=>{
+    const f = catalogItems.find(x => x.id === it.catalogId);
+    if(!f) return null;
+    const d = f.thumb || f.photo;
+    if(!d) return null;
+    return { data:d, type:(f.thumb ? f.thumbType : f.photoType) || 'image/jpeg' };
+  }).filter(Boolean);
+}
 function photosDe(o){
+  const out = photosItems(o);
   if(Array.isArray(o.photos) && o.photos.length)
-    return o.photos.filter(p=>p && p.data).map(p=>({ data:p.data, type:p.type || 'image/jpeg' }));
-  if(o.photo) return [{ data:o.photo, type:o.photoType || 'image/jpeg' }];
-  return [];
+    o.photos.filter(p=>p && p.data).forEach(p=>out.push({ data:p.data, type:p.type || 'image/jpeg' }));
+  else if(o.photo) out.push({ data:o.photo, type:o.photoType || 'image/jpeg' });
+  return out;
 }
 // Quels replis sont ouverts, par identifiant. En mémoire, pas en localStorage :
 // c'est l'état d'un geste en cours, pas une préférence. Sans ce Set, le repli
@@ -4168,8 +4192,18 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
 
 $('#deleteBrandBtn').addEventListener('click', async ()=>{
   if(!brandOrigine) return;
-  const n = catalogItems.filter(i => (i.brand||'').trim() === brandOrigine).length;
-  if(!(await showConfirm(t('confirmDeleteBrandAll').replace('{n}', n)))) return;
+  const fiches = catalogItems.filter(i => (i.brand||'').trim() === brandOrigine);
+  const n = fiches.length;
+  // Une commande passée ne porte plus la photo, elle POINTE la fiche :
+  // supprimer la fiche lui retire son image. Masquer avec l'œil la garde
+  // lisible tout en la retirant de la vitrine — c'est presque toujours ce
+  // qu'on veut, et personne ne peut le deviner sans qu'on le dise.
+  const ids = new Set(fiches.map(i => i.id));
+  const citees = orders.filter(o => Array.isArray(o.items)
+    && o.items.some(it => ids.has(it.catalogId))).length;
+  let question = t('confirmDeleteBrandAll').replace('{n}', n);
+  if(citees) question += '\n\n' + t('warnBrandUsed').replace('{n}', citees);
+  if(!(await showConfirm(question))) return;
   try{
     const lot = db.batch();
     catalogItems.filter(i => (i.brand||'').trim() === brandOrigine)
@@ -4523,6 +4557,7 @@ function blocReqPhotos(o){
 
 let pendingSourceId = null;
 let pendingPhotos = [];
+let pendingItems = [];   // les lignes du catalogue, portées de la demande à la commande
 $('#requestsList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('button[data-action]');
   if(!btn) return;
@@ -4549,7 +4584,11 @@ $('#requestsList').addEventListener('click', async (e)=>{
     showToast(t('toastRequestRejected'));
   } else {
     pendingSourceId = reqId;
-    pendingPhotos = photosDe(req);   // toutes les photos suivent sur la commande
+    // Les photos QUE LE CLIENT A PRISES suivent sur la commande ; celles du
+    // catalogue n'ont jamais été recopiées, `items` les retrouve.
+    pendingPhotos = (Array.isArray(req.photos) ? req.photos : (req.photo ? [{data:req.photo, type:req.photoType||'image/jpeg'}] : []))
+      .filter(p=>p && p.data).map(p=>({ data:p.data, type:p.type || 'image/jpeg' }));
+    pendingItems = Array.isArray(req.items) ? req.items : [];
     openSheet(null, req.clientId, { product:req.product, qty:req.qty, note:req.note });
   }
 });
@@ -4965,6 +5004,7 @@ function closeSheet(){
   editingId = null;
   pendingSourceId = null;
   pendingPhotos = [];
+  pendingItems = [];
 }
 
 // ===== « Il a payé ? » =====
@@ -5227,6 +5267,10 @@ form.addEventListener('submit', async (e)=>{
                  couponId:$('#f_coupon').value || '',
                  discount:selectedCouponValue() };
   if(pendingPhotos.length) data.photos = pendingPhotos.map(p=>({ data:p.data, type:p.type }));
+  // Une demande à plusieurs coloris devient UNE commande : une marque, un
+  // modèle, une référence, un colis, un suivi. C'est la règle de Massif, et
+  // c'est `items` qui en porte le détail.
+  if(pendingItems.length) data.items = pendingItems;
   if(editingId){
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
   } else {

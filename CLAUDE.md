@@ -530,6 +530,22 @@ dans sa demande **chacun avec sa quantité** et **chacun avec sa photo**, sans
 qu'il ait rien à téléverser. Le champ texte reste en dessous pour ce qui n'est
 pas encore au catalogue : les deux chemins cohabitent, un seul suffit.
 
+**UNE DEMANDE = UNE MARQUE ET UN SEUL MODÈLE.** C'est la règle décidée par
+Massif le 27 septembre, et elle simplifie beaucoup plus que l'organisation :
+une commande, **une référence `#A7F3`, un colis, un suivi**. Un client qui veut
+un ensemble Asics *et* un Tech Fleece Nike envoie **deux demandes** — et c'est
+précisément ce qu'on veut, deux colis suivis séparément.
+
+Dans la fenêtre de choix, le premier coloris coché **pose le verrou** : les
+autres modèles et les autres marques passent en gris (`is-locked`), avec la
+consigne qui change et un message si on insiste. Retirer le dernier coloris
+relâche le verrou. On **grise plutôt qu'on ne cache** : le client doit voir que
+sa vitrine est toujours là, et comprendre pourquoi il ne peut pas y toucher
+maintenant.
+
+C'est cette règle qui a fait tomber les questions restées ouvertes : plus de
+découpage à trancher, et le libellé n'a plus qu'une seule tête à porter.
+
 **Une quantité par coloris, et le champ « Quantité » unique disparaît** dès
 qu'il y a une ligne. Deux endroits pour le même nombre, c'est une erreur de
 saisie qui attend son heure. Le `qty` envoyé est la somme des lignes.
@@ -537,22 +553,43 @@ saisie qui attend son heure. Le `qty` envoyé est la somme des lignes.
 **Ce que ça écrit.** `product` reste **une seule chaîne lisible** —
 `Asics · Ensemble / Veste : Gris ×3, Noire, Blanc ×2` — parce que c'est elle qui
 voyage partout sans une ligne de code en plus : recherche du vendeur, fiche
-commande, copie publique, portail. **Elle est coupée à 190 caractères** : les
-règles bornent ce champ à 200, et au-delà la base refuse l'écriture — le client
-ne lirait qu'un « erreur d'envoi » qui ne lui apprend rien (piège 9 appliqué à
-l'écriture). La liste détaillée part en plus dans **`items[]`**
-(`catalogId`, `brand`, `model`, `name`, `qty`), que personne ne lit encore :
-c'est elle qui permettra un jour de découper une demande en plusieurs commandes.
-**Attention, `items` ne vit que sur la demande** — la validation côté vendeur ne
-la recopie pas, et la demande est supprimée ensuite. À traiter le jour où on
-construira la commande à plusieurs lignes.
+commande, copie publique, portail. Les règles bornent ce champ à 200
+caractères ; au-delà de 180 il **devient un résumé**
+(`Asics · Ensemble / Veste : 12 coloris (27 pièces)`) plutôt qu'une phrase
+coupée au milieu d'un nom. Le détail complet vit dans **`items[]`**
+(`catalogId`, `brand`, `model`, `name`, `qty`).
 
-**Les vignettes comptent dans le plafond des photos.** Elles partent dans le
-**même document** que les photos du client, et Firestore plafonne à 1 Mo
-(piège 23) : le nombre de coloris cochés est donc borné par le même compteur —
-cinq en tout, coloris et photos confondus, avec un message qui le dit. C'est la
-**vignette de 400 px** qui part, pas la photo pleine : elle suffit à reconnaître
-l'article et pèse le quart. Trois coloris = 19 Ko, mesuré.
+**`items` voyage désormais jusqu'au bout** : la demande le porte, la validation
+le recopie sur la commande (`pendingItems`), et `publicOrderData()` le met dans
+la copie publique. C'est lui qui permet au vendeur comme au client de voir les
+photos, sans qu'aucune image soit dupliquée.
+
+**LES COLORIS NE SONT PLUS RECOPIÉS, ILS POINTENT LA FICHE.** C'était la
+limite de cinq articles par demande : les vignettes partaient dans le document,
+donc elles comptaient dans le mégaoctet de Firestore. Or les deux côtés ont
+déjà le catalogue chargé — recopier l'image ne servait qu'à remplir la place.
+`items[]` porte donc `catalogId`, et `photosItems()` résout la photo à
+l'affichage. Mesuré : trois coloris passent de **19 Ko à moins d'un kilooctet**,
+et le plafond de cinq ne concerne plus que **les photos que le client prend
+lui-même**.
+
+**Conséquence à connaître, et elle est dite dans l'app** : une fiche
+**supprimée** du catalogue retire son image aux commandes qui la citent.
+Supprimer une marque prévient donc du nombre de commandes concernées et
+rappelle la bonne manœuvre — **masquer avec l'œil**, qui retire de la vitrine
+sans rien perdre. C'est pour ça que l'écouteur du portail **garde les fiches
+masquées** et que c'est le rendu qui filtre (`catActifs()`) : sinon masquer
+reviendrait à supprimer.
+
+**Et les deux côtés redessinent quand le catalogue arrive.** Les photos sont
+résolues depuis les fiches : tant qu'elles ne sont pas chargées, une commande
+s'affiche sans image. Le catalogue arrivant après les commandes, l'écouteur
+rappelle le rendu — sans ça le client voyait une commande nue jusqu'au
+rechargement. Le même oubli existait des deux côtés, corrigé des deux côtés.
+
+**`photosItems()` existe à l'identique dans les deux fichiers**, comme
+`freshRef()` et `photosDe()` : si l'une des deux change, le vendeur et le
+client ne verraient plus les mêmes photos.
 
 **La vitrine et la fenêtre de choix partagent le même rendu** (`catVueMarques`,
 `catVueMarque`, avec un mode). « Passer commande » depuis la photo en grand
@@ -1841,8 +1878,10 @@ mode discret qui masque montants et marges, catalogue par marques et modèles
 avec photos recadrées en carré (côté vendeur), scan de carte de visite
 fournisseur, scanner de QR avec l'algorithme de WeChat lui-même,
 vitrine du catalogue côté client (marques, modèles, coloris, photo en grand)
-avec aperçu client depuis l'app pro, commande depuis le catalogue (plusieurs
-coloris cochés, une quantité chacun, photos jointes automatiquement), programme de fidélité complet
+avec aperçu client depuis l'app pro, commande depuis le catalogue (une marque et
+un modèle par demande, plusieurs coloris cochés avec une quantité chacun,
+photos pointées au lieu d'être recopiées donc sans limite de nombre),
+programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques.
@@ -1853,29 +1892,6 @@ fidélité dans les statistiques.
   pré-remplir la date de livraison estimée
 - Photo du stand dans la fiche fournisseur (le champ `photo` existe déjà,
   rempli par le scan de carte : il reste à pouvoir en ajouter une à la main)
-- **La demande à plusieurs lignes existe côté client** (coloris cochés,
-  quantité chacun, `items[]` écrit sur la demande). **Côté vendeur, elle reste
-  une commande unique** : `product` porte le texte lisible, `items` n'est pas
-  recopié à la validation et disparaît avec la demande.
-  **La question à trancher** : une demande à plusieurs lignes doit-elle donner
-  une commande par modèle (plusieurs références #A7F3, plusieurs suivis) ou une
-  commande unique à plusieurs lignes ? C'est elle qui décidera s'il faut porter
-  `items` jusqu'à `orders`.
-- **Lever la limite de cinq articles par demande.** Aujourd'hui les vignettes
-  des coloris cochés sont **recopiées** dans la demande, donc elles comptent
-  dans le plafond du mégaoctet. La réponse décidée, et elle ne coûte rien :
-  **ne plus recopier, pointer la fiche du catalogue** (`catalogId`), que les
-  deux côtés ont déjà chargée. Le nombre de coloris par demande devient alors
-  illimité. Deux points à traiter en même temps : `product` est borné à
-  200 caractères par les règles, donc au-delà de quelques lignes il devient un
-  résumé et c'est `items[]` qu'il faut porter jusqu'à `orders` et afficher côté
-  vendeur ; et **une fiche supprimée du catalogue ferait perdre l'image des
-  anciennes commandes** — d'où la règle à rappeler : masquer avec l'œil, ne pas
-  supprimer.
-  **Firebase Storage reste écarté** : il ne sert que le cas où le client
-  photographie lui-même plus de cinq articles absents du catalogue, qui est le
-  cas rare. À rouvrir seulement s'il se présente pour de vrai.
-
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
 - Plus tard : abonnement payant, inscription autonome
@@ -1885,6 +1901,12 @@ fidélité dans les statistiques.
 Facturation légale, mentions obligatoires, numérotation de factures :
 Massif n'est pas encore immatriculé. **Ne rien construire là-dessus** tant
 qu'il n'a pas de SIRET.
+
+**Firebase Storage** : écarté tant que le seul cas qui le justifierait ne se
+présente pas pour de vrai — un client qui photographie **lui-même** plus de
+cinq articles absents du catalogue. Les coloris du catalogue, eux, ne pèsent
+plus rien depuis qu'ils pointent la fiche au lieu de la recopier. À rouvrir
+seulement si ce cas arrive.
 
 API de suivi automatique (17TRACK, TrackingMore, AfterShip) : écartée pour
 l'instant. À faible volume on paie le ticket d'entrée, pas les colis (~110 €/an
