@@ -733,6 +733,96 @@
   body.apercu .tabs{ pointer-events:none; margin-top:4px; }
   body.apercu #app{ padding-top:calc(env(safe-area-inset-top) + 10px); }
 
+
+  /* ===== Choisir ses modèles dans le catalogue ===== */
+  .cat-browse-main{ margin-top:0; padding:12px; font-size:13.5px; }
+  .free-hint{ margin:12px 0 6px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; }
+  /* Une pastille sur la marque dit combien de coloris y sont déjà cochés :
+     sans elle, on referme un dossier sans savoir ce qu'on y a laissé. */
+  .cat-brand.has-picked{ border-color:var(--accent); }
+  .cat-badge{
+    position:absolute; top:8px; right:8px; z-index:4; min-width:21px; height:21px; padding:0 6px;
+    border-radius:100px; background:var(--accent); color:var(--on-accent);
+    font-size:11.5px; font-weight:700; display:grid; place-items:center;
+    font-variant-numeric:tabular-nums; box-shadow:var(--raise);
+  }
+  .cat-color{ position:relative; }
+  .cat-check{
+    position:absolute; top:7px; right:7px; width:23px; height:23px; border-radius:50%;
+    background:var(--accent); color:var(--on-accent); display:grid; place-items:center;
+    opacity:0; transform:scale(.5); pointer-events:none; box-shadow:var(--raise);
+    transition:opacity .2s var(--ease-io), transform .32s var(--spring);
+  }
+  .cat-check svg{ width:13px; height:13px; }
+  .cat-color.is-picked .cat-check{ opacity:1; transform:none; }
+  .cat-color.is-picked img{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft), var(--raise); }
+
+  .picked{ margin-top:11px; }
+  .picked-row{
+    display:flex; align-items:center; gap:10px; padding:8px; margin-bottom:8px;
+    background:var(--fill); border:0.5px solid var(--hairline); border-radius:14px;
+  }
+  .picked-row img{
+    width:44px; height:44px; flex:none; border-radius:10px; object-fit:cover; display:block;
+    background:var(--fill-2);
+  }
+  .picked-t{ flex:1; min-width:0; }
+  .picked-t b{
+    display:block; font-size:13.5px; font-weight:600; letter-spacing:-0.012em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .picked-t span{
+    display:block; font-size:11.5px; color:var(--text-faint);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .qty-step{
+    display:flex; align-items:center; gap:2px; flex:none;
+    background:var(--bg); border:0.5px solid var(--hairline); border-radius:100px; padding:2px;
+  }
+  .qty-step button{
+    width:28px; height:28px; border:0; border-radius:50%; background:none; cursor:pointer;
+    color:var(--accent); font-size:17px; line-height:1; font-weight:600; font-family:inherit;
+    display:grid; place-items:center; transition:transform .3s var(--spring), background .2s var(--ease-io);
+  }
+  .qty-step button:active{ transform:scale(.88); background:var(--accent-soft); }
+  .qty-step b{
+    min-width:20px; text-align:center; font-size:13.5px; font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+  .picked-x{
+    width:26px; height:26px; flex:none; border:0; border-radius:50%; background:none; cursor:pointer;
+    color:var(--text-ghost); display:grid; place-items:center; transition:transform .3s var(--spring);
+  }
+  .picked-x:active{ transform:scale(.88); }
+  .picked-x svg{ width:14px; height:14px; }
+
+  .pick-sheet{
+    position:fixed; inset:0; z-index:230; display:none; flex-direction:column; background:var(--bg);
+  }
+  .pick-sheet.open{ display:flex; animation:pickIn .28s var(--ease-out); }
+  @keyframes pickIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+  .pick-bar{
+    flex:none; display:flex; align-items:center; gap:10px;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+    border-bottom:0.5px solid var(--hairline); background:var(--mat);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .pick-bar b{
+    flex:1; min-width:0; text-align:center; font-family:var(--font-display); font-size:16px;
+    font-weight:600; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  /* Le corps défile, pas la page : c'est ce qui fait que rien ne bouge dessous. */
+  .pick-body{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; }
+  .pick-foot{
+    flex:none; display:flex; align-items:center; gap:12px;
+    padding:12px 16px calc(env(safe-area-inset-bottom) + 14px);
+    border-top:0.5px solid var(--hairline); background:var(--mat);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .pick-foot span{ flex:1; font-size:13px; color:var(--text-faint); letter-spacing:-0.005em; }
+  .pick-foot .btn-primary{ flex:none; width:auto; padding:11px 24px; }
+  .pick-foot .btn-primary:disabled{ opacity:.4; }
+
   /* Passage d'un onglet à l'autre : ça glisse. */
   .view-in{ animation:viewIn .3s var(--ease-out) both; }
   @keyframes viewIn{
@@ -1452,15 +1542,19 @@
       <form id="orderForm" novalidate>
         <div class="field">
           <label data-i18n="fieldProduct">Produit</label>
-          <input type="text" id="f_product" data-i18n-placeholder="phProduct" placeholder="Ex: paire de chaussures, sac...">
-          <div class="field-error"></div>
-          <button type="button" class="cat-browse" id="catBrowseBtn">
+          <!-- Le chemin principal : on choisit dans le catalogue. Le champ
+               texte reste en dessous pour ce qui n'y est pas encore. -->
+          <button type="button" class="cat-browse cat-browse-main" id="pickOpenBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg>
-            <span data-i18n="catBrowse">Parcourir le catalogue</span>
+            <span id="pickOpenLabel" data-i18n="pickOpen">Choisir dans le catalogue</span>
           </button>
+          <div class="picked" id="pickedList" style="display:none;"></div>
+          <p class="free-hint" id="freeHint" style="display:none;" data-i18n="freeHint">Autre chose en plus ?</p>
+          <input type="text" id="f_product" data-i18n-placeholder="phProduct" placeholder="Ou écris-le toi-même">
+          <div class="field-error"></div>
         </div>
         <div class="row2">
-          <div class="field">
+          <div class="field" id="qtyField">
             <label data-i18n="fieldQty">Quantité</label>
             <input type="number" id="f_qty" min="1" value="1">
             <div class="field-error"></div>
@@ -1540,6 +1634,25 @@
   <div class="crop-bar">
     <button type="button" class="crop-cancel" id="cropCancel" data-i18n="cropCancel">Annuler</button>
     <button type="button" class="crop-ok" id="cropOk" data-i18n="cropOk">Valider</button>
+  </div>
+</div>
+
+<!-- La fenêtre de choix. Elle se pose PAR-DESSUS la page : rien ne défile
+     dessous, donc rien ne bouge tout seul sous les doigts du client. -->
+<div class="pick-sheet" id="pickSheet" role="dialog" aria-modal="true">
+  <div class="pick-bar">
+    <button type="button" class="cat-back" id="pickBack" data-i18n-title="catBack" title="Retour aux marques" aria-label="Retour">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <b id="pickTitle">Le catalogue</b>
+    <button type="button" class="cat-back" id="pickClose" data-i18n-title="pickClose" title="Fermer" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="pick-body" id="pickBody"></div>
+  <div class="pick-foot">
+    <span id="pickCount"></span>
+    <button type="button" class="btn-primary" id="pickOk" data-i18n="pickValidate">Valider</button>
   </div>
 </div>
 
@@ -1648,6 +1761,15 @@ const I18N = {
     catOrderThis:'Passer commande',
     catPicked:'Produit choisi. Indique la quantité, puis envoie.',
     catPreview:'Aperçu client',
+    pickOpen:'Choisir dans le catalogue', pickOpenMore:'Ajouter un autre modèle',
+    pickTitle:'Le catalogue', pickClose:'Fermer',
+    pickHintBrands:'Touche une marque pour voir ses modèles.',
+    pickHint:'Touche les coloris que tu veux. Tu peux en prendre plusieurs.',
+    pickValidate:'Valider', pickNone:'Rien de choisi',
+    pickOne:'{n} article choisi', pickMany:'{n} articles choisis',
+    pickRemove:'Retirer de ma demande',
+    pickMax:'{n} articles et photos au maximum. Retires-en un pour en ajouter un autre.',
+    freeHint:'Autre chose en plus ?',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
@@ -1655,7 +1777,7 @@ const I18N = {
     dollarsRules:"Tu gagnes 1 Dollarz par euro dépensé, crédité à la livraison. Un seul coupon par commande, sans date d'expiration. Les Dollarz ne sont ni transférables ni convertibles en euros.",
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photos du produit',
     fieldDetails:'Précisions (taille, couleur, référence...)', yourDetails:'Tes précisions',
-    phProduct:'Ex: paire de chaussures, sac...', phOptional:'Optionnel',
+    phProduct:'Ou écris-le toi-même : sacoche, montre...', phOptional:'Optionnel',
     photoAdd:'Ajouter des photos', photoAddMore:'Ajouter une autre photo',
     photoRemove:'Retirer cette photo',
     photoCountOne:'1 photo', photoCountMany:'{n} photos',
@@ -1744,6 +1866,15 @@ const I18N = {
     catOrderThis:'Order this',
     catPicked:'Product selected. Set the quantity, then send.',
     catPreview:'Client preview',
+    pickOpen:'Pick from the catalogue', pickOpenMore:'Add another model',
+    pickTitle:'The catalogue', pickClose:'Close',
+    pickHintBrands:'Tap a brand to see its models.',
+    pickHint:'Tap the colours you want. You can take several.',
+    pickValidate:'Confirm', pickNone:'Nothing selected',
+    pickOne:'{n} item selected', pickMany:'{n} items selected',
+    pickRemove:'Remove from my request',
+    pickMax:'{n} items and photos maximum. Remove one to add another.',
+    freeHint:'Anything else?',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
@@ -1751,7 +1882,7 @@ const I18N = {
     dollarsRules:'You earn 1 Dollarz per euro spent, credited on delivery. One coupon per order, no expiry date. Dollarz are neither transferable nor convertible into euros.',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photos',
     fieldDetails:'Details (size, colour, reference...)', yourDetails:'Your details',
-    phProduct:'E.g. pair of shoes, bag...', phOptional:'Optional',
+    phProduct:'Or type it yourself: bag, watch...', phOptional:'Optional',
     photoAdd:'Add photos', photoAddMore:'Add another photo',
     photoRemove:'Remove this photo',
     photoCountOne:'1 photo', photoCountMany:'{n} photos',
@@ -1815,6 +1946,13 @@ function applyTranslations(){
   buildCodePad();
   renderCodeDots();
   if($('#app').style.display !== 'none') renderHistory();
+  // Ces listes sont écrites par le JS : `applyTranslations` ne les touche pas,
+  // il faut les redessiner. C'est le même piège que le libellé du bouton WeChat.
+  if(typeof picked !== 'undefined'){
+    renderPicked();
+    if($('#pickSheet').classList.contains('open')) renderPick();
+    if(currentTab === 'catalog') renderCatalog();
+  }
 }
 $('#langToggle').addEventListener('click', ()=>{
   currentLang = (currentLang === 'fr') ? 'en' : 'fr';
@@ -3153,7 +3291,7 @@ $('#photoInput').addEventListener('change', async (e)=>{
   e.target.value = '';                    // pour pouvoir rechoisir le même fichier
   if(!fichiers.length) return;
 
-  const place = MAX_PHOTOS - orderPhotos.length;
+  const place = placeRestante();
   if(place <= 0){ showToast(t('toastPhotoMax').replace('{n}', MAX_PHOTOS)); return; }
   const aTraiter = fichiers.slice(0, place);
   if(fichiers.length > place) showToast(t('toastPhotoMax').replace('{n}', MAX_PHOTOS));
@@ -3192,8 +3330,12 @@ function rendPhotos(){
     + '</div>'
   ).join('');
   const compteur = $('#photoCount');
-  compteur.style.display = orderPhotos.length ? 'block' : 'none';
-  compteur.textContent = orderPhotos.length + ' / ' + MAX_PHOTOS;
+  // Les photos du catalogue partent dans le MÊME document que les siennes :
+  // elles comptent donc dans le même plafond, sinon on dépasserait le 1 Mo de
+  // Firestore sans que rien ne prévienne (piège 23).
+  const pris = orderPhotos.length + picked.length;
+  compteur.style.display = pris ? 'block' : 'none';
+  compteur.textContent = pris + ' / ' + MAX_PHOTOS;
   $('#photoPickLabel').textContent = orderPhotos.length ? t('photoAddMore') : t('photoAdd');
 }
 
@@ -3323,6 +3465,16 @@ function catCount(n, cleUn, clePlusieurs){
   return t(n > 1 ? clePlusieurs : cleUn).replace('{n}', n);
 }
 
+// Un mouvement qu'on n'a pas demandé désoriente : on ne fait donc JAMAIS
+// glisser la page. On remonte seulement si le panneau est passé au-dessus de
+// l'écran — et d'un coup, sans animation. Descendre tout seul, jamais.
+function catRemonte(){
+  const el = $('#catalogPanel');
+  if(!el) return;
+  const haut = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 8);
+  if(window.scrollY > haut) window.scrollTo(0, haut);
+}
+
 function renderCatalog(){
   const el = $('#catalogPanel');
   if(!el) return;
@@ -3342,12 +3494,17 @@ function renderCatalog(){
     el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>';
     return;
   }
-  if(catBrand) renderCatBrand(el); else renderCatBrands(el);
+  if(catBrand){ if(!catVueMarque(el, catBrand, 'vitrine')){ catBrand = null; renderCatalog(); } }
+  else catVueMarques(el, 'vitrine', t('catLead'));
 }
 
-function renderCatBrands(el){
+// LA VITRINE ET LE CHOIX PARTAGENT LE MÊME RENDU, avec un mode. Le catalogue
+// qu'on parcourt et celui où l'on coche doivent montrer exactement les mêmes
+// marques, les mêmes modèles et les mêmes coloris : deux rendus séparés
+// finiraient par se contredire, c'est la leçon de `decodeAt`.
+function catVueMarques(el, mode, intro){
   const marques = catBrands();
-  el.innerHTML = '<p class="cat-lead">' + escapeHtml(t('catLead')) + '</p>'
+  el.innerHTML = '<p class="cat-lead">' + escapeHtml(intro) + '</p>'
     + '<div class="cat-grid">' + marques.map(m=>{
         const vues = m.items.slice(0, 4);
         const reste = m.items.length - vues.length;
@@ -3358,8 +3515,11 @@ function renderCatBrands(el){
         const forme = vues.length === 1 ? ' solo' : vues.length === 2 ? ' duo'
                     : vues.length === 3 ? ' trio' : '';
         const nbModeles = catModelsOf(m.items).length;
-        return '<button type="button" class="cat-brand" data-brand="' + escapeHtml(m.nom) + '">'
+        const coches = mode === 'choix' ? m.items.filter(i=>estChoisi(i.id)).length : 0;
+        return '<button type="button" class="cat-brand' + (coches ? ' has-picked' : '')
+          + '" data-brand="' + escapeHtml(m.nom) + '">'
           + '<div class="cat-cover' + forme + '">' + cases + '</div>'
+          + (coches ? '<span class="cat-badge">' + coches + '</span>' : '')
           + '<div class="cat-brand-n"><b>' + escapeHtml(m.nom) + '</b><span>'
           + catCount(nbModeles, 'catModel', 'catModels') + ' · '
           + catCount(m.items.length, 'catColor', 'catColors') + '</span></div></button>';
@@ -3367,43 +3527,168 @@ function renderCatBrands(el){
   stagger(el.querySelectorAll('.cat-brand'), 55);
 }
 
-function renderCatBrand(el){
-  const items = catalogItems.filter(i => (i.brand||'').trim() === catBrand).sort(catRang);
-  // La marque a pu disparaître pendant qu'on la regardait : on revient à la
-  // grille plutôt que d'afficher une page vide.
-  if(!items.length){ catBrand = null; renderCatalog(); return; }
+function catVueMarque(el, marque, mode){
+  const items = catalogItems.filter(i => (i.brand||'').trim() === marque).sort(catRang);
+  if(!items.length) return false;   // la marque a disparu pendant qu'on la regardait
   const modeles = catModelsOf(items);
-  el.innerHTML = '<div class="cat-head">'
+  const entete = mode === 'choix' ? '' : '<div class="cat-head">'
     + '<button type="button" class="cat-back" id="catBackBtn" title="' + escapeHtml(t('catBack'))
     + '" aria-label="' + escapeHtml(t('catBack')) + '">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'
-    + '</button><div class="cat-head-t"><b>' + escapeHtml(catBrand) + '</b><span>'
+    + '</button><div class="cat-head-t"><b>' + escapeHtml(marque) + '</b><span>'
     + catCount(modeles.length, 'catModel', 'catModels') + ' · '
-    + catCount(items.length, 'catColor', 'catColors') + '</span></div></div>'
+    + catCount(items.length, 'catColor', 'catColors') + '</span></div></div>';
+  el.innerHTML = entete
+    + (mode === 'choix' ? '<p class="cat-lead">' + escapeHtml(t('pickHint')) + '</p>' : '')
     + modeles.map(g=>
         '<div class="cat-model"><div class="cat-model-h">'
         + escapeHtml(g.nom || t('catNoModel'))
         + '<i>' + catCount(g.items.length, 'catColor', 'catColors') + '</i></div>'
         + '<div class="cat-colors">' + g.items.map(i=>
-            '<button type="button" class="cat-color" data-id="' + escapeHtml(i.id) + '">'
+            '<button type="button" class="cat-color' + (mode === 'choix' && estChoisi(i.id) ? ' is-picked' : '')
+            + '" data-id="' + escapeHtml(i.id) + '">'
             + '<img src="' + catImg(i) + '" alt="" loading="lazy">'
+            + (mode === 'choix' ? '<i class="cat-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>' : '')
             + '<span>' + escapeHtml(i.name || '') + '</span></button>').join('')
         + '</div></div>').join('');
   stagger(el.querySelectorAll('.cat-color'), 45);
+  return true;
 }
 
 $('#catalogPanel').addEventListener('click', (e)=>{
-  if(e.target.closest('#catBackBtn')){ catBrand = null; renderCatalog(); return; }
+  if(e.target.closest('#catBackBtn')){ catBrand = null; renderCatalog(); catRemonte(); return; }
   const marque = e.target.closest('.cat-brand');
   if(marque){
     catBrand = marque.dataset.brand;
     renderCatalog();
-    window.scrollTo({ top:0, behavior:reduceMotion() ? 'auto' : 'smooth' });
+    catRemonte();
     return;
   }
   const coloris = e.target.closest('.cat-color');
   if(coloris) openCatLb(coloris.dataset.id);
 });
+
+// ================= Choisir ses modèles dans le catalogue =================
+// Le client coche ses coloris, chacun avec sa quantité, et les photos partent
+// avec la demande sans qu'il ait rien à téléverser. Le vendeur reçoit alors le
+// nom exact et l'image exacte — plus de phrase à relire au moment d'acheter.
+//
+// La fenêtre se pose PAR-DESSUS la page : rien ne défile dessous, donc rien ne
+// bouge tout seul. C'est aussi ce qui règle le saut du panneau qui raccourcit.
+let picked = [];      // [{id, brand, model, name, thumb, thumbType, qty}]
+let pickBrand = null;
+
+function estChoisi(id){ return picked.some(x => x.id === id); }
+function placeRestante(){ return MAX_PHOTOS - orderPhotos.length - picked.length; }
+
+function openPick(){
+  pickBrand = null;
+  $('#pickSheet').classList.add('open');
+  renderPick();
+}
+function closePick(){ $('#pickSheet').classList.remove('open'); }
+
+function renderPick(){
+  const el = $('#pickBody');
+  if(!el) return;
+  $('#pickBack').style.visibility = pickBrand ? 'visible' : 'hidden';
+  $('#pickTitle').textContent = pickBrand || t('pickTitle');
+  if(!catalogLoaded){ el.innerHTML = '<div class="empty">' + escapeHtml(t('loading')) + '</div>'; }
+  else if(catalogError){ el.innerHTML = '<div class="empty">' + escapeHtml(t('catDenied')).replace(/\n/g,'<br>') + '</div>'; }
+  else if(!catalogItems.length){ el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>'; }
+  else if(pickBrand){ if(!catVueMarque(el, pickBrand, 'choix')){ pickBrand = null; renderPick(); return; } }
+  else catVueMarques(el, 'choix', t('pickHintBrands'));
+  majPickFoot();
+}
+function majPickFoot(){
+  $('#pickCount').textContent = picked.length
+    ? catCount(picked.length, 'pickOne', 'pickMany') : t('pickNone');
+  $('#pickOk').disabled = !picked.length;
+}
+
+$('#pickBody').addEventListener('click', (e)=>{
+  const marque = e.target.closest('.cat-brand');
+  if(marque){ pickBrand = marque.dataset.brand; renderPick(); $('#pickBody').scrollTop = 0; return; }
+  const coloris = e.target.closest('.cat-color');
+  if(!coloris) return;
+  const id = coloris.dataset.id;
+  const i = picked.findIndex(x => x.id === id);
+  if(i >= 0){ picked.splice(i, 1); coloris.classList.remove('is-picked'); }
+  else{
+    // Les photos partent DANS le document de la demande, et Firestore plafonne
+    // à 1 Mo (piège 23) : le nombre de coloris est donc borné par le même
+    // compte que les photos du client, pas par un chiffre inventé ici.
+    if(placeRestante() <= 0){ showToast(t('pickMax').replace('{n}', MAX_PHOTOS)); return; }
+    const f = catalogItems.find(x => x.id === id);
+    if(!f) return;
+    picked.push({ id:f.id, brand:f.brand, model:f.model, name:f.name,
+                  thumb:f.thumb || f.photo, thumbType:(f.thumb ? f.thumbType : f.photoType) || 'image/jpeg', qty:1 });
+    coloris.classList.add('is-picked');
+  }
+  majPickFoot();
+});
+$('#pickBack').addEventListener('click', ()=>{ pickBrand = null; renderPick(); $('#pickBody').scrollTop = 0; });
+$('#pickClose').addEventListener('click', closePick);
+$('#pickOk').addEventListener('click', ()=>{ closePick(); renderPicked(); });
+$('#pickOpenBtn').addEventListener('click', openPick);
+
+// Les lignes choisies, dans le formulaire. Une quantité PAR coloris : c'est
+// tout l'intérêt d'avoir un document par coloris dans le catalogue.
+function renderPicked(){
+  const el = $('#pickedList');
+  if(!el) return;
+  el.innerHTML = picked.map((x,k)=>
+    '<div class="picked-row">'
+    + '<img src="data:' + (x.thumbType||'image/jpeg') + ';base64,' + x.thumb + '" alt="">'
+    + '<div class="picked-t"><b>' + escapeHtml(x.name || x.model || '') + '</b>'
+    + '<span>' + escapeHtml([x.brand, x.model].filter(Boolean).join(' · ')) + '</span></div>'
+    + '<div class="qty-step">'
+    + '<button type="button" data-moins="' + k + '" aria-label="-">−</button>'
+    + '<b>' + x.qty + '</b>'
+    + '<button type="button" data-plus="' + k + '" aria-label="+">+</button>'
+    + '</div>'
+    + '<button type="button" class="picked-x" data-ote="' + k + '" title="' + escapeHtml(t('pickRemove'))
+    + '" aria-label="' + escapeHtml(t('pickRemove')) + '">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+    + '</button></div>').join('');
+  el.style.display = picked.length ? 'block' : 'none';
+  // Le champ « Quantité » unique n'a plus de sens dès qu'il y a une quantité
+  // par ligne : deux endroits pour le même nombre, c'est une erreur de saisie
+  // qui attend son heure.
+  $('#qtyField').style.display = picked.length ? 'none' : 'block';
+  $('#pickOpenLabel').textContent = picked.length ? t('pickOpenMore') : t('pickOpen');
+  $('#freeHint').style.display = picked.length ? 'block' : 'none';
+  rendPhotos();
+}
+$('#pickedList').addEventListener('click', (e)=>{
+  const b = e.target.closest('button[data-moins], button[data-plus], button[data-ote]');
+  if(!b) return;
+  if(b.dataset.ote !== undefined) picked.splice(Number(b.dataset.ote), 1);
+  else if(b.dataset.plus !== undefined){
+    const x = picked[Number(b.dataset.plus)];
+    if(x && x.qty < 99) x.qty++;
+  }else{
+    const x = picked[Number(b.dataset.moins)];
+    if(x && x.qty > 1) x.qty--;
+  }
+  renderPicked();
+});
+
+// « Asics · Ensemble / Veste : Gris ×2, Blanc » — une seule chaîne lisible, qui
+// part dans `product` et se retrouve partout : recherche du vendeur, fiche
+// commande, copie publique. Les règles bornent ce champ à 200 caractères ; au
+// delà, la base refuserait l'écriture et le client ne lirait qu'un « erreur
+// d'envoi » qui ne lui apprend rien.
+function libellePicked(){
+  const par = new Map();
+  picked.forEach(x=>{
+    const cle = [(x.brand||'').trim(), (x.model||'').trim()].filter(Boolean).join(' · ');
+    if(!par.has(cle)) par.set(cle, []);
+    par.get(cle).push((x.name||'').trim() + (x.qty > 1 ? ' ×' + x.qty : ''));
+  });
+  return Array.from(par, ([cle, noms])=> (cle ? cle + ' : ' : '') + noms.join(', ')).join(' | ');
+}
+
 
 function openCatLb(id){
   const i = catalogItems.find(x => x.id === id);
@@ -3438,19 +3723,20 @@ document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeCatLb();
 $('#catLbOrder').addEventListener('click', ()=>{
   const i = catCurrent;
   if(!i) return;
-  const libelle = [i.brand, i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ');
   closeCatLb();
-  if(apercuCat){ showToast(libelle); return; }
-  $('#f_product').value = libelle;
+  if(apercuCat){ showToast([i.brand, i.model, i.name].filter(Boolean).join(' · ')); return; }
+  // Le même panier que la fenêtre de choix : la vitrine et le formulaire ne
+  // remplissent pas deux listes différentes.
+  if(!estChoisi(i.id)){
+    if(placeRestante() <= 0){ showToast(t('pickMax').replace('{n}', MAX_PHOTOS)); return; }
+    picked.push({ id:i.id, brand:i.brand, model:i.model, name:i.name,
+                  thumb:i.thumb || i.photo, thumbType:(i.thumb ? i.thumbType : i.photoType) || 'image/jpeg', qty:1 });
+  }
+  renderPicked();
   clearFormErrors();
   switchTab('order');
   showToast(t('catPicked'));
-  setTimeout(()=>{
-    const f = $('#orderForm');
-    if(f) f.scrollIntoView({ behavior:reduceMotion() ? 'auto' : 'smooth', block:'center' });
-  }, 90);
 });
-$('#catBrowseBtn').addEventListener('click', ()=>switchTab('catalog'));
 
 // ---- Envoi de la demande ----
 $('#orderForm').addEventListener('submit', async (e)=>{
@@ -3458,11 +3744,20 @@ $('#orderForm').addEventListener('submit', async (e)=>{
   clearFormErrors();
   let valid = true;
 
-  const product = $('#f_product').value.trim();
+  const libre = $('#f_product').value.trim();
+  // Deux façons de dire ce qu'on veut : cocher au catalogue, ou l'écrire. Une
+  // seule des deux suffit.
+  let product = [libellePicked(), libre].filter(Boolean).join(' | ');
   if(!product){ setFieldError($('#f_product'), t('errProduct')); valid = false; }
+  // Les règles bornent `product` à 200 caractères. Au-delà, l'écriture est
+  // refusée et le client ne lit qu'un « erreur d'envoi » qui ne lui apprend
+  // rien : on coupe ici, la liste complète part dans `items`.
+  if(product.length > 190) product = product.slice(0, 189) + '\u2026';
 
-  const qtyVal = parseInt($('#f_qty').value);
-  if(!qtyVal || qtyVal<1){ setFieldError($('#f_qty'), t('errQty')); valid = false; }
+  // Une quantité par coloris : le total est la somme. Sans catalogue, c'est le
+  // champ unique qui parle.
+  const qtyVal = picked.length ? picked.reduce((n,x)=>n + x.qty, 0) : parseInt($('#f_qty').value);
+  if(!picked.length && (!qtyVal || qtyVal<1)){ setFieldError($('#f_qty'), t('errQty')); valid = false; }
 
   if(!valid) return;
 
@@ -3477,22 +3772,31 @@ $('#orderForm').addEventListener('submit', async (e)=>{
       ownerId: clientData.ownerId || null,   // la demande revient au vendeur de ce client
       product,
       qty: qtyVal,
+      // La liste détaillée, ligne par ligne. Elle n'est lue par personne pour
+      // l'instant — `product` porte déjà le texte lisible — mais c'est elle qui
+      // permettra un jour de découper une demande en plusieurs commandes sans
+      // avoir à relire une phrase.
+      items: picked.map(x=>({ catalogId:x.id, brand:x.brand||'', model:x.model||'', name:x.name||'', qty:x.qty })),
       note: $('#f_note').value.trim(),
       createdAt: Date.now()
     };
-    if(orderPhotos.length){
-      // Un tableau, parce qu'une demande peut porter plusieurs modèles. On
-      // n'écrit plus l'ancien champ `photo` : le vendeur reçoit la nouvelle
-      // version en même temps que le client, les deux fichiers sont déployés
-      // ensemble. La compatibilité dont on a besoin est en LECTURE, pour les
-      // commandes d'avant — voir photosDe().
-      payload.photos = orderPhotos.map(p=>({ data:p.data, type:p.media_type }));
-    }
+    // Les coloris choisis apportent leur vignette : le vendeur voit l'article
+    // exact sans que le client ait eu à photographier quoi que ce soit. La
+    // vignette de 400 px suffit à reconnaître, et pèse le quart de la photo
+    // pleine — ce qui compte quand tout tient dans un document d'un mégaoctet.
+    // Un tableau, jamais l'ancien champ `photo` au singulier : les deux
+    // fichiers sont déployés ensemble, la compatibilité dont on a besoin est
+    // en LECTURE, pour les commandes d'avant — voir photosDe().
+    const photos = picked.map(x=>({ data:x.thumb, type:x.thumbType || 'image/jpeg' }))
+      .concat(orderPhotos.map(p=>({ data:p.data, type:p.media_type })))
+      .slice(0, MAX_PHOTOS);
+    if(photos.length) payload.photos = photos;
     await db.collection('pendingOrders').add(payload);
     $('#orderForm').reset();
     $('#f_qty').value = 1;
     orderPhotos = [];
-    rendPhotos();
+    picked = [];
+    renderPicked();
     showToast(t('toastSent'));
     switchTab('history');
   }catch(e){
