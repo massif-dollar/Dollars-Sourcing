@@ -548,6 +548,48 @@
     animation:foldIn .3s var(--ease-out) both;
   }
 
+
+  /* ===== L'aperçu client =====
+     Il n'affiche PAS une copie de la vitrine : il ouvre `client.html` en mode
+     aperçu dans un cadre. Ce que le vendeur voit ici est littéralement la page
+     du client, pas un second rendu qui finirait par s'en écarter — la règle
+     apprise avec `decodeAt` : deux chemins qui doivent donner le même résultat
+     partagent la fonction, jamais l'algorithme recopié. */
+  .preview-btn{
+    width:100%; margin-bottom:12px; padding:11px; border-radius:13px; cursor:pointer; font:inherit;
+    background:var(--accent-soft); border:0.5px solid transparent; color:var(--accent);
+    font-size:13.5px; font-weight:600; letter-spacing:-0.01em;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    position:relative; overflow:hidden; transition:transform .3s var(--spring);
+  }
+  .preview-btn:active{ transform:scale(.975); }
+  .preview-btn svg{ width:16px; height:16px; flex:none; }
+  #previewOverlay{
+    position:fixed; inset:0; z-index:240; display:none; flex-direction:column;
+    background:var(--bg);
+  }
+  #previewOverlay.open{ display:flex; animation:pvIn .26s var(--ease-out); }
+  @keyframes pvIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+  .preview-bar{
+    flex:none; display:flex; align-items:center; gap:10px;
+    padding:calc(env(safe-area-inset-top) + 11px) 16px 11px;
+    border-bottom:0.5px solid var(--hairline); background:var(--mat);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .preview-bar b{
+    flex:1; min-width:0; font-family:var(--font-display); font-size:15.5px; font-weight:600;
+    letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .preview-bar em{ font-style:normal; font-size:11.5px; color:var(--text-faint); font-weight:500; }
+  .preview-close{
+    width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    cursor:pointer; transition:transform .3s var(--spring);
+  }
+  .preview-close:active{ transform:scale(.92); }
+  .preview-close svg{ width:16px; height:16px; }
+  #previewFrame{ flex:1; width:100%; border:0; display:block; background:var(--bg); }
+
   /* ===== Le recadreur carré =====
      Le même que celui du portail, avec la rotation en plus. Le cadre est FIXE
      et l'image glisse dessous : c'est le geste de la photo de profil d'iOS.
@@ -1780,6 +1822,10 @@
        Comme un dossier qu'on ouvre. -->
   <div id="catalogueView" style="display:none;">
     <div class="search"><input type="text" id="catSearchInput" data-i18n-placeholder="searchCatalogue" placeholder="Rechercher une marque, un modèle..."></div>
+    <button type="button" class="preview-btn" id="previewBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 5.5h3"/></svg>
+      <span data-i18n="previewClient">Voir comme le client</span>
+    </button>
     <div class="list" id="catalogueList"></div>
   </div>
 
@@ -2207,6 +2253,20 @@
   </div>
 </div>
 
+<!-- L'aperçu client : la vraie page du client, dans un cadre. -->
+<div id="previewOverlay">
+  <div class="preview-bar">
+    <div style="flex:1; min-width:0;">
+      <b data-i18n="previewTitle">Aperçu client</b>
+      <em style="display:block;" data-i18n="previewHint">Ce que voit ton client dans son espace</em>
+    </div>
+    <button type="button" class="preview-close" id="previewClose" data-i18n-title="previewCloseTitle" title="Fermer l'aperçu" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <iframe id="previewFrame" title="Aperçu client" referrerpolicy="same-origin"></iframe>
+</div>
+
 <!-- Le recadreur carré du catalogue. Le cadre ne bouge pas, l'image glisse
      dessous ; la rotation par quarts de tour est là parce qu'une photo de
      produit prise de travers, c'est la règle et pas l'exception. -->
@@ -2424,6 +2484,10 @@ const I18N = {
     placeholderWechatId:'Identifiant WeChat', placeholderMarket:'Ex: Marché Baima, étage 3, stand 217',
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
+    previewClient:'Voir comme le client',
+    previewTitle:'Aperçu client',
+    previewHint:'Ce que voit ton client dans son espace',
+    previewCloseTitle:"Fermer l'aperçu",
     emptyCatalogueSearch:'Aucune marque ne correspond.',
     newBrand:'Nouvelle marque', brandName:'Nom de la marque', brandNamePh:'Ex: Asics',
     brandModels:'Modèles', modelNamePh:'Nom du modèle',
@@ -2610,6 +2674,10 @@ const I18N = {
     placeholderWechatId:'WeChat ID', placeholderMarket:'E.g. Baima Market, floor 3, stall 217',
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
+    previewClient:'View as the client',
+    previewTitle:'Client preview',
+    previewHint:'What your client sees in their space',
+    previewCloseTitle:'Close the preview',
     emptyCatalogueSearch:'No brand matches.',
     newBrand:'New brand', brandName:'Brand name', brandNamePh:'e.g. Asics',
     brandModels:'Models', modelNamePh:'Model name',
@@ -2709,7 +2777,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-26c';
+const BUILD = '2026-09-26d';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3853,6 +3921,37 @@ $('#catPhotoInput').addEventListener('change', async (e)=>{
   }
   $('#cropStep').textContent = '';
 });
+
+
+// ---- L'aperçu client ----
+// On n'affiche pas une imitation de la vitrine : on ouvre `client.html` en
+// mode aperçu. Ce que le vendeur voit ici EST la page du client. Deux rendus
+// séparés auraient fini par se contredire — c'est exactement le bug qui avait
+// fait diverger le scan par photo et le scan en direct.
+// Le thème et la langue voyagent dans l'adresse : le portail a ses propres
+// préférences en mémoire, et l'aperçu doit suivre celles de l'app, pas les siennes.
+function openPreview(){
+  if(!currentUid) return;
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  const url = 'client.html?apercu=catalogue'
+            + '&o=' + encodeURIComponent(currentUid)
+            + '&theme=' + theme
+            + '&lang=' + currentLang
+            + '&t=' + Date.now();   // jamais la version en cache d'un aperçu précédent
+  $('#previewFrame').src = url;
+  $('#previewOverlay').classList.add('open');
+}
+function closePreview(){
+  const ov = $('#previewOverlay');
+  if(!ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  // On vide le cadre : sinon la page du client continue d'écouter Firestore
+  // derrière un calque fermé, pour rien.
+  $('#previewFrame').removeAttribute('src');
+}
+$('#previewBtn').addEventListener('click', openPreview);
+$('#previewClose').addEventListener('click', closePreview);
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closePreview(); });
 
 $('#saveBrandBtn').addEventListener('click', async ()=>{
   const nom = $('#b_name').value.trim();
@@ -7159,7 +7258,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button, .sheet-ref';
+const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button, .sheet-ref, .preview-btn';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function tapDown(el, cx, cy){

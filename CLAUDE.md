@@ -230,6 +230,15 @@ déploiement est un choix assumé.
   redésactivait l'adresse de l'activité, la base ne s'arrêterait plus — seule
   la connexion basculerait sur l'adresse de secours.
 
+  **CONSÉQUENCE À NE JAMAIS OUBLIER, ET ELLE A DÉJÀ COÛTÉ UNE HEURE** : la
+  console Firebase se connecte avec **`chweirtzleryoyo@gmail.com`**, le compte
+  personnel qui porte le projet — jamais avec l'adresse de l'activité. Les deux
+  adresses ouvrent l'app pareil, mais **une seule voit le projet**. Connecté
+  avec l'autre, Google n'affiche pas une erreur : il affiche **l'ancien projet
+  `dollar-sourcing`, sans le s**, celui qui a été suspendu. On publie alors des
+  règles très sincèrement, sur une base que plus personne n'utilise. Voir le
+  piège 30.
+
   **Trois leçons.** Le code sur GitHub est le vrai actif, il n'a rien risqué.
   L'app a un **bouton d'export** (icône dans l'en-tête, `exportData()`) qui
   télécharge commandes, clients et fournisseurs en JSON : **s'en servir
@@ -458,6 +467,55 @@ d'achat ni de nom de fournisseur dans le catalogue.** Ce qui est là est public.
 
 Le catalogue est réservé au **propriétaire**, comme tout ce qui touche au client
 final (voir le tableau des invités).
+
+#### La vitrine, côté client
+
+Le portail a désormais **quatre onglets** : `Commandes` · `Demande` ·
+`Catalogue` · `Dollarz`. Les libellés ont été **raccourcis** pour que les quatre
+tiennent d'un coup d'œil sur un iPhone — à 390 px « Mes commandes » et
+« Nouvelle demande » ne passaient plus. On ne masque aucun onglet et on n'en met
+aucun dans une rangée qui défile : un onglet qu'il faut aller chercher n'existe
+pas. Le texte qui **cite** un onglet a été mis à jour en même temps (« dans
+l'onglet Dollarz ») : renommer un onglet sans relire ce qui le nomme, c'est
+envoyer le client vers une porte qui n'existe plus.
+
+La vitrine va **marque → modèle → coloris**, comme l'atelier du vendeur, mais
+elle ne montre que ce qui se regarde : une grille de marques avec une
+**mosaïque de couverture** (une photo la remplit, deux la coupent en deux, trois
+donnent une grande et deux petites, quatre font une grille, et au-delà la
+quatrième case devient « +N »), puis les modèles de la marque avec leurs
+coloris. `active` est respecté : **une fiche masquée n'existe pas ici** — c'est
+exactement à ça que sert ce bouton.
+
+**Le pont vers la commande** : la photo en grand porte un bouton « Passer
+commande » qui bascule sur l'onglet Demande avec le produit **déjà écrit**, ses
+trois niveaux compris (`Asics · Ensemble / Veste · Bleu Marine`). Le vendeur sait
+alors exactement quel article acheter. **La photo, elle, ne suit pas** : elle est
+déjà dans son catalogue, et la recopier dans la demande pèserait pour rien sur
+le plafond d'un document (piège 23). Le chemin inverse existe aussi, un bouton
+« Parcourir le catalogue » sous le champ produit.
+
+#### L'aperçu client, et pourquoi ce n'est pas une copie
+
+Le bouton « Voir comme le client » de l'onglet Catalogue **n'affiche pas une
+imitation de la vitrine** : il ouvre `client.html?apercu=catalogue&o=<uid>` dans
+un calque. Ce que le vendeur voit **est** la page du client, pas un second rendu.
+
+C'est la règle apprise avec `decodeAt` appliquée à l'affichage : **deux chemins
+qui doivent donner le même résultat partagent la fonction, jamais l'algorithme
+recopié.** Une vitrine dupliquée dans `index.html` aurait marché le premier jour
+et menti au premier changement — et un aperçu qui ment est pire que pas d'aperçu.
+
+Trois points qui ne s'inventent pas :
+
+- **Le mode aperçu est une branche posée tout en haut de `init()`, qui sort
+  avant de toucher au chemin normal.** Le portail d'un vrai client ne doit rien
+  risquer d'un mode de démonstration.
+- **Le thème et la langue voyagent dans l'adresse.** Le portail a ses propres
+  préférences en mémoire ; sans ça l'aperçu s'ouvrirait en clair pendant que
+  l'app est en sombre.
+- **Les bascules langue et thème du portail sont masquées en aperçu** : elles
+  sont en `position:fixed` et flottaient par-dessus la rangée d'onglets.
 
 ### Le recadreur
 
@@ -1553,6 +1611,47 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    explicite de publier les règles**, dans la PR et dans le message à Massif.
    Le déploiement du site ne suffira jamais.
 
+30. **LES RÈGLES SE PUBLIENT SUR UN PROJET, ET CE N'EST PAS FORCÉMENT CELUI DE
+   L'APP.** Le piège 29 disait « publier les règles ne se fait pas tout seul ».
+   Il en manquait la moitié : **encore faut-il les publier au bon endroit.**
+
+   Symptôme : le catalogue répondait `permission-denied`, les règles avaient été
+   publiées — vraiment, bouton appuyé, sélecteur de base sur `(default)` — et
+   rien ne changeait. Trois publications successives, trois fois le même
+   refus. La cause n'était pas dans les règles : la console était connectée avec
+   `dollars.sourcing@gmail.com`, qui ne possède pas le projet. Google n'affiche
+   alors aucune erreur, il affiche **l'ancien projet `dollar-sourcing`** — une
+   lettre d'écart, suspendu depuis septembre. Les règles partaient bien, dans le
+   vide.
+
+   **CE QUI A TRANCHÉ EN DIX SECONDES, ET QUI CHANGE LA MÉTHODE POUR DE BON :
+   un appel REST anonyme à Firestore lit les règles EN VIGUEUR, sans clé, sans
+   compte, sans que personne ait à tester dans l'app.** La clé de l'API est
+   publique par construction — elle est dans le HTML servi à tout le monde :
+
+       curl -s -o /dev/null -w '%{http_code}\n' \
+         "https://firestore.googleapis.com/v1/projects/dollars-sourcing/databases/(default)/documents/catalog?key=<apiKey>&pageSize=1"
+
+   On ne lit pas un code isolé, **on lit un tableau** : chaque collection répond
+   ce que le fichier prévoit, ou pas.
+
+   | collection | attendu | ce que ça prouve |
+   |---|---|---|
+   | `publicOrders`, `pendingOrders`, `catalog` | 200 | la lecture ouverte est bien en vigueur |
+   | `orders`, `clients`, `suppliers` | 403 | rien n'a été ouvert de trop |
+
+   Cinq lignes conformes et une seule qui cloche, c'est **une version
+   antérieure du fichier** ; tout conforme sauf que rien ne bouge après
+   publication, c'est **le mauvais projet**. Aucune des deux ne se devine en
+   relisant le code.
+
+   **C'est la leçon du 5 septembre enfin appliquée** (« un appel REST aurait
+   donné la réponse en dix secondes »), et elle supprime un aller-retour
+   complet : on ne demande plus « republie et dis-moi si ça marche », on
+   vérifie, puis on dit d'y aller. Trois choses à retenir ensemble : la console
+   se connecte avec le **compte personnel**, coller n'est pas publier, et le
+   sélecteur de base doit être sur `(default)`.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1591,7 +1690,10 @@ par numéro de suivi,
 page de formulaire client avec bannière propre et renvoi WhatsApp,
 mode discret qui masque montants et marges, catalogue par marques et modèles
 avec photos recadrées en carré (côté vendeur), scan de carte de visite
-fournisseur, scanner de QR avec l'algorithme de WeChat lui-même, programme de fidélité complet
+fournisseur, scanner de QR avec l'algorithme de WeChat lui-même,
+vitrine du catalogue côté client (marques, modèles, coloris, photo en grand,
+« Passer commande » qui pré-remplit la demande) avec aperçu client depuis
+l'app pro, programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques.
@@ -1602,8 +1704,10 @@ fidélité dans les statistiques.
   pré-remplir la date de livraison estimée
 - Photo du stand dans la fiche fournisseur (le champ `photo` existe déjà,
   rempli par le scan de carte : il reste à pouvoir en ajouter une à la main)
-- Catalogue côté client : le parcourir depuis « Nouvelle demande », choisir des
-  modèles avec une quantité chacun, et les indications qui guident le client.
+- Catalogue côté client : **la vitrine est faite** (onglet Catalogue, marques →
+  modèles → coloris, « Passer commande » qui pré-remplit le produit). Reste la
+  **commande à plusieurs lignes** : choisir plusieurs coloris avec une quantité
+  chacun au lieu d'un seul produit écrit en texte.
   **La question à trancher à ce moment-là** : une demande à plusieurs lignes
   donne-t-elle une commande par modèle (plusieurs références, plusieurs suivis)
   ou une commande unique à plusieurs lignes ?
