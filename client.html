@@ -772,6 +772,16 @@
   }
   .cat-check svg{ width:13px; height:13px; }
   .cat-color.is-picked .cat-check{ opacity:1; transform:none; }
+  /* Hors du modèle verrouillé : visible mais clairement hors de portée. On ne
+     le CACHE pas — le client doit voir que sa vitrine est toujours là, et
+     comprendre pourquoi il ne peut pas y toucher maintenant. */
+  .cat-color.is-locked, .cat-brand.is-locked{ opacity:.34; }
+  .cat-color.is-locked img{ filter:grayscale(1); }
+  .cat-color.is-locked:active img, .cat-brand.is-locked:active{ transform:none; }
+  .picked-vide{
+    width:44px; height:44px; flex:none; border-radius:10px; display:block;
+    background:var(--fill-2);
+  }
   .cat-color.is-picked img{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft), var(--raise); }
 
   .picked{ margin-top:11px; }
@@ -1793,7 +1803,10 @@ const I18N = {
     pickValidate:'Valider', pickNone:'Rien de choisi',
     pickOne:'{n} article choisi', pickMany:'{n} articles choisis',
     pickRemove:'Retirer de ma demande',
-    pickMax:'{n} articles et photos au maximum. Retires-en un pour en ajouter un autre.',
+    pickMax:'{n} coloris au maximum sur une même demande.',
+    pickOneModel:"Une demande = un seul modèle. Valide celle-ci, tu pourras en envoyer une autre juste après.",
+    pickLocked:'Choisis les coloris de ce modèle. Pour un autre modèle, ce sera une seconde demande.',
+    pieceOne:'{n} pièce', pieceMany:'{n} pièces',
     freeHint:'Autre chose en plus ?',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
@@ -1898,7 +1911,10 @@ const I18N = {
     pickValidate:'Confirm', pickNone:'Nothing selected',
     pickOne:'{n} item selected', pickMany:'{n} items selected',
     pickRemove:'Remove from my request',
-    pickMax:'{n} items and photos maximum. Remove one to add another.',
+    pickMax:'{n} colours maximum on one request.',
+    pickOneModel:'One request = one model. Send this one, you can send another right after.',
+    pickLocked:'Pick the colours of this model. For another model, that will be a second request.',
+    pieceOne:'{n} item', pieceMany:'{n} items',
     freeHint:'Anything else?',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
@@ -2379,11 +2395,24 @@ const ICON_MENU = '<svg class="ins-ico" viewBox="0 0 24 24" fill="currentColor" 
 // contenir plusieurs modèles. Les commandes d'AVANT n'ont qu'un champ `photo`
 // au singulier : on lit les deux et on ne migre rien, exactement comme
 // carrier/forwarder. Rien à réécrire dans la base.
+// Les coloris commandés au catalogue n'ont pas de photo DANS la commande :
+// ils pointent la fiche. On les résout ici, une seule fois, pour que tous les
+// affichages en profitent — carte, repli, compteur — sans un chemin de plus.
+function photosItems(o){
+  return (Array.isArray(o.items) ? o.items : []).map(it=>{
+    const f = catParId(it.catalogId);
+    if(!f) return null;
+    const d = f.thumb || f.photo;
+    if(!d) return null;
+    return { data:d, type:(f.thumb ? f.thumbType : f.photoType) || 'image/jpeg' };
+  }).filter(Boolean);
+}
 function photosDe(o){
+  const out = photosItems(o);
   if(Array.isArray(o.photos) && o.photos.length)
-    return o.photos.filter(p=>p && p.data).map(p=>({ data:p.data, type:p.type || 'image/jpeg' }));
-  if(o.photo) return [{ data:o.photo, type:o.photoType || 'image/jpeg' }];
-  return [];
+    o.photos.filter(p=>p && p.data).forEach(p=>out.push({ data:p.data, type:p.type || 'image/jpeg' }));
+  else if(o.photo) out.push({ data:o.photo, type:o.photoType || 'image/jpeg' });
+  return out;
 }
 
 // Quels replis sont ouverts, par identifiant de commande. En mémoire, pas en
@@ -3355,12 +3384,11 @@ function rendPhotos(){
     + '</div>'
   ).join('');
   const compteur = $('#photoCount');
-  // Les photos du catalogue partent dans le MÊME document que les siennes :
-  // elles comptent donc dans le même plafond, sinon on dépasserait le 1 Mo de
-  // Firestore sans que rien ne prévienne (piège 23).
-  const pris = orderPhotos.length + picked.length;
-  compteur.style.display = pris ? 'block' : 'none';
-  compteur.textContent = pris + ' / ' + MAX_PHOTOS;
+  // Le compteur ne porte QUE sur les photos que le client prend lui-même :
+  // depuis que les coloris pointent la fiche du catalogue au lieu d'y recopier
+  // leur image, ils ne pèsent plus rien dans le document (piège 23).
+  compteur.style.display = orderPhotos.length ? 'block' : 'none';
+  compteur.textContent = orderPhotos.length + ' / ' + MAX_PHOTOS;
   $('#photoPickLabel').textContent = orderPhotos.length ? t('photoAddMore') : t('photoAdd');
 }
 
@@ -3440,15 +3468,22 @@ function listenCatalog(ownerId){
   // Un écouteur, pas une lecture unique : le vendeur peut ajouter une marque
   // pendant que le client regarde, et elle doit apparaître (piège 10).
   catUnsub = db.collection('catalog').where('ownerId','==',ownerId).onSnapshot(snap=>{
+    // ON GARDE TOUT, y compris les fiches masquées : une commande passée
+    // pointe sa fiche pour retrouver sa photo, et masquer un coloris ne doit
+    // pas effacer l'image d'une commande d'il y a trois semaines. C'est le
+    // rendu qui filtre, pas l'écouteur.
     catalogItems = snap.docs.map(d=>Object.assign({id:d.id}, d.data()))
-                            // `active` n'est pas du stock, c'est de la
-                            // publication : une fiche masquée n'existe pas ici.
-                            .filter(i => i.active !== false && (i.thumb || i.photo));
+                            .filter(i => i.thumb || i.photo);
     catalogLoaded = true; catalogError = '';
     // Le vendeur a pu remplacer une photo : on ne garde pas l'ancienne en
     // mémoire. Le catalogue ne change pas souvent, ça ne coûte rien.
     catPhotos.clear();
     if(currentTab === 'catalog') renderCatalog();
+    // Les photos des commandes venues du catalogue sont RÉSOLUES depuis ces
+    // fiches : tant qu'elles ne sont pas là, les cartes n'en montrent aucune.
+    // Le catalogue arrive après les commandes, il faut donc redessiner —
+    // sinon le client voit une commande sans image jusqu'au rechargement.
+    if($('#app').style.display !== 'none') renderHistory();
   }, err=>{
     // Jamais en silence : un catalogue vide et un catalogue en panne se
     // ressemblent à l'écran, et le client n'aurait aucun moyen de les
@@ -3469,9 +3504,15 @@ function catImg(i, grand){
 function catRang(a,b){ return (a.rang||0) - (b.rang||0) || (a.createdAt||0) - (b.createdAt||0); }
 // Ni les marques ni les modèles ne sont stockés à part : les deux se déduisent
 // des fiches, donc un dossier vide ne peut pas exister.
+// Ce que le client a le droit de VOIR. `active` n'est pas du stock, c'est de
+// la publication : une fiche masquée n'existe pas dans la vitrine, mais elle
+// reste lisible pour les commandes qui la citent.
+function catActifs(){ return catalogItems.filter(i => i.active !== false); }
+function catParId(id){ return catalogItems.find(x => x.id === id) || null; }
+
 function catBrands(){
   const m = new Map();
-  catalogItems.forEach(i=>{
+  catActifs().forEach(i=>{
     const b = (i.brand || '').trim();
     if(!b) return;
     if(!m.has(b)) m.set(b, []);
@@ -3518,7 +3559,7 @@ function renderCatalog(){
     el.innerHTML = '<div class="empty">' + escapeHtml(t('catDenied')).replace(/\n/g,'<br>') + '</div>';
     return;
   }
-  if(!catalogItems.length){
+  if(!catActifs().length){
     el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>';
     return;
   }
@@ -3544,7 +3585,10 @@ function catVueMarques(el, mode, intro){
                     : vues.length === 3 ? ' trio' : '';
         const nbModeles = catModelsOf(m.items).length;
         const coches = mode === 'choix' ? m.items.filter(i=>estChoisi(i.id)).length : 0;
+        const v = mode === 'choix' ? verrouModele() : null;
+        const bloquee = !!v && v.brand !== m.nom;
         return '<button type="button" class="cat-brand' + (coches ? ' has-picked' : '')
+          + (bloquee ? ' is-locked' : '')
           + '" data-brand="' + escapeHtml(m.nom) + '">'
           + '<div class="cat-cover' + forme + '">' + cases + '</div>'
           + (coches ? '<span class="cat-badge">' + coches + '</span>' : '')
@@ -3556,7 +3600,7 @@ function catVueMarques(el, mode, intro){
 }
 
 function catVueMarque(el, marque, mode){
-  const items = catalogItems.filter(i => (i.brand||'').trim() === marque).sort(catRang);
+  const items = catActifs().filter(i => (i.brand||'').trim() === marque).sort(catRang);
   if(!items.length) return false;   // la marque a disparu pendant qu'on la regardait
   const modeles = catModelsOf(items);
   const entete = mode === 'choix' ? '' : '<div class="cat-head">'
@@ -3566,14 +3610,19 @@ function catVueMarque(el, marque, mode){
     + '</button><div class="cat-head-t"><b>' + escapeHtml(marque) + '</b><span>'
     + catCount(modeles.length, 'catModel', 'catModels') + ' · '
     + catCount(items.length, 'catColor', 'catColors') + '</span></div></div>';
+  const verrou = mode === 'choix' ? verrouModele() : null;
   el.innerHTML = entete
-    + (mode === 'choix' ? '<p class="cat-lead">' + escapeHtml(t('pickHint')) + '</p>' : '')
+    + (mode === 'choix'
+        ? '<p class="cat-lead">' + escapeHtml(verrou ? t('pickLocked') : t('pickHint')) + '</p>'
+        : '')
     + modeles.map(g=>
         '<div class="cat-model"><div class="cat-model-h">'
         + escapeHtml(g.nom || t('catNoModel'))
         + '<i>' + catCount(g.items.length, 'catColor', 'catColors') + '</i></div>'
         + '<div class="cat-colors">' + g.items.map(i=>
-            '<button type="button" class="cat-color' + (mode === 'choix' && estChoisi(i.id) ? ' is-picked' : '')
+            '<button type="button" class="cat-color'
+            + (mode === 'choix' && estChoisi(i.id) ? ' is-picked' : '')
+            + (mode === 'choix' && !memeModele(i) ? ' is-locked' : '')
             + '" data-id="' + escapeHtml(i.id) + '">'
             + '<img src="' + catImg(i) + '" alt="" loading="lazy">'
             + (mode === 'choix' ? '<i class="cat-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>' : '')
@@ -3603,11 +3652,28 @@ $('#catalogPanel').addEventListener('click', (e)=>{
 //
 // La fenêtre se pose PAR-DESSUS la page : rien ne défile dessous, donc rien ne
 // bouge tout seul. C'est aussi ce qui règle le saut du panneau qui raccourcit.
-let picked = [];      // [{id, brand, model, name, thumb, thumbType, qty}]
+// UNE DEMANDE = UNE MARQUE ET UN SEUL MODÈLE. C'est la règle de Massif, et
+// elle simplifie tout le reste : une commande, une référence #A7F3, un colis,
+// un suivi. Un client qui veut deux modèles envoie deux demandes — et c'est
+// justement ce qu'on veut, deux colis suivis séparément.
+let picked = [];      // [{id, brand, model, name, qty}] — pas de photo, on pointe
 let pickBrand = null;
+const MAX_LIGNES = 20;   // un modèle n'a jamais vingt coloris, c'est une borne
 
 function estChoisi(id){ return picked.some(x => x.id === id); }
-function placeRestante(){ return MAX_PHOTOS - orderPhotos.length - picked.length; }
+// Les coloris ne sont plus recopiés en photos : ils pointent la fiche du
+// catalogue. Le plafond du mégaoctet ne concerne donc plus que les photos que
+// le client prend lui-même.
+function placeRestante(){ return MAX_PHOTOS - orderPhotos.length; }
+function verrouModele(){
+  if(!picked.length) return null;
+  return { brand:(picked[0].brand||'').trim(), model:(picked[0].model||'').trim() };
+}
+function memeModele(i){
+  const v = verrouModele();
+  if(!v) return true;
+  return (i.brand||'').trim() === v.brand && (i.model||'').trim() === v.model;
+}
 
 function openPick(){
   pickBrand = null;
@@ -3623,7 +3689,7 @@ function renderPick(){
   $('#pickTitle').textContent = pickBrand || t('pickTitle');
   if(!catalogLoaded){ el.innerHTML = '<div class="empty">' + escapeHtml(t('loading')) + '</div>'; }
   else if(catalogError){ el.innerHTML = '<div class="empty">' + escapeHtml(t('catDenied')).replace(/\n/g,'<br>') + '</div>'; }
-  else if(!catalogItems.length){ el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>'; }
+  else if(!catActifs().length){ el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>'; }
   else if(pickBrand){ if(!catVueMarque(el, pickBrand, 'choix')){ pickBrand = null; renderPick(); return; } }
   else catVueMarques(el, 'choix', t('pickHintBrands'));
   majPickFoot();
@@ -3636,22 +3702,31 @@ function majPickFoot(){
 
 $('#pickBody').addEventListener('click', (e)=>{
   const marque = e.target.closest('.cat-brand');
-  if(marque){ pickBrand = marque.dataset.brand; renderPick(); $('#pickBody').scrollTop = 0; return; }
+  if(marque){
+    if(marque.classList.contains('is-locked')){ showToast(t('pickOneModel')); return; }
+    pickBrand = marque.dataset.brand; renderPick(); $('#pickBody').scrollTop = 0; return;
+  }
   const coloris = e.target.closest('.cat-color');
   if(!coloris) return;
   const id = coloris.dataset.id;
   const i = picked.findIndex(x => x.id === id);
-  if(i >= 0){ picked.splice(i, 1); coloris.classList.remove('is-picked'); }
-  else{
-    // Les photos partent DANS le document de la demande, et Firestore plafonne
-    // à 1 Mo (piège 23) : le nombre de coloris est donc borné par le même
-    // compte que les photos du client, pas par un chiffre inventé ici.
-    if(placeRestante() <= 0){ showToast(t('pickMax').replace('{n}', MAX_PHOTOS)); return; }
-    const f = catalogItems.find(x => x.id === id);
+  if(i >= 0){
+    picked.splice(i, 1);
+    coloris.classList.remove('is-picked');
+    // Le dernier coloris retiré libère le verrou : les autres modèles
+    // redeviennent accessibles, il faut donc redessiner.
+    if(!picked.length){ renderPick(); return; }
+  }else{
+    const f = catParId(id);
     if(!f) return;
-    picked.push({ id:f.id, brand:f.brand, model:f.model, name:f.name,
-                  thumb:f.thumb || f.photo, thumbType:(f.thumb ? f.thumbType : f.photoType) || 'image/jpeg', qty:1 });
+    if(!memeModele(f)){ showToast(t('pickOneModel')); return; }
+    if(picked.length >= MAX_LIGNES){ showToast(t('pickMax').replace('{n}', MAX_LIGNES)); return; }
+    // On ne recopie PAS la photo : on pointe la fiche. C'est ce qui lève la
+    // limite de cinq — le poids ne dépend plus du nombre de coloris.
+    picked.push({ id:f.id, brand:f.brand, model:f.model, name:f.name, qty:1 });
     coloris.classList.add('is-picked');
+    // Premier coloris : le verrou se pose, les autres modèles se grisent.
+    if(picked.length === 1){ renderPick(); return; }
   }
   majPickFoot();
 });
@@ -3665,9 +3740,10 @@ $('#pickOpenBtn').addEventListener('click', openPick);
 function renderPicked(){
   const el = $('#pickedList');
   if(!el) return;
-  el.innerHTML = picked.map((x,k)=>
-    '<div class="picked-row">'
-    + '<img src="data:' + (x.thumbType||'image/jpeg') + ';base64,' + x.thumb + '" alt="">'
+  el.innerHTML = picked.map((x,k)=>{
+    const f = catParId(x.id);
+    return '<div class="picked-row">'
+    + (f ? '<img src="' + catImg(f) + '" alt="">' : '<span class="picked-vide"></span>')
     + '<div class="picked-t"><b>' + escapeHtml(x.name || x.model || '') + '</b>'
     + '<span>' + escapeHtml([x.brand, x.model].filter(Boolean).join(' · ')) + '</span></div>'
     + '<div class="qty-step">'
@@ -3678,7 +3754,8 @@ function renderPicked(){
     + '<button type="button" class="picked-x" data-ote="' + k + '" title="' + escapeHtml(t('pickRemove'))
     + '" aria-label="' + escapeHtml(t('pickRemove')) + '">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
-    + '</button></div>').join('');
+    + '</button></div>';
+  }).join('');
   el.style.display = picked.length ? 'block' : 'none';
   // Le champ « Quantité » unique n'a plus de sens dès qu'il y a une quantité
   // par ligne : deux endroits pour le même nombre, c'est une erreur de saisie
@@ -3708,13 +3785,19 @@ $('#pickedList').addEventListener('click', (e)=>{
 // delà, la base refuserait l'écriture et le client ne lirait qu'un « erreur
 // d'envoi » qui ne lui apprend rien.
 function libellePicked(){
-  const par = new Map();
-  picked.forEach(x=>{
-    const cle = [(x.brand||'').trim(), (x.model||'').trim()].filter(Boolean).join(' · ');
-    if(!par.has(cle)) par.set(cle, []);
-    par.get(cle).push((x.name||'').trim() + (x.qty > 1 ? ' ×' + x.qty : ''));
-  });
-  return Array.from(par, ([cle, noms])=> (cle ? cle + ' : ' : '') + noms.join(', ')).join(' | ');
+  if(!picked.length) return '';
+  const v = verrouModele();
+  const tete = [v.brand, v.model].filter(Boolean).join(' · ');
+  const noms = picked.map(x => (x.name||'').trim() + (x.qty > 1 ? ' ×' + x.qty : ''));
+  const complet = (tete ? tete + ' : ' : '') + noms.join(', ');
+  // Les règles bornent `product` à 200 caractères. Plutôt que de couper un nom
+  // de coloris en plein milieu, on résume : le détail est dans `items`, et le
+  // vendeur le voit ligne par ligne sur sa fiche.
+  if(complet.length <= 180) return complet;
+  const pieces = picked.reduce((n,x)=>n + x.qty, 0);
+  return (tete ? tete + ' : ' : '')
+    + catCount(picked.length, 'catColor', 'catColors')
+    + ' (' + catCount(pieces, 'pieceOne', 'pieceMany') + ')';
 }
 
 
@@ -3793,9 +3876,9 @@ $('#catLbOrder').addEventListener('click', ()=>{
   // Le même panier que la fenêtre de choix : la vitrine et le formulaire ne
   // remplissent pas deux listes différentes.
   if(!estChoisi(i.id)){
-    if(placeRestante() <= 0){ showToast(t('pickMax').replace('{n}', MAX_PHOTOS)); return; }
-    picked.push({ id:i.id, brand:i.brand, model:i.model, name:i.name,
-                  thumb:i.thumb || i.photo, thumbType:(i.thumb ? i.thumbType : i.photoType) || 'image/jpeg', qty:1 });
+    if(!memeModele(i)){ showToast(t('pickOneModel')); return; }
+    if(picked.length >= MAX_LIGNES){ showToast(t('pickMax').replace('{n}', MAX_LIGNES)); return; }
+    picked.push({ id:i.id, brand:i.brand, model:i.model, name:i.name, qty:1 });
   }
   renderPicked();
   clearFormErrors();
@@ -3852,10 +3935,13 @@ $('#orderForm').addEventListener('submit', async (e)=>{
     // Un tableau, jamais l'ancien champ `photo` au singulier : les deux
     // fichiers sont déployés ensemble, la compatibilité dont on a besoin est
     // en LECTURE, pour les commandes d'avant — voir photosDe().
-    const photos = picked.map(x=>({ data:x.thumb, type:x.thumbType || 'image/jpeg' }))
-      .concat(orderPhotos.map(p=>({ data:p.data, type:p.media_type })))
-      .slice(0, MAX_PHOTOS);
-    if(photos.length) payload.photos = photos;
+    // Seules les photos que le CLIENT a prises partent dans le document. Les
+    // coloris du catalogue sont pointés par `items[].catalogId` : les deux
+    // côtés ont déjà la fiche, la recopier ne servirait qu'à remplir le
+    // mégaoctet — et c'est ce qui limitait la demande à cinq articles.
+    if(orderPhotos.length){
+      payload.photos = orderPhotos.map(p=>({ data:p.data, type:p.media_type }));
+    }
     await db.collection('pendingOrders').add(payload);
     $('#orderForm').reset();
     $('#f_qty').value = 1;
