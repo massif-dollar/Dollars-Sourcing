@@ -596,6 +596,27 @@ client ne verraient plus les mêmes photos.
 remplit **le même panier** que la fenêtre. Deux listes différentes, c'est deux
 comportements qui divergent : la règle de `decodeAt`, encore.
 
+#### Les consignes, et pourquoi elles sont en couleur
+
+**Une consigne grise et en petit se saute.** Le premier jet les écrivait en
+`--text-faint`, comme une légende : personne ne les lisait, et le client
+touchait au hasard. Elles sont devenues un **bloc à l'accent** — fond
+`--accent-soft`, icône, texte coloré — avec une **arrivée qui monte** et **un
+reflet qui la balaie une fois**. Un reflet, pas un clignotement : une consigne
+qui bouge en boucle, on finit par ne plus la voir (et ça violerait « une seule
+chose bouge en boucle par écran »).
+
+Elles sont aussi **plus précises qu'une règle générale** : verrouillée, la
+consigne **nomme le modèle en cours** — « Tu commandes **Ensemble / Veste** »
+dit bien plus que « un seul modèle ». Le verrou se distingue en plus par une
+**bordure pleine** et une icône de cadenas, pas seulement par une nuance de fond.
+
+**`catNote()` les fabrique toutes**, vitrine et fenêtre de choix comprises :
+deux endroits qui guident le client ne doivent pas prendre du retard l'un sur
+l'autre. Les chaînes portent leur `<b>` — donc elles ne passent **pas** par
+`escapeHtml`, et tout ce qui vient des données (le nom du modèle) est échappé
+avant d'y entrer.
+
 #### L'aperçu client, et pourquoi ce n'est pas une copie
 
 Le bouton « Voir comme le client » de l'onglet Catalogue **n'affiche pas une

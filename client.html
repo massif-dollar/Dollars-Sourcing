@@ -617,7 +617,34 @@
      Ce n'est PAS un second rendu du catalogue : l'aperçu côté vendeur ouvre
      cette page-ci dans un calque. Un seul rendu, donc jamais deux vitrines qui
      se décalent — la leçon de `decodeAt` appliquée à l'affichage. */
-  .cat-lead{ font-size:13px; color:var(--text-faint); line-height:1.55; margin-bottom:14px; letter-spacing:-0.005em; }
+  /* LA CONSIGNE N'EST PAS UNE LÉGENDE. Le client doit la lire avant de
+     toucher quoi que ce soit : elle porte donc la couleur de l'accent, une
+     icône, et un reflet qui la balaie à l'arrivée. Grise et en petit, elle
+     était simplement sautée. */
+  .cat-note{
+    position:relative; overflow:hidden; display:flex; align-items:flex-start; gap:10px;
+    padding:11px 13px 12px; border-radius:14px; margin-bottom:15px;
+    background:var(--accent-soft); border:0.5px solid transparent;
+    color:var(--accent); font-size:12.8px; line-height:1.45; letter-spacing:-0.005em;
+    animation:noteIn .42s var(--ease-out) both;
+  }
+  .cat-note b{ font-weight:700; }
+  .cat-note .note-ic{
+    flex:none; width:18px; height:18px; margin-top:.5px;
+  }
+  .cat-note .note-ic svg{ width:100%; height:100%; }
+  /* Le verrou se distingue au premier coup d'œil : bordure pleine, pas juste
+     une nuance de fond. */
+  .cat-note.is-lock{ border-color:var(--accent); }
+  /* Le reflet, comme sur les cartes : c'est lui qui attire l'œil sans bouger
+     en boucle. Une consigne qui clignote, on finit par ne plus la voir. */
+  .cat-note::after{
+    content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(18deg); pointer-events:none; opacity:0;
+    animation:cardSheen 1.05s var(--ease-io) .22s backwards;
+  }
+  @keyframes noteIn{ from{ opacity:0; transform:translateY(-7px); } to{ opacity:1; transform:none; } }
   .cat-head{ display:flex; align-items:center; gap:11px; margin-bottom:16px; }
   .cat-back{
     width:34px; height:34px; flex:none; border-radius:50%; display:grid; place-items:center;
@@ -1449,7 +1476,7 @@
        opaque, et la photo la remplace quand elle arrive. */
     .cat-lb-img img.chargement{ opacity:1 !important; }
     .skel::after{ display:none !important; }
-    .order-card::before{ display:none !important; }
+    .order-card::before, .cat-note::after{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
   }
@@ -1785,7 +1812,8 @@ const I18N = {
     errLoadNet:'Connexion perdue. Vérifie ton réseau, ça se remettra tout seul.',
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
     tabHistory:'Commandes', tabOrder:'Demande', tabCatalog:'Catalogue', tabDollars:'Dollarz',
-    catLead:"Parcours les marques. Touche un modèle pour le voir en grand, puis « Passer commande ».",
+    catLead:'<b>Touche une marque</b> pour voir ses modèles et tous ses coloris.',
+    catLeadBrand:'<b>Touche un coloris</b> pour le voir en grand — tu pourras le commander de là.',
     catEmpty:"Le catalogue est encore vide.\nEnvoie ta demande directement, on trouve tout.",
     catDenied:"Le catalogue ne répond pas pour le moment.\nRéessaie dans un instant.",
     catModel:'{n} modèle', catModels:'{n} modèles',
@@ -1798,16 +1826,16 @@ const I18N = {
     catPreview:'Aperçu client',
     pickOpen:'Choisir dans le catalogue', pickOpenMore:'Ajouter un autre modèle',
     pickTitle:'Le catalogue', pickClose:'Fermer',
-    pickHintBrands:'Touche une marque pour voir ses modèles.',
-    pickHint:'Touche les coloris que tu veux. Tu peux en prendre plusieurs.',
+    pickHintBrands:'<b>Touche une marque</b>, puis coche les coloris qui te plaisent.',
+    pickHint:'<b>Coche les coloris que tu veux.</b> Tu pourras choisir la quantité de chacun juste après.',
     pickValidate:'Valider', pickNone:'Rien de choisi',
     pickOne:'{n} article choisi', pickMany:'{n} articles choisis',
     pickRemove:'Retirer de ma demande',
     pickMax:'{n} coloris au maximum sur une même demande.',
-    pickOneModel:"Une demande = un seul modèle. Valide celle-ci, tu pourras en envoyer une autre juste après.",
-    pickLocked:'Choisis les coloris de ce modèle. Pour un autre modèle, ce sera une seconde demande.',
+    pickOneModel:"Un autre modèle, c'est une seconde demande. Envoie d'abord celle-ci — ça prend dix secondes.",
+    pickLocked:'Tu commandes {model}. <b>Prends autant de coloris que tu veux ici.</b> Pour un autre modèle, ce sera une seconde demande.',
     pieceOne:'{n} pièce', pieceMany:'{n} pièces',
-    freeHint:'Autre chose en plus ?',
+    freeHint:'Autre chose qui n\u2019est pas au catalogue ? Écris-le ici.',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
@@ -1893,7 +1921,8 @@ const I18N = {
     errLoadNet:'Connection lost. Check your network, it will come back on its own.',
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
     tabHistory:'Orders', tabOrder:'Request', tabCatalog:'Catalogue', tabDollars:'Dollarz',
-    catLead:'Browse the brands. Tap a model to see it full size, then "Order this".',
+    catLead:'<b>Tap a brand</b> to see its models and every colour.',
+    catLeadBrand:'<b>Tap a colour</b> to see it full size — you can order it from there.',
     catEmpty:"The catalogue is still empty.\nJust send your request, we find anything.",
     catDenied:"The catalogue is not responding right now.\nTry again in a moment.",
     catModel:'{n} model', catModels:'{n} models',
@@ -1906,16 +1935,16 @@ const I18N = {
     catPreview:'Client preview',
     pickOpen:'Pick from the catalogue', pickOpenMore:'Add another model',
     pickTitle:'The catalogue', pickClose:'Close',
-    pickHintBrands:'Tap a brand to see its models.',
-    pickHint:'Tap the colours you want. You can take several.',
+    pickHintBrands:'<b>Tap a brand</b>, then tick the colours you like.',
+    pickHint:'<b>Tick the colours you want.</b> You will set the quantity of each right after.',
     pickValidate:'Confirm', pickNone:'Nothing selected',
     pickOne:'{n} item selected', pickMany:'{n} items selected',
     pickRemove:'Remove from my request',
     pickMax:'{n} colours maximum on one request.',
-    pickOneModel:'One request = one model. Send this one, you can send another right after.',
-    pickLocked:'Pick the colours of this model. For another model, that will be a second request.',
+    pickOneModel:'Another model means a second request. Send this one first — it takes ten seconds.',
+    pickLocked:'You are ordering {model}. <b>Take as many colours as you want here.</b> For another model, that will be a second request.',
     pieceOne:'{n} item', pieceMany:'{n} items',
-    freeHint:'Anything else?',
+    freeHint:'Something that is not in the catalogue? Type it here.',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
@@ -3571,9 +3600,21 @@ function renderCatalog(){
 // qu'on parcourt et celui où l'on coche doivent montrer exactement les mêmes
 // marques, les mêmes modèles et les mêmes coloris : deux rendus séparés
 // finiraient par se contredire, c'est la leçon de `decodeAt`.
+const NOTE_IC = {
+  main: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5V5.2a1.7 1.7 0 0 1 3.4 0v5.3"/><path d="M12.4 10.4V8.9a1.6 1.6 0 0 1 3.2 0v1.8"/><path d="M15.6 10.9v-1a1.6 1.6 0 0 1 3.2 0v5.4a6 6 0 0 1-6 6h-1.3a5 5 0 0 1-3.6-1.6L5 16.6a1.7 1.7 0 0 1 2.5-2.2L9 15.9"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.6"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>'
+};
+// La consigne se fabrique ici, une seule fois : vitrine et fenêtre de choix
+// doivent guider de la même façon, sinon l'une des deux prend du retard.
+function catNote(html, type){
+  return '<div class="cat-note' + (type === 'lock' ? ' is-lock' : '') + '">'
+       + '<span class="note-ic" aria-hidden="true">' + NOTE_IC[type === 'lock' ? 'lock' : 'main'] + '</span>'
+       + '<span>' + html + '</span></div>';
+}
+
 function catVueMarques(el, mode, intro){
   const marques = catBrands();
-  el.innerHTML = '<p class="cat-lead">' + escapeHtml(intro) + '</p>'
+  el.innerHTML = catNote(intro)
     + '<div class="cat-grid">' + marques.map(m=>{
         const vues = m.items.slice(0, 4);
         const reste = m.items.length - vues.length;
@@ -3611,10 +3652,14 @@ function catVueMarque(el, marque, mode){
     + catCount(modeles.length, 'catModel', 'catModels') + ' · '
     + catCount(items.length, 'catColor', 'catColors') + '</span></div></div>';
   const verrou = mode === 'choix' ? verrouModele() : null;
-  el.innerHTML = entete
-    + (mode === 'choix'
-        ? '<p class="cat-lead">' + escapeHtml(verrou ? t('pickLocked') : t('pickHint')) + '</p>'
-        : '')
+  // Verrouillée, la consigne NOMME le modèle en cours : « tu commandes
+  // Ensemble / Veste » dit bien plus que « un seul modèle ».
+  const consigne = mode === 'choix'
+    ? (verrou
+        ? catNote(t('pickLocked').replace('{model}', '<b>' + escapeHtml(verrou.model || verrou.brand) + '</b>'), 'lock')
+        : catNote(t('pickHint')))
+    : catNote(t('catLeadBrand'));
+  el.innerHTML = entete + consigne
     + modeles.map(g=>
         '<div class="cat-model"><div class="cat-model-h">'
         + escapeHtml(g.nom || t('catNoModel'))
