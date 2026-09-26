@@ -612,6 +612,127 @@
   }
   .reveal.revealed{ opacity:1; transform:none; }
 
+
+  /* ===== La vitrine : le catalogue vu par le client =====
+     Ce n'est PAS un second rendu du catalogue : l'aperçu côté vendeur ouvre
+     cette page-ci dans un calque. Un seul rendu, donc jamais deux vitrines qui
+     se décalent — la leçon de `decodeAt` appliquée à l'affichage. */
+  .cat-lead{ font-size:13px; color:var(--text-faint); line-height:1.55; margin-bottom:14px; letter-spacing:-0.005em; }
+  .cat-head{ display:flex; align-items:center; gap:11px; margin-bottom:16px; }
+  .cat-back{
+    width:34px; height:34px; flex:none; border-radius:50%; display:grid; place-items:center;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    box-shadow:var(--raise); cursor:pointer; position:relative; overflow:hidden;
+    transition:transform .3s var(--spring);
+  }
+  .cat-back:active{ transform:scale(.92); }
+  .cat-back svg{ width:17px; height:17px; }
+  .cat-head-t{ min-width:0; }
+  .cat-head-t b{
+    display:block; font-family:var(--font-display); font-size:18px; font-weight:600;
+    letter-spacing:-0.025em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cat-head-t span{ font-size:11.5px; color:var(--text-faint); }
+
+  .cat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:11px; }
+  .cat-brand{
+    position:relative; overflow:hidden; padding:0; width:100%; text-align:left; font:inherit;
+    background:var(--mat); border:0.5px solid var(--hairline); border-radius:17px;
+    box-shadow:var(--raise); cursor:pointer; color:var(--text);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+    animation:cardIn .5s var(--ease-out) backwards; animation-delay:var(--d, 0ms);
+  }
+  /* Le même reflet que sur les cartes de commande : c'est lui qui fait lire la
+     surface comme du verre plutôt que comme un rectangle. */
+  .cat-brand::before{
+    content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%; z-index:3;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(18deg); pointer-events:none; opacity:0;
+    animation:cardSheen 1.1s var(--ease-io) backwards;
+    animation-delay:calc(var(--d, 0ms) + 260ms);
+  }
+  /* La couverture est une mosaïque : une photo la remplit, deux la coupent en
+     deux, trois donnent une grande et deux petites, quatre font une grille. */
+  .cat-cover{
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1.5px;
+    aspect-ratio:1/1; background:var(--fill-2);
+  }
+  .cat-cover.solo{ grid-template-columns:1fr; grid-template-rows:1fr; }
+  .cat-cover.duo{ grid-template-rows:1fr; }
+  .cat-cover.trio > *:first-child{ grid-row:span 2; }
+  .cat-cover img{ width:100%; height:100%; object-fit:cover; display:block; min-width:0; min-height:0; }
+  .cat-cover .cat-more{
+    display:grid; place-items:center; background:var(--fill-2); font-size:13px; font-weight:600;
+    color:var(--text-faint); font-variant-numeric:tabular-nums; letter-spacing:-0.01em;
+  }
+  .cat-brand-n{ padding:10px 12px 12px; }
+  .cat-brand-n b{ display:block; font-size:14.5px; font-weight:600; letter-spacing:-0.015em; }
+  .cat-brand-n span{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+
+  .cat-model{ margin-top:20px; }
+  .cat-model:first-of-type{ margin-top:0; }
+  .cat-model-h{
+    font-family:var(--font-display); font-size:15.5px; font-weight:600; letter-spacing:-0.02em;
+    margin-bottom:10px; display:flex; align-items:baseline; gap:8px;
+  }
+  .cat-model-h i{ font-style:normal; font-size:11.5px; font-weight:500; color:var(--text-faint); }
+  .cat-colors{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  .cat-color{
+    padding:0; border:0; background:none; cursor:pointer; text-align:center; color:inherit; font:inherit;
+    animation:cardIn .45s var(--ease-out) backwards; animation-delay:var(--d, 0ms);
+  }
+  .cat-color img{
+    width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border-radius:13px;
+    border:0.5px solid var(--hairline); box-shadow:var(--raise); background:var(--fill-2);
+    transition:transform .3s var(--spring);
+  }
+  .cat-color:active img{ transform:scale(.95); }
+  .cat-color span{
+    display:block; margin-top:6px; font-size:11.5px; color:var(--text-muted); letter-spacing:-0.005em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* La porte vers le catalogue depuis le formulaire. Discrète : c'est un
+     passage, pas l'action principale de l'écran. */
+  .cat-browse{
+    margin-top:9px; width:100%; padding:10px; border-radius:12px; cursor:pointer; font:inherit;
+    background:var(--accent-soft); border:0.5px solid transparent; color:var(--accent);
+    font-size:13px; font-weight:600; letter-spacing:-0.01em;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    position:relative; overflow:hidden; transition:transform .3s var(--spring);
+  }
+  .cat-browse:active{ transform:scale(.97); }
+  .cat-browse svg{ width:15px; height:15px; flex:none; }
+
+  /* La photo en grand, avec de quoi commander sans revenir en arrière. */
+  .cat-lb{
+    position:fixed; inset:0; z-index:220; display:none; flex-direction:column;
+    background:rgba(0,0,0,.9); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    padding:calc(env(safe-area-inset-top) + 58px) 16px calc(env(safe-area-inset-bottom) + 20px);
+  }
+  .cat-lb.open{ display:flex; animation:lbFade .22s var(--ease-out); }
+  .cat-lb-img{ flex:1; min-height:0; display:grid; place-items:center; }
+  .cat-lb-img img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:16px; display:block; }
+  .cat-lb-foot{ flex:none; text-align:center; margin-top:16px; }
+  .cat-lb-foot b{
+    display:block; font-family:var(--font-display); font-size:18px; font-weight:600;
+    letter-spacing:-0.02em; color:#fff;
+  }
+  .cat-lb-foot > span{ display:block; font-size:12.5px; color:rgba(255,255,255,.6); margin-top:3px; }
+  .cat-lb-foot .btn-primary{ margin-top:15px; }
+
+  /* Mode aperçu : le vendeur regarde sa propre vitrine. Tout ce qui appartient
+     à un client précis disparaît, puisqu'il n'y en a pas. */
+  body.apercu .hello, body.apercu #topbar, body.apercu #summary,
+  body.apercu .welcome, body.apercu #historyPanel,
+  body.apercu #orderPanel, body.apercu #dollarsPanel{ display:none !important; }
+  /* Les bascules langue et thème sont fixes : sans ça elles flottent
+     par-dessus la rangée d'onglets de l'aperçu. Elles appartiennent au client,
+     pas à la fenêtre du vendeur — c'est lui qui a déjà les siennes. */
+  body.apercu .lang-toggle, body.apercu .theme-toggle{ display:none !important; }
+  body.apercu .tabs{ pointer-events:none; margin-top:4px; }
+  body.apercu #app{ padding-top:calc(env(safe-area-inset-top) + 10px); }
+
   /* Passage d'un onglet à l'autre : ça glisse. */
   .view-in{ animation:viewIn .3s var(--ease-out) both; }
   @keyframes viewIn{
@@ -1173,8 +1294,19 @@
     .summary-tile{ padding:9px 6px; border-radius:13px; }
     .summary-tile .n{ font-size:19px; }
 
-    .tabs{ gap:7px; margin-bottom:13px; }
-    .tab{ padding:9px 6px; font-size:12.5px; }
+    .tabs{ gap:6px; margin-bottom:13px; }
+    /* Quatre onglets et non plus trois : à 390 px, « Commandes » débordait
+       de sa pastille. On resserre le texte, on n'enlève aucun onglet. */
+    .tab{ padding:9px 4px; font-size:11.8px; letter-spacing:-0.022em; }
+    .cat-grid{ gap:9px; }
+    .cat-colors{ gap:8px; }
+  }
+  /* Les écrans les plus étroits (iPhone SE de première génération, 320 px) :
+     « Commandes » y débordait encore. On rétrécit le texte plutôt que de
+     retirer un onglet — les quatre doivent rester visibles d'un coup d'œil. */
+  @media (max-width:340px){
+    .tabs{ gap:5px; }
+    .tab{ padding:9px 3px; font-size:10.2px; letter-spacing:-0.03em; }
 
     .order-card{ padding:12px 13px; border-radius:15px; }
 
@@ -1242,7 +1374,7 @@
         </div>
         <div class="welcome-point">
           <span class="dot"><span class="ds-coin" style="width:1.05em; height:1.05em; font-size:12px;">$</span></span>
-          <span data-i18n="cwDollars">Chaque euro dépensé te rapporte <b>1 Dollarz</b>, à échanger contre des remises dans l'onglet « Mes Dollarz ».</span>
+          <span data-i18n="cwDollars">Chaque euro dépensé te rapporte <b>1 Dollarz</b>, à échanger contre des remises dans l'onglet « Dollarz ».</span>
         </div>
         <div class="welcome-point" id="cwBioPoint" style="display:none;">
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a7 7 0 0 1-.6 2.8"/><path d="M8 11a4 4 0 0 1 8 0v2a11 11 0 0 1-.5 3.4"/><path d="M5 11a7 7 0 0 1 12-4.9"/><path d="M19 11v2c0 1.5-.2 3-.6 4.4"/><path d="M5 15.5c.3-1.1.5-2.3.5-3.5"/><path d="M8.5 20a13 13 0 0 0 1.3-3"/></svg></span>
@@ -1271,7 +1403,7 @@
         </div>
         <div class="welcome-point">
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 11a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></span>
-          <span data-i18n="diSpend">Dans l'onglet <b>Mes Dollarz</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.</span>
+          <span data-i18n="diSpend">Dans l'onglet <b>Dollarz</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.</span>
         </div>
         <div class="welcome-point">
           <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg></span>
@@ -1309,9 +1441,10 @@
 
   <div class="tabs">
     <i class="tab-pill" id="tabPill" aria-hidden="true"></i>
-    <button class="tab" id="tabHistory" data-i18n="tabHistory">Mes commandes</button>
-    <button class="tab active" id="tabOrder" data-i18n="tabOrder">Nouvelle demande</button>
-    <button class="tab" id="tabDollars" data-i18n="tabDollars">Mes Dollarz</button>
+    <button class="tab" id="tabHistory" data-i18n="tabHistory">Commandes</button>
+    <button class="tab active" id="tabOrder" data-i18n="tabOrder">Demande</button>
+    <button class="tab" id="tabCatalog" data-i18n="tabCatalog">Catalogue</button>
+    <button class="tab" id="tabDollars" data-i18n="tabDollars">Dollarz</button>
   </div>
 
   <div id="orderPanel">
@@ -1321,6 +1454,10 @@
           <label data-i18n="fieldProduct">Produit</label>
           <input type="text" id="f_product" data-i18n-placeholder="phProduct" placeholder="Ex: paire de chaussures, sac...">
           <div class="field-error"></div>
+          <button type="button" class="cat-browse" id="catBrowseBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg>
+            <span data-i18n="catBrowse">Parcourir le catalogue</span>
+          </button>
         </div>
         <div class="row2">
           <div class="field">
@@ -1355,6 +1492,10 @@
     <div class="list" id="historyList"></div>
     <div id="archiveBlock"></div>
   </div>
+
+  <!-- La vitrine. Le client la parcourt avant de commander, et « Passer
+       commande » le ramène au formulaire avec le produit déjà écrit. -->
+  <div id="catalogPanel" style="display:none;"></div>
 
   <div id="dollarsPanel" style="display:none;"></div>
 </div>
@@ -1399,6 +1540,18 @@
   <div class="crop-bar">
     <button type="button" class="crop-cancel" id="cropCancel" data-i18n="cropCancel">Annuler</button>
     <button type="button" class="crop-ok" id="cropOk" data-i18n="cropOk">Valider</button>
+  </div>
+</div>
+
+<div class="cat-lb" id="catLb">
+  <button type="button" class="lightbox-close" id="catLbClose" data-i18n-title="photoCloseTitle" title="Fermer la photo" aria-label="Fermer la photo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div class="cat-lb-img"><img id="catLbImg" alt=""></div>
+  <div class="cat-lb-foot">
+    <b id="catLbName"></b>
+    <span id="catLbSub"></span>
+    <button type="button" class="btn-primary" id="catLbOrder" data-i18n="catOrderThis">Passer commande</button>
   </div>
 </div>
 
@@ -1461,11 +1614,11 @@ const I18N = {
     cwPrivate:"Ce lien est <b>personnel</b> et protégé par ton code à 6 chiffres : personne d'autre n'y a accès.",
     cwBio:'La prochaine fois, <b>Face ID</b> te reconnaît : plus besoin de retaper ton code.',
     cwBioBtn:'Activer Face ID', cwOk:"J'ai compris", cwBioDone:'Face ID activé.',
-    cwDollars:'Chaque euro dépensé te rapporte <b>1 Dollarz</b>, à échanger contre des remises dans l\u2019onglet « Mes Dollarz ».',
+    cwDollars:'Chaque euro dépensé te rapporte <b>1 Dollarz</b>, à échanger contre des remises dans l\u2019onglet « Dollarz ».',
     diTitle:'Nouveau : les Dollarz',
     diLead:'La maison a sa monnaie. Tu la cumules en commandant, et tu l\u2019échanges quand tu veux contre une remise.',
     diEarn:'<b>1 € dépensé = 1 Dollarz</b>, crédité dès que ta commande est livrée.',
-    diSpend:'Dans l\u2019onglet <b>Mes Dollarz</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.',
+    diSpend:'Dans l\u2019onglet <b>Dollarz</b>, tu choisis ton coupon. Plus tu attends, plus il rapporte.',
     diKeep:'Ils n\u2019expirent jamais. Un coupon par commande.',
     diBtn:'Voir la boutique', diLater:'Plus tard',
     insTitle:'Mets-le sur ton écran d\u2019accueil',
@@ -1483,7 +1636,18 @@ const I18N = {
     errLoadDenied:"L'accès à tes commandes est bloqué. Préviens ton vendeur, il doit ouvrir les droits.",
     errLoadNet:'Connexion perdue. Vérifie ton réseau, ça se remettra tout seul.',
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
-    tabHistory:'Mes commandes', tabOrder:'Nouvelle demande', tabDollars:'Mes Dollarz',
+    tabHistory:'Commandes', tabOrder:'Demande', tabCatalog:'Catalogue', tabDollars:'Dollarz',
+    catLead:"Parcours les marques. Touche un modèle pour le voir en grand, puis « Passer commande ».",
+    catEmpty:"Le catalogue est encore vide.\nEnvoie ta demande directement, on trouve tout.",
+    catDenied:"Le catalogue ne répond pas pour le moment.\nRéessaie dans un instant.",
+    catModel:'{n} modèle', catModels:'{n} modèles',
+    catColor:'{n} coloris', catColors:'{n} coloris',
+    catNoModel:'Autres',
+    catBack:'Retour aux marques',
+    catBrowse:'Parcourir le catalogue',
+    catOrderThis:'Passer commande',
+    catPicked:'Produit choisi. Indique la quantité, puis envoie.',
+    catPreview:'Aperçu client',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
@@ -1518,7 +1682,7 @@ const I18N = {
     errExpiredTitle:'Lien invalide ou expiré',
     errExpiredText:'Ce lien ne correspond à aucun compte actif. Demande un nouveau lien à ton vendeur.',
     errOfflineTitle:'Connexion impossible', errOfflineText:'Vérifie ta connexion internet et réessaie.',
-    emptyTitle:"Pas encore de commande.", emptySub:'Envoie ta première demande depuis l\'onglet « Nouvelle demande ».',
+    emptyTitle:"Pas encore de commande.", emptySub:'Envoie ta première demande depuis l\'onglet « Demande ».',
     stWaiting:'En attente de validation',
     stNouveau:'Demande reçue', stDevis:'Devis envoyé', stPaye:'Payé',
     stCommande:'Commandé', stExpedie:'Expédié', stLivre:'Livré', stAnnule:'Annulé',
@@ -1546,11 +1710,11 @@ const I18N = {
     cwPrivate:'This link is <b>yours alone</b> and protected by your 6-digit code: nobody else can get in.',
     cwBio:'Next time, <b>Face ID</b> recognises you: no code to type again.',
     cwBioBtn:'Turn on Face ID', cwOk:'Got it', cwBioDone:'Face ID is on.',
-    cwDollars:'Every euro you spend earns you <b>1 Dollarz</b>, to trade for discounts in the “My Dollarz” tab.',
+    cwDollars:'Every euro you spend earns you <b>1 Dollarz</b>, to trade for discounts in the “Dollarz” tab.',
     diTitle:'New: Dollarz',
     diLead:'The house has its own currency. You build it up by ordering, and trade it for a discount whenever you like.',
     diEarn:'<b>1 € spent = 1 Dollarz</b>, credited as soon as your order is delivered.',
-    diSpend:'In the <b>My Dollarz</b> tab, you pick your coupon. The longer you wait, the more it pays.',
+    diSpend:'In the <b>Dollarz</b> tab, you pick your coupon. The longer you wait, the more it pays.',
     diKeep:'They never expire. One coupon per order.',
     diBtn:'See the shop', diLater:'Later',
     insTitle:'Put it on your home screen',
@@ -1568,7 +1732,18 @@ const I18N = {
     errLoadDenied:'Access to your orders is blocked. Tell your seller, they need to open the permissions.',
     errLoadNet:'Connection lost. Check your network, it will come back on its own.',
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
-    tabHistory:'My orders', tabOrder:'New request', tabDollars:'My Dollarz',
+    tabHistory:'Orders', tabOrder:'Request', tabCatalog:'Catalogue', tabDollars:'Dollarz',
+    catLead:'Browse the brands. Tap a model to see it full size, then "Order this".',
+    catEmpty:"The catalogue is still empty.\nJust send your request, we find anything.",
+    catDenied:"The catalogue is not responding right now.\nTry again in a moment.",
+    catModel:'{n} model', catModels:'{n} models',
+    catColor:'{n} colour', catColors:'{n} colours',
+    catNoModel:'Others',
+    catBack:'Back to brands',
+    catBrowse:'Browse the catalogue',
+    catOrderThis:'Order this',
+    catPicked:'Product selected. Set the quantity, then send.',
+    catPreview:'Client preview',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
@@ -1603,7 +1778,7 @@ const I18N = {
     errExpiredTitle:'Invalid or expired link',
     errExpiredText:'This link matches no active account. Ask your seller for a new one.',
     errOfflineTitle:'Connection failed', errOfflineText:'Check your internet connection and try again.',
-    emptyTitle:'No order yet.', emptySub:'Send your first request from the "New request" tab.',
+    emptyTitle:'No order yet.', emptySub:'Send your first request from the "Request" tab.',
     stWaiting:'Waiting for confirmation',
     stNouveau:'Request received', stDevis:'Quote sent', stPaye:'Paid',
     stCommande:'Ordered', stExpedie:'Shipped', stLivre:'Delivered', stAnnule:'Cancelled',
@@ -1702,7 +1877,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head, .shop-btn';
+const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head, .shop-btn, .cat-brand, .cat-browse, .cat-back';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tapDown(el, cx, cy){
   el.classList.add('is-pressed');
@@ -1832,6 +2007,11 @@ function oublieLien(){
 }
 
 const params = new URLSearchParams(location.search);
+// Mode aperçu : l'app pro ouvre CETTE page dans un calque pour montrer au
+// vendeur ce que verra son client. Aucun client, aucun jeton, aucune écriture.
+// C'est ce qui garantit qu'il n'y a qu'une vitrine à maintenir.
+const apercuCat = params.get('apercu') === 'catalogue';
+const apercuOwner = params.get('o') || null;
 const urlId = params.get('id'), urlToken = params.get('token');
 // Le couple est pris EN BLOC : mélanger l'identifiant d'un lien avec le jeton
 // d'un autre ne donnerait rien de bon.
@@ -2139,6 +2319,7 @@ function enterApp(){
   renderInstallCard();
   renderHistory();      // état « chargement » tout de suite, jamais de vide
   listenOrders();
+  listenCatalog(clientData && clientData.ownerId);
 
   if(!jouer){
     if(rideau) rideau.style.display = 'none';
@@ -2208,7 +2389,27 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+// Le vendeur regarde sa propre vitrine depuis l'app pro : on saute la porte
+// d'entrée (pas de client, pas de jeton, pas de code) et on n'affiche que le
+// catalogue. Une branche posée tout en haut, qui sort avant de toucher au
+// chemin normal : le portail d'un vrai client ne doit rien risquer de ce mode.
+function entreApercu(){
+  const th = params.get('theme');
+  if(th === 'dark' || th === 'light') applyTheme(th);
+  const lg = params.get('lang');
+  if(lg === 'fr' || lg === 'en'){ currentLang = lg; applyTranslations(); }
+  document.body.classList.add('apercu');
+  $('#loadingScreen').style.display = 'none';
+  const rideau = $('#portalCurtain');
+  if(rideau) rideau.style.display = 'none';
+  $('#app').style.display = 'block';
+  switchTab('catalog');
+  listenCatalog(apercuOwner);
+  requestAnimationFrame(movePill);
+}
+
 async function init(){
+  if(apercuCat){ entreApercu(); return; }
   if(!clientId || !clientToken){
     showError(t('errLinkTitle'), t('errLinkText'));
     return;
@@ -3005,7 +3206,7 @@ $('#photoGrid').addEventListener('click', (e)=>{
 
 
 // ---- Onglets ----
-const TABS = ['history','order','dollars'];
+const TABS = ['history','order','catalog','dollars'];
 let currentTab = 'order';
 // La pastille se cale sur l'onglet actif. Recalculée à chaque bascule et au
 // changement de langue : les libellés n'ont pas la même largeur en anglais.
@@ -3021,13 +3222,14 @@ function switchTab(tab){
   const from = TABS.indexOf(currentTab);
   const to = TABS.indexOf(tab);
   currentTab = tab;
-  const panels = { history:'#historyPanel', order:'#orderPanel', dollars:'#dollarsPanel' };
-  const boutons = { history:'#tabHistory', order:'#tabOrder', dollars:'#tabDollars' };
+  const panels = { history:'#historyPanel', order:'#orderPanel', catalog:'#catalogPanel', dollars:'#dollarsPanel' };
+  const boutons = { history:'#tabHistory', order:'#tabOrder', catalog:'#tabCatalog', dollars:'#tabDollars' };
   TABS.forEach(k=>{
     $(boutons[k]).classList.toggle('active', k === tab);
     $(panels[k]).style.display = (k === tab) ? 'block' : 'none';
   });
   if(tab === 'dollars') renderDollars();
+  if(tab === 'catalog') renderCatalog();
   const panel = $(panels[tab]);
   panel.style.setProperty('--view-dir', (to >= from ? '18px' : '-18px'));
   panel.classList.remove('view-in');
@@ -3038,6 +3240,7 @@ function switchTab(tab){
 }
 $('#tabOrder').addEventListener('click', ()=>switchTab('order'));
 $('#tabHistory').addEventListener('click', ()=>switchTab('history'));
+$('#tabCatalog').addEventListener('click', ()=>switchTab('catalog'));
 $('#tabDollars').addEventListener('click', ()=>switchTab('dollars'));
 // Rotation de l'écran, clavier qui s'ouvre : la pastille suit.
 window.addEventListener('resize', movePill);
@@ -3049,6 +3252,205 @@ function applyDefaultTab(){
   defaultTabApplied = true;
   if(myOrders.length || myPending.length) switchTab('history');
 }
+
+
+// ================= La vitrine : le catalogue =================
+// Le vendeur tient son catalogue dans l'app pro, le client le parcourt ici.
+// La lecture de `catalog` est OUVERTE dans les règles, et c'est ce qui le rend
+// possible : ce portail n'est jamais connecté à Firebase, Firestore le voit
+// comme un visiteur anonyme (piège 11). La contrepartie est écrite dans les
+// règles : rien de confidentiel n'entre dans le catalogue, jamais un prix
+// d'achat ni un nom de fournisseur.
+let catalogItems = [];
+let catalogLoaded = false, catalogError = '';
+let catBrand = null;    // la marque ouverte, ou null pour la grille des marques
+let catCurrent = null;  // la fiche affichée en grand
+let catUnsub = null;
+
+function listenCatalog(ownerId){
+  if(catUnsub) return;
+  if(!ownerId){ catalogLoaded = true; if(currentTab === 'catalog') renderCatalog(); return; }
+  // Un écouteur, pas une lecture unique : le vendeur peut ajouter une marque
+  // pendant que le client regarde, et elle doit apparaître (piège 10).
+  catUnsub = db.collection('catalog').where('ownerId','==',ownerId).onSnapshot(snap=>{
+    catalogItems = snap.docs.map(d=>Object.assign({id:d.id}, d.data()))
+                            // `active` n'est pas du stock, c'est de la
+                            // publication : une fiche masquée n'existe pas ici.
+                            .filter(i => i.active !== false && (i.thumb || i.photo));
+    catalogLoaded = true; catalogError = '';
+    if(currentTab === 'catalog') renderCatalog();
+  }, err=>{
+    // Jamais en silence : un catalogue vide et un catalogue en panne se
+    // ressemblent à l'écran, et le client n'aurait aucun moyen de les
+    // distinguer (piège 9).
+    catalogLoaded = true;
+    catalogError = (err && err.code === 'permission-denied') ? 'denied' : 'net';
+    console.error('[catalogue] lecture refusée :', err && err.code, err && err.message);
+    if(currentTab === 'catalog') renderCatalog();
+  });
+}
+
+function catImg(i, grand){
+  const d  = grand ? (i.photo || i.thumb) : (i.thumb || i.photo);
+  const ty = grand ? (i.photo ? i.photoType : i.thumbType)
+                   : (i.thumb ? i.thumbType : i.photoType);
+  return 'data:' + (ty || 'image/jpeg') + ';base64,' + d;
+}
+function catRang(a,b){ return (a.rang||0) - (b.rang||0) || (a.createdAt||0) - (b.createdAt||0); }
+// Ni les marques ni les modèles ne sont stockés à part : les deux se déduisent
+// des fiches, donc un dossier vide ne peut pas exister.
+function catBrands(){
+  const m = new Map();
+  catalogItems.forEach(i=>{
+    const b = (i.brand || '').trim();
+    if(!b) return;
+    if(!m.has(b)) m.set(b, []);
+    m.get(b).push(i);
+  });
+  return Array.from(m, ([nom, items])=>({ nom, items:items.slice().sort(catRang) }))
+              .sort((a,b)=>a.nom.localeCompare(b.nom, currentLang));
+}
+function catModelsOf(items){
+  const m = new Map();
+  items.forEach(i=>{
+    const k = (i.model || '').trim();
+    if(!m.has(k)) m.set(k, []);
+    m.get(k).push(i);
+  });
+  return Array.from(m, ([nom, its])=>({ nom, items:its }));
+}
+function catCount(n, cleUn, clePlusieurs){
+  return t(n > 1 ? clePlusieurs : cleUn).replace('{n}', n);
+}
+
+function renderCatalog(){
+  const el = $('#catalogPanel');
+  if(!el) return;
+  if(!catalogLoaded){
+    el.innerHTML = '<div class="cat-grid">' + [0,1,2,3].map(i=>
+      '<div class="skel-card" style="--d:' + (i*90) + 'ms; padding:0; overflow:hidden;">'
+      + '<span class="skel" style="display:block; width:100%; aspect-ratio:1/1; border-radius:0;"></span>'
+      + '<div style="padding:11px 12px 13px;"><span class="skel skel-line" style="width:64%"></span></div>'
+      + '</div>').join('') + '</div>';
+    return;
+  }
+  if(catalogError){
+    el.innerHTML = '<div class="empty">' + escapeHtml(t('catDenied')).replace(/\n/g,'<br>') + '</div>';
+    return;
+  }
+  if(!catalogItems.length){
+    el.innerHTML = '<div class="empty">' + escapeHtml(t('catEmpty')).replace(/\n/g,'<br>') + '</div>';
+    return;
+  }
+  if(catBrand) renderCatBrand(el); else renderCatBrands(el);
+}
+
+function renderCatBrands(el){
+  const marques = catBrands();
+  el.innerHTML = '<p class="cat-lead">' + escapeHtml(t('catLead')) + '</p>'
+    + '<div class="cat-grid">' + marques.map(m=>{
+        const vues = m.items.slice(0, 4);
+        const reste = m.items.length - vues.length;
+        const cases = vues.map((i,k)=>
+          (reste > 0 && k === 3)
+            ? '<div class="cat-more">+' + (reste + 1) + '</div>'
+            : '<img src="' + catImg(i) + '" alt="" loading="lazy">').join('');
+        const forme = vues.length === 1 ? ' solo' : vues.length === 2 ? ' duo'
+                    : vues.length === 3 ? ' trio' : '';
+        const nbModeles = catModelsOf(m.items).length;
+        return '<button type="button" class="cat-brand" data-brand="' + escapeHtml(m.nom) + '">'
+          + '<div class="cat-cover' + forme + '">' + cases + '</div>'
+          + '<div class="cat-brand-n"><b>' + escapeHtml(m.nom) + '</b><span>'
+          + catCount(nbModeles, 'catModel', 'catModels') + ' · '
+          + catCount(m.items.length, 'catColor', 'catColors') + '</span></div></button>';
+      }).join('') + '</div>';
+  stagger(el.querySelectorAll('.cat-brand'), 55);
+}
+
+function renderCatBrand(el){
+  const items = catalogItems.filter(i => (i.brand||'').trim() === catBrand).sort(catRang);
+  // La marque a pu disparaître pendant qu'on la regardait : on revient à la
+  // grille plutôt que d'afficher une page vide.
+  if(!items.length){ catBrand = null; renderCatalog(); return; }
+  const modeles = catModelsOf(items);
+  el.innerHTML = '<div class="cat-head">'
+    + '<button type="button" class="cat-back" id="catBackBtn" title="' + escapeHtml(t('catBack'))
+    + '" aria-label="' + escapeHtml(t('catBack')) + '">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'
+    + '</button><div class="cat-head-t"><b>' + escapeHtml(catBrand) + '</b><span>'
+    + catCount(modeles.length, 'catModel', 'catModels') + ' · '
+    + catCount(items.length, 'catColor', 'catColors') + '</span></div></div>'
+    + modeles.map(g=>
+        '<div class="cat-model"><div class="cat-model-h">'
+        + escapeHtml(g.nom || t('catNoModel'))
+        + '<i>' + catCount(g.items.length, 'catColor', 'catColors') + '</i></div>'
+        + '<div class="cat-colors">' + g.items.map(i=>
+            '<button type="button" class="cat-color" data-id="' + escapeHtml(i.id) + '">'
+            + '<img src="' + catImg(i) + '" alt="" loading="lazy">'
+            + '<span>' + escapeHtml(i.name || '') + '</span></button>').join('')
+        + '</div></div>').join('');
+  stagger(el.querySelectorAll('.cat-color'), 45);
+}
+
+$('#catalogPanel').addEventListener('click', (e)=>{
+  if(e.target.closest('#catBackBtn')){ catBrand = null; renderCatalog(); return; }
+  const marque = e.target.closest('.cat-brand');
+  if(marque){
+    catBrand = marque.dataset.brand;
+    renderCatalog();
+    window.scrollTo({ top:0, behavior:reduceMotion() ? 'auto' : 'smooth' });
+    return;
+  }
+  const coloris = e.target.closest('.cat-color');
+  if(coloris) openCatLb(coloris.dataset.id);
+});
+
+function openCatLb(id){
+  const i = catalogItems.find(x => x.id === id);
+  if(!i) return;
+  catCurrent = i;
+  $('#catLbImg').src = catImg(i, true);
+  $('#catLbName').textContent = [i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ')
+                                || (i.brand || '');
+  $('#catLbSub').textContent = i.brand || '';
+  $('#catLb').classList.add('open');
+}
+function closeCatLb(){
+  const lb = $('#catLb');
+  if(!lb.classList.contains('open')) return;
+  lb.classList.remove('open');
+  $('#catLbImg').removeAttribute('src');
+  catCurrent = null;
+}
+$('#catLbClose').addEventListener('click', closeCatLb);
+// On ferme sur le fond et sur la photo, jamais sur le pied : c'est là qu'est
+// le bouton, et un bouton qui ferme la fenêtre en même temps qu'il agit est
+// un bouton qui ment sur ce qu'il fait.
+$('#catLb').addEventListener('click', (e)=>{
+  if(e.target.id === 'catLb' || e.target.closest('.cat-lb-img')) closeCatLb();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeCatLb(); });
+
+// Le pont entre la vitrine et la commande : le produit part déjà écrit, avec
+// ses trois niveaux, donc le vendeur sait exactement quel article acheter.
+// La photo, elle, ne suit pas : elle est déjà dans SON catalogue, et la
+// recopier dans la demande pèserait sur le plafond d'un document (piège 23).
+$('#catLbOrder').addEventListener('click', ()=>{
+  const i = catCurrent;
+  if(!i) return;
+  const libelle = [i.brand, i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ');
+  closeCatLb();
+  if(apercuCat){ showToast(libelle); return; }
+  $('#f_product').value = libelle;
+  clearFormErrors();
+  switchTab('order');
+  showToast(t('catPicked'));
+  setTimeout(()=>{
+    const f = $('#orderForm');
+    if(f) f.scrollIntoView({ behavior:reduceMotion() ? 'auto' : 'smooth', block:'center' });
+  }, 90);
+});
+$('#catBrowseBtn').addEventListener('click', ()=>switchTab('catalog'));
 
 // ---- Envoi de la demande ----
 $('#orderForm').addEventListener('submit', async (e)=>{
