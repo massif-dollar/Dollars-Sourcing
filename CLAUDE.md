@@ -419,10 +419,19 @@ modèles de la marque ouverte — comme un dossier. **Rien à voir avec le carne
 fournisseurs**, qui reste l'outil de terrain en Chine et n'est jamais montré au
 client.
 
-**Une fiche = un coloris précis** (« Gel-Kayano 31 bleue »), pas un modèle
-abstrait. C'est ce qui permettra au client de commander cinq bleues et cinq
+**TROIS NIVEAUX : marque → modèle → coloris.** Le niveau du milieu manquait au
+premier jet, et ça s'est vu au premier usage réel : tous les coloris de toutes
+les pièces d'une marque tombaient dans le même tas. Une marque porte plusieurs
+modèles (« Ensemble survêtement », « Gel-Kayano 31 »), et chaque modèle porte
+ses coloris.
+
+**Un document = un coloris**, et il porte les trois niveaux (`brand`, `model`,
+`name`). C'est ce qui permettra au client de commander cinq bleues et cinq
 noires en tapant deux quantités, au lieu d'écrire une phrase qu'il faudrait
 relire à chaque colis.
+
+**Ni les marques ni les modèles ne sont stockés à part** : les deux se déduisent
+des fiches. Rien à maintenir, et un dossier vide ne peut pas exister.
 
 **AUCUN STOCK.** Le catalogue est fixe : pas de quantité disponible, pas de
 décompte à la commande, pas de rupture. Massif achète chez le fournisseur
@@ -440,10 +449,6 @@ navigation, **c'est ce qui rend le catalogue possible**.
 (~25 Ko) pour la grille, la photo pleine de 900 px (~102 Ko) seulement à
 l'ouverture. Sans ça, ouvrir une marque de dix modèles téléchargerait 1 Mo au
 lieu de 250 Ko. Le même cadrage produit les deux, en un seul geste.
-
-**Les marques ne sont stockées nulle part** : elles se déduisent des fiches.
-Rien à maintenir, et une marque vide ne peut pas exister — pas de dossier
-fantôme après une suppression. Même principe que le solde en Dollarz.
 
 **La lecture de `catalog` est OUVERTE dans les règles**, et il faut savoir
 pourquoi : le portail n'est jamais connecté à Firebase, Firestore le voit comme
@@ -1516,6 +1521,21 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    personne ne lit jamais — et rien ne le signale, puisque le texte est bien
    là dans le DOM. `setFieldError()` / `clearFieldError()` existent pour ça :
    **toujours passer par elles.**
+
+29. **PUBLIER LES RÈGLES N'EST PAS DÉPLOYER LE SITE, ET ÇA SE PAIE À CHAQUE
+   NOUVELLE COLLECTION.** Le catalogue livré, la première marque enregistrée a
+   répondu `permission-denied` : `firestore-rules.txt` était bien dans le dépôt
+   et bien déployé avec le site, mais **les règles ne vivent pas là** — elles
+   vivent dans la console Firebase, et rien ne les y pousse.
+
+   Le diagnostic a pris trois secondes, et uniquement parce que le code
+   d'erreur est affiché dans le toast (piège 13) : « Sauvegarde impossible
+   [permission-denied] ». Sans ce code entre crochets, c'était une soirée à
+   chercher dans le code d'une fonctionnalité qui venait d'être testée.
+
+   **La règle : toute nouvelle collection Firestore se livre avec un rappel
+   explicite de publier les règles**, dans la PR et dans le message à Massif.
+   Le déploiement du site ne suffira jamais.
 
 ## Assistant IA
 

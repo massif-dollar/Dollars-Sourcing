@@ -609,7 +609,29 @@
   .brand-card .brand-go svg{ width:17px; height:17px; }
 
   /* La grille des modèles, dans la feuille d'une marque. */
-  .cat-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:9px; margin-top:4px; }
+  /* Un modèle = un bloc : son nom en tête, ses coloris en dessous. C'est le
+     niveau qui manquait — sans lui, tous les coloris de toutes les pièces
+     d'une marque se retrouvaient à plat dans le même tas. */
+  .model-block{
+    border:0.5px solid var(--hairline); border-radius:14px;
+    padding:11px; margin-bottom:11px; background:var(--fill);
+  }
+  .model-head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  .model-head input{
+    flex:1; min-width:0; padding:9px 11px; border-radius:10px;
+    border:0.5px solid var(--hairline); background:var(--card); color:var(--text);
+    font-family:var(--font-body); font-size:14px; font-weight:600;
+  }
+  .model-head input:focus{ border-color:var(--accent); outline:none; }
+  .model-head .mini-btn{ flex:none; }
+  .cat-add-model{
+    width:100%; padding:12px; border-radius:12px; cursor:pointer; margin-bottom:6px;
+    border:1px dashed var(--hairline-strong); background:transparent; color:var(--accent);
+    font-family:var(--font-body); font-size:13.5px; font-weight:700;
+    transition:transform .3s var(--spring);
+  }
+  .cat-add-model:active{ transform:scale(.985); }
+  .cat-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:9px; }
   .cat-item{ position:relative; }
   .cat-item .cat-img{
     width:100%; aspect-ratio:1; object-fit:cover; display:block;
@@ -2107,7 +2129,10 @@
       <div class="field-error"></div>
     </div>
     <p class="section-title" data-i18n="brandModels">Modèles</p>
-    <div class="cat-grid" id="brandGrid"></div>
+    <!-- Un bloc par modèle : son nom, puis SES photos. Ajouter un modèle ajoute
+         un bloc, pas une photo de plus dans un tas. -->
+    <div id="brandModels"></div>
+    <button type="button" class="cat-add-model" id="addModelBtn" data-i18n="addModel">+ Ajouter un modèle</button>
     <input type="file" id="catPhotoInput" accept="image/*" multiple style="display:none;">
     <div class="sheet-actions">
       <button type="button" class="btn-primary" id="saveBrandBtn" data-i18n="save">Enregistrer</button>
@@ -2362,7 +2387,11 @@ const I18N = {
     emptyCatalogueSearch:'Aucune marque ne correspond.',
     newBrand:'Nouvelle marque', brandName:'Nom de la marque', brandNamePh:'Ex: Asics',
     brandModels:'Modèles', modelNamePh:'Nom du modèle',
-    catAdd:'Ajouter', catRemove:'Retirer ce modèle',
+    catAdd:'Ajouter', catRemove:'Retirer ce coloris',
+    colorSingular:'coloris', colorsPlural:'coloris', colorNamePh:'Coloris',
+    deleteModel:'Supprimer ce modèle',
+    confirmDeleteModel:'Supprimer ce modèle et ses {n} coloris ?',
+    errModelName:'Donne un nom à chaque modèle.',
     catVisible:'Visible par les clients', catHidden:'Masqué aux clients', catHiddenCount:'masqué',
     deleteBrand:'Supprimer la marque',
     confirmDeleteBrandAll:'Supprimer cette marque et ses {n} modèles ?',
@@ -2543,7 +2572,11 @@ const I18N = {
     emptyCatalogueSearch:'No brand matches.',
     newBrand:'New brand', brandName:'Brand name', brandNamePh:'e.g. Asics',
     brandModels:'Models', modelNamePh:'Model name',
-    catAdd:'Add', catRemove:'Remove this model',
+    catAdd:'Add', catRemove:'Remove this colour',
+    colorSingular:'colour', colorsPlural:'colours', colorNamePh:'Colour',
+    deleteModel:'Delete this model',
+    confirmDeleteModel:'Delete this model and its {n} colours?',
+    errModelName:'Give every model a name.',
     catVisible:'Visible to clients', catHidden:'Hidden from clients', catHiddenCount:'hidden',
     deleteBrand:'Delete brand',
     confirmDeleteBrandAll:'Delete this brand and its {n} models?',
@@ -2634,7 +2667,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-26';
+const BUILD = '2026-09-26b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3569,8 +3602,12 @@ function imgPhoto(p){
 // Firestore voit comme un visiteur anonyme (piège 11). Donc : jamais de prix
 // d'achat, jamais de nom de fournisseur ici.
 
-// Les marques ne sont stockées nulle part : elles se déduisent des fiches.
-// Rien à maintenir, et une marque vide ne peut pas exister.
+// Trois niveaux : MARQUE → MODÈLE → COLORIS. Un document porte les trois.
+// Le niveau « modèle » est celui qui manquait au premier jet : sans lui, tous
+// les coloris de toutes les pièces d'une marque tombaient dans le même tas.
+//
+// Ni les marques ni les modèles ne sont stockés à part : ils se déduisent des
+// fiches. Rien à maintenir, et un dossier vide ne peut pas exister.
 function marquesDuCatalogue(){
   const par = new Map();
   catalogItems.forEach(it=>{
@@ -3580,8 +3617,22 @@ function marquesDuCatalogue(){
     par.get(m).push(it);
   });
   return [...par.entries()]
-    .map(([nom, items])=>({ nom, items: items.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)) }))
+    .map(([nom, items])=>({ nom, items, modeles: grouperParModele(items) }))
     .sort((a,b)=>a.nom.localeCompare(b.nom));
+}
+
+// Regroupe les fiches d'une marque par modèle, dans l'ordre où ils ont été
+// créés. Les fiches sans `model` (s'il en existe) tombent dans un groupe sans
+// nom plutôt que d'être perdues.
+function grouperParModele(items){
+  const par = new Map();
+  items.slice().sort((a,b)=>(a.rang||0)-(b.rang||0) || (a.createdAt||0)-(b.createdAt||0))
+       .forEach(it=>{
+    const m = (it.model || '').trim();
+    if(!par.has(m)) par.set(m, []);
+    par.get(m).push(it);
+  });
+  return [...par.entries()].map(([model, fiches])=>({ model, items: fiches }));
 }
 
 function renderCatalogue(){
@@ -3590,10 +3641,10 @@ function renderCatalogue(){
   let marques = marquesDuCatalogue();
   const terme = ($('#catSearchInput').value || '').trim().toLowerCase();
   if(terme){
-    // On cherche dans la marque ET dans les modèles : « kayano » doit trouver
-    // Asics même si on ne se souvient plus de la marque.
+    // On cherche dans la marque, le modèle ET le coloris : « kayano » doit
+    // trouver Asics même si on ne se souvient plus de la marque.
     marques = marques.filter(m => m.nom.toLowerCase().includes(terme)
-      || m.items.some(i=>(i.name||'').toLowerCase().includes(terme)));
+      || m.items.some(i=>((i.model||'') + ' ' + (i.name||'')).toLowerCase().includes(terme)));
   }
   if(!marques.length){
     el.innerHTML = emptyHtml('catalogue', t(terme ? 'emptyCatalogueSearch' : 'emptyCatalogue'));
@@ -3602,14 +3653,17 @@ function renderCatalogue(){
   el.innerHTML = marques.map(m=>{
     const apercus = m.items.filter(i=>i.thumb).slice(0,3).map(i=>
       '<img src="data:' + (i.thumbType||'image/jpeg') + ';base64,' + i.thumb + '" alt="">').join('');
-    const n = m.items.length;
+    const nbM = m.modeles.length, nbP = m.items.length;
     const caches = m.items.filter(i=>i.active === false).length;
     return '<div class="order-card brand-card" data-brand="' + escapeHtml(m.nom) + '">'
       + (apercus ? '<div class="brand-thumbs">' + apercus + '</div>' : '')
       + '<div class="brand-info">'
       +   '<div class="brand-title">' + escapeHtml(m.nom) + '</div>'
-      +   '<div class="brand-count">' + n + ' ' + escapeHtml(t(n > 1 ? 'modelsPlural' : 'modelSingular'))
-      +     (caches ? ' · ' + caches + ' ' + escapeHtml(t('catHiddenCount')) : '') + '</div>'
+      +   '<div class="brand-count">'
+      +     nbM + ' ' + escapeHtml(t(nbM > 1 ? 'modelsPlural' : 'modelSingular'))
+      +     ' · ' + nbP + ' ' + escapeHtml(t(nbP > 1 ? 'colorsPlural' : 'colorSingular'))
+      +     (caches ? ' · ' + caches + ' ' + escapeHtml(t('catHiddenCount')) : '')
+      +   '</div>'
       + '</div>'
       + '<span class="brand-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>'
       + '</div>';
@@ -3623,27 +3677,29 @@ $('#catalogueList').addEventListener('click', (e)=>{
 });
 
 // ---- La feuille d'une marque ----
-// `brandDraft` porte le travail en cours : les fiches existantes ET celles
-// qu'on vient d'ajouter mais qui ne sont pas encore écrites. Rien ne part dans
-// la base avant « Enregistrer » — un modèle photographié par erreur se retire
-// d'un tap, sans laisser de trace.
+// `brandDraft` porte le travail en cours : un tableau de MODÈLES, chacun avec
+// ses coloris. Rien ne part dans la base avant « Enregistrer » — une photo
+// prise par erreur se retire d'un tap, sans laisser de trace.
 let brandOrigine = null;   // le nom de la marque à l'ouverture (null = nouvelle)
-let brandDraft = [];
+let brandDraft = [];       // [{ model, items:[{id?, name, thumb, photo, active}] }]
+let modeleCible = null;    // à quel modèle les photos choisies vont s'ajouter
 
 function openBrandSheet(nom){
   brandOrigine = nom || null;
   const trouvee = nom ? marquesDuCatalogue().find(m=>m.nom === nom) : null;
-  brandDraft = trouvee ? trouvee.items.map(i=>Object.assign({}, i)) : [];
+  brandDraft = trouvee
+    ? trouvee.modeles.map(g=>({ model:g.model, items:g.items.map(i=>Object.assign({}, i)) }))
+    : [{ model:'', items:[] }];   // une marque neuve s'ouvre sur un modèle vide
   $('#brandSheetTitle').textContent = nom || t('newBrand');
   $('#b_name').value = nom || '';
   $('#deleteBrandBtn').style.display = nom ? 'block' : 'none';
   clearFieldError($('#b_name'));
-  renderBrandGrid();
+  renderBrandModels();
   $('#brandOverlay').classList.add('open');
 }
 function closeBrandSheet(){
   $('#brandOverlay').classList.remove('open');
-  brandOrigine = null; brandDraft = [];
+  brandOrigine = null; brandDraft = []; modeleCible = null;
 }
 $('#closeBrandSheet').addEventListener('click', closeBrandSheet);
 $('#brandOverlay').addEventListener('click', (e)=>{ if(e.target===$('#brandOverlay')) closeBrandSheet(); });
@@ -3651,46 +3707,91 @@ $('#brandOverlay').addEventListener('click', (e)=>{ if(e.target===$('#brandOverl
 const OEIL_OUVERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OEIL_BARRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 3.6-.7"/></svg>';
 
-function renderBrandGrid(){
+function renderBrandModels(){
   const vues = escapeHtml(t('catVisible')), masq = escapeHtml(t('catHidden'));
-  const cases = brandDraft.map((it, i)=>{
-    const cache = it.active === false;
-    return '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
-      + '<img class="cat-img" src="data:' + (it.thumbType||'image/jpeg') + ';base64,' + it.thumb + '" alt="">'
-      + '<button type="button" class="cat-eye" data-eye="' + i + '" title="' + (cache?masq:vues) + '" aria-label="' + (cache?masq:vues) + '">'
-      +   (cache ? OEIL_BARRE : OEIL_OUVERT) + '</button>'
-      + '<button type="button" class="cat-del" data-del="' + i + '" aria-label="' + escapeHtml(t('catRemove')) + '">\u2715</button>'
-      + '<input type="text" class="cat-name-input" value="' + escapeHtml(it.name || '') + '" data-name="' + i + '"'
-      +   ' placeholder="' + escapeHtml(t('modelNamePh')) + '">'
+  $('#brandModels').innerHTML = brandDraft.map((g, gi)=>{
+    const cases = g.items.map((it, i)=>{
+      const cache = it.active === false;
+      return '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
+        + '<img class="cat-img" src="data:' + (it.thumbType||'image/jpeg') + ';base64,' + it.thumb + '" alt="">'
+        + '<button type="button" class="cat-eye" data-eye="' + gi + ':' + i + '" title="' + (cache?masq:vues) + '" aria-label="' + (cache?masq:vues) + '">'
+        +   (cache ? OEIL_BARRE : OEIL_OUVERT) + '</button>'
+        + '<button type="button" class="cat-del" data-del="' + gi + ':' + i + '" aria-label="' + escapeHtml(t('catRemove')) + '">\u2715</button>'
+        + '<input type="text" class="cat-name-input" value="' + escapeHtml(it.name || '') + '" data-name="' + gi + ':' + i + '"'
+        +   ' placeholder="' + escapeHtml(t('colorNamePh')) + '">'
+        + '</div>';
+    }).join('');
+    return '<div class="model-block">'
+      + '<div class="model-head">'
+      +   '<input type="text" value="' + escapeHtml(g.model || '') + '" data-model="' + gi + '"'
+      +     ' placeholder="' + escapeHtml(t('modelNamePh')) + '">'
+      +   '<button type="button" class="mini-btn danger" data-del-model="' + gi + '" aria-label="' + escapeHtml(t('deleteModel')) + '">' + ICON_TRASH + '</button>'
+      + '</div>'
+      + '<div class="cat-grid">' + cases
+      +   '<button type="button" class="cat-add" data-add="' + gi + '">'
+      +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+      +   escapeHtml(t('catAdd')) + '</button>'
+      + '</div>'
       + '</div>';
   }).join('');
-  $('#brandGrid').innerHTML = cases
-    + '<button type="button" class="cat-add" id="catAddBtn">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
-    + escapeHtml(t('catAdd')) + '</button>';
 }
 
-$('#brandGrid').addEventListener('click', (e)=>{
-  if(e.target.closest('#catAddBtn')){ $('#catPhotoInput').click(); return; }
-  const del = e.target.closest('button[data-del]');
-  if(del){ brandDraft.splice(Number(del.dataset.del), 1); renderBrandGrid(); return; }
-  const eye = e.target.closest('button[data-eye]');
-  if(eye){
-    const it = brandDraft[Number(eye.dataset.eye)];
-    it.active = (it.active === false);   // masqué ↔ visible
-    renderBrandGrid();
-  }
-});
-$('#brandGrid').addEventListener('input', (e)=>{
-  const inp = e.target.closest('input[data-name]');
-  if(inp) brandDraft[Number(inp.dataset.name)].name = inp.value;
+$('#addModelBtn').addEventListener('click', ()=>{
+  brandDraft.push({ model:'', items:[] });
+  renderBrandModels();
+  // on amène le curseur sur le nom du nouveau modèle : c'est la première chose
+  // à taper, et le faire chercher serait une friction gratuite.
+  const champs = $('#brandModels').querySelectorAll('input[data-model]');
+  const dernier = champs[champs.length - 1];
+  if(dernier){ dernier.focus(); dernier.scrollIntoView({ block:'center', behavior:'smooth' }); }
 });
 
-// Chaque photo passe par le recadreur, l'une après l'autre.
+$('#brandModels').addEventListener('click', async (e)=>{
+  const add = e.target.closest('button[data-add]');
+  if(add){ modeleCible = Number(add.dataset.add); $('#catPhotoInput').click(); return; }
+  const delM = e.target.closest('button[data-del-model]');
+  if(delM){
+    const gi = Number(delM.dataset.delModel);
+    const g = brandDraft[gi];
+    if(g.items.length && !(await showConfirm(t('confirmDeleteModel').replace('{n}', g.items.length)))) return;
+    brandDraft.splice(gi, 1);
+    if(!brandDraft.length) brandDraft.push({ model:'', items:[] });
+    renderBrandModels();
+    return;
+  }
+  const del = e.target.closest('button[data-del]');
+  if(del){
+    const [gi, i] = del.dataset.del.split(':').map(Number);
+    brandDraft[gi].items.splice(i, 1);
+    renderBrandModels();
+    return;
+  }
+  const eye = e.target.closest('button[data-eye]');
+  if(eye){
+    const [gi, i] = eye.dataset.eye.split(':').map(Number);
+    const it = brandDraft[gi].items[i];
+    it.active = (it.active === false);   // masqué ↔ visible
+    renderBrandModels();
+  }
+});
+
+$('#brandModels').addEventListener('input', (e)=>{
+  const nomModele = e.target.closest('input[data-model]');
+  if(nomModele){ brandDraft[Number(nomModele.dataset.model)].model = nomModele.value; return; }
+  const nomColoris = e.target.closest('input[data-name]');
+  if(nomColoris){
+    const [gi, i] = nomColoris.dataset.name.split(':').map(Number);
+    brandDraft[gi].items[i].name = nomColoris.value;
+  }
+});
+
+// Chaque photo passe par le recadreur, l'une après l'autre, et rejoint le
+// modèle depuis lequel on a appuyé sur « Ajouter ».
 $('#catPhotoInput').addEventListener('change', async (e)=>{
   const fichiers = [...(e.target.files || [])];
   e.target.value = '';
-  if(!fichiers.length) return;
+  const gi = modeleCible; modeleCible = null;
+  if(!fichiers.length || gi === null || !brandDraft[gi]) return;
   for(let i = 0; i < fichiers.length; i++){
     let src;
     try{ src = await chargeImageFichier(fichiers[i]); }
@@ -3699,13 +3800,13 @@ $('#catPhotoInput').addEventListener('change', async (e)=>{
       ? t('cropStep').replace('{i}', i+1).replace('{n}', fichiers.length) : '';
     const out = await ouvreRecadreur(src);
     if(out){
-      brandDraft.push({
+      brandDraft[gi].items.push({
         name: '', active: true,
         photo: out.photo.data, photoType: out.photo.media_type,
         thumb: out.thumb.data, thumbType: out.thumb.media_type,
         createdAt: Date.now() + i
       });
-      renderBrandGrid();
+      renderBrandModels();
     }
   }
   $('#cropStep').textContent = '';
@@ -3717,38 +3818,47 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
   // qu'il pose qui rend le message visible — sans elle il reste en display:none.
   clearFieldError($('#b_name'));
   if(!nom){ setFieldError($('#b_name'), t('errBrandName')); return; }
-  if(!brandDraft.length){ showToast(t('errNoModel')); return; }
+  // On ignore les modèles restés complètement vides : ajouter un bloc puis
+  // changer d'avis ne doit rien coûter.
+  const modeles = brandDraft.filter(g => g.items.length);
+  if(!modeles.length){ showToast(t('errNoModel')); return; }
+  if(modeles.some(g => !(g.model || '').trim())){ showToast(t('errModelName')); return; }
 
   const btn = $('#saveBrandBtn');
   btn.disabled = true;
   try{
-    // Un document par fiche. On écrit en lot : cinq modèles, une seule
-    // opération — et si une écriture échoue, aucune ne passe.
+    // Un document par coloris, portant sa marque ET son modèle. On écrit en
+    // lot : si une écriture échoue, aucune ne passe.
     const lot = db.batch();
     const avant = brandOrigine
       ? catalogItems.filter(i => (i.brand||'').trim() === brandOrigine) : [];
-    const gardes = new Set(brandDraft.filter(i=>i.id).map(i=>i.id));
-    // ce qui a disparu du brouillon est supprimé
+    const gardes = new Set();
+    modeles.forEach(g => g.items.forEach(i => { if(i.id) gardes.add(i.id); }));
     avant.filter(i=>!gardes.has(i.id)).forEach(i=>lot.delete(db.collection('catalog').doc(i.id)));
-    brandDraft.forEach((it, rang)=>{
-      const donnees = {
-        ownerId: currentUid, brand: nom,
-        name: (it.name || '').trim(),
-        photo: it.photo, photoType: it.photoType,
-        thumb: it.thumb, thumbType: it.thumbType,
-        active: it.active !== false,
-        rang,
-        createdAt: it.createdAt || Date.now()
-      };
-      if(it.id) lot.set(db.collection('catalog').doc(it.id), donnees);
-      else      lot.set(db.collection('catalog').doc(), donnees);
+    let rang = 0;
+    modeles.forEach(g=>{
+      const nomModele = g.model.trim();
+      g.items.forEach(it=>{
+        const donnees = {
+          ownerId: currentUid, brand: nom, model: nomModele,
+          name: (it.name || '').trim(),
+          photo: it.photo, photoType: it.photoType,
+          thumb: it.thumb, thumbType: it.thumbType,
+          active: it.active !== false,
+          rang: rang++,
+          createdAt: it.createdAt || Date.now()
+        };
+        if(it.id) lot.set(db.collection('catalog').doc(it.id), donnees);
+        else      lot.set(db.collection('catalog').doc(), donnees);
+      });
     });
     await lot.commit();
     closeBrandSheet();
     showToast(t('toastBrandSaved'));
   }catch(err){
     // Le code d'erreur s'affiche : sur un iPhone il n'y a pas de console, et
-    // « permission-denied » se lit à voix haute (piège 13).
+    // « permission-denied » se lit à voix haute (piège 13). C'est ce message
+    // qui a dit, du premier coup, que les règles n'étaient pas publiées.
     showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
   }
   btn.disabled = false;
@@ -3756,7 +3866,8 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
 
 $('#deleteBrandBtn').addEventListener('click', async ()=>{
   if(!brandOrigine) return;
-  if(!(await showConfirm(t('confirmDeleteBrandAll').replace('{n}', brandDraft.length)))) return;
+  const n = catalogItems.filter(i => (i.brand||'').trim() === brandOrigine).length;
+  if(!(await showConfirm(t('confirmDeleteBrandAll').replace('{n}', n)))) return;
   try{
     const lot = db.batch();
     catalogItems.filter(i => (i.brand||'').trim() === brandOrigine)
