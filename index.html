@@ -549,6 +549,55 @@
   }
 
 
+
+  /* ===== Les commandes rangées par client =====
+     Dans « Tout », cinquante commandes de dix clients se lisent comme une
+     pile. Un dossier par client, replié, et on ouvre celui qu'on cherche —
+     exactement le geste des photos, et le même `<details>` natif. */
+  .group-btn{
+    width:100%; margin-bottom:10px; padding:9px; border-radius:12px; cursor:pointer; font:inherit;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    font-size:12.5px; font-weight:600; letter-spacing:-0.01em;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    position:relative; overflow:hidden; transition:transform .3s var(--spring), color .25s var(--ease-io), border-color .25s var(--ease-io);
+  }
+  .group-btn:active{ transform:scale(.98); }
+  .group-btn.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  .group-btn svg{ width:15px; height:15px; flex:none; }
+  .client-fold > summary{
+    display:flex; align-items:center; gap:9px; cursor:pointer; list-style:none;
+    padding:11px 13px; border-radius:15px; background:var(--mat);
+    border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    -webkit-user-select:none; user-select:none;
+    transition:border-color .25s var(--ease-io);
+  }
+  .client-fold > summary::-webkit-details-marker{ display:none; }
+  .client-fold > summary::marker{ content:''; }
+  .client-fold[open] > summary{ border-color:var(--accent); }
+  .client-fold > summary .fold-arrow{
+    flex:none; width:15px; height:15px; color:var(--text-faint);
+    transition:transform .3s var(--ease-out);
+  }
+  .client-fold[open] > summary .fold-arrow{ transform:rotate(90deg); }
+  .cf-name{
+    flex:1; min-width:0; font-weight:600; font-size:15px; letter-spacing:-0.015em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cf-count{
+    flex:none; font-size:11px; font-weight:600; padding:3px 9px; border-radius:100px;
+    background:var(--accent-soft); color:var(--accent); font-variant-numeric:tabular-nums;
+  }
+  .cf-body{ display:flex; flex-direction:column; gap:7px; padding:8px 0 3px 11px; }
+  /* Dans le dossier d'un client, son nom sur chaque carte est du bruit : on
+     le retire et c'est le PRODUIT qui prend la première ligne. La carte reste
+     la même, seule sa hiérarchie change. */
+  .cf-body .order-card .client{ display:none; }
+  .cf-body .order-card .card-top{ justify-content:flex-end; }
+  .cf-body .order-card .card-mid{
+    margin-top:0; font-style:normal; font-size:14px; font-weight:600;
+    color:var(--text); letter-spacing:-0.012em;
+  }
+
   /* ===== L'aperçu client =====
      Il n'affiche PAS une copie de la vitrine : il ouvre `client.html` en mode
      aperçu dans un cadre. Ce que le vendeur voit ici est littéralement la page
@@ -1800,6 +1849,10 @@
       <input type="text" id="searchInput" data-i18n-placeholder="searchOrders" placeholder="Rechercher un client ou un produit...">
     </div>
     <div class="tabs" id="tabs"></div>
+    <button type="button" class="group-btn" id="groupBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h4M3 12h4M3 17.5h4"/><path d="M10.5 6.5H21M10.5 12H21M10.5 17.5H21"/></svg>
+      <span id="groupBtnLabel" data-i18n="groupByClient">Ranger par client</span>
+    </button>
     <div class="list" id="list"></div>
   </div>
 
@@ -2485,6 +2538,9 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
+    groupByClient:'Ranger par client',
+    groupFlat:'Par date',
+    cmdOne:'1 commande', cmdMany:'{n} commandes',
     previewTitle:'Aperçu client',
     previewHint:'Ce que voit ton client dans son espace',
     previewCloseTitle:"Fermer l'aperçu",
@@ -2675,6 +2731,9 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
+    groupByClient:'Group by client',
+    groupFlat:'By date',
+    cmdOne:'1 order', cmdMany:'{n} orders',
     previewTitle:'Client preview',
     previewHint:'What your client sees in their space',
     previewCloseTitle:'Close the preview',
@@ -2777,7 +2836,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-26e';
+const BUILD = '2026-09-26f';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3395,6 +3454,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title = t(el.dataset.i18nTitle); });
   showWechatQr();   // libellé choisi à la main : personnel ou groupe
+  majGroupBtn();    // son libellé bascule selon l'état, data-i18n l'écraserait
   $('#buildStamp').textContent = 'DOLLAR$ SOURCING · v' + BUILD;
   render();
   if(viewState==='stats'){ buildRangeTabs(); renderStats(); }
@@ -3496,11 +3556,17 @@ function renderList(){
     listEl.innerHTML = emptyHtml('orders', t('emptyOrders'));
     return;
   }
-  listEl.innerHTML = filtered.map((o,i)=>{
-    const meta = STATUS_META[o.status];
-    const margin = orderMargin(o);
-    const mult = orderMultiplier(o);
-    return `
+  // Les deux dispositions partagent LA MÊME carte : une liste à plat et une
+  // liste rangée qui afficheraient deux cartes différentes finiraient par se
+  // contredire, et c'est la carte qu'on lit tous les jours.
+  listEl.innerHTML = groupeParClient ? listeRangee(filtered) : filtered.map(carteCommande).join('');
+}
+
+function carteCommande(o){
+  const meta = STATUS_META[o.status];
+  const margin = orderMargin(o);
+  const mult = orderMultiplier(o);
+  return `
       <div class="order-card" data-id="${o.id}">
         <div class="card-top">
           <div class="client">${escapeHtml(clientName(o))}</div>
@@ -3515,8 +3581,54 @@ function renderList(){
           <div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
         </div>
       </div>`;
+}
+
+// Un dossier par client, replié. L'état ouvert passe par le MÊME Set que les
+// photos (`foldsOuverts`), préfixé : la liste est redessinée en entier à
+// chaque snapshot Firestore, et le dossier se refermerait sous les doigts.
+function listeRangee(filtered){
+  const par = new Map();
+  filtered.forEach(o=>{
+    const cle = o.clientId || '_';
+    if(!par.has(cle)) par.set(cle, []);
+    par.get(cle).push(o);
+  });
+  // Le client dont la dernière commande est la plus récente arrive en tête :
+  // c'est l'ordre de la liste à plat, gardé au niveau du dossier.
+  const groupes = Array.from(par, ([cle, cmds])=>({
+      cle, cmds, nom: clientName(cmds[0]),
+      recent: Math.max.apply(null, cmds.map(o=>o.createdAt || 0))
+    })).sort((a,b)=> b.recent - a.recent);
+  return groupes.map(g=>{
+    const cle = 'cli:' + g.cle;
+    const du = clientRemaining(g.cle);
+    const n = g.cmds.length;
+    return '<details class="client-fold" data-fold="' + escapeHtml(cle) + '"'
+      + (foldsOuverts.has(cle) ? ' open' : '') + '>'
+      + '<summary>' + FLECHE
+      + '<span class="cf-name">' + escapeHtml(g.nom) + '</span>'
+      + (du > 0 ? '<span class="badge-due private">' + t('owesLabel') + ' ' + fmtMoney(du) + '</span>' : '')
+      + '<span class="cf-count">' + (n === 1 ? t('cmdOne') : t('cmdMany').replace('{n}', n)) + '</span>'
+      + '</summary><div class="cf-body">' + g.cmds.map(carteCommande).join('') + '</div></details>';
   }).join('');
 }
+
+// Une préférence, elle : contrairement à l'état d'un repli, elle doit survivre
+// à la fermeture de l'app.
+let groupeParClient = false;
+try{ groupeParClient = localStorage.getItem('ds_group_client') === '1'; }catch(e){}
+function majGroupBtn(){
+  const b = $('#groupBtn');
+  if(!b) return;
+  b.classList.toggle('on', groupeParClient);
+  $('#groupBtnLabel').textContent = groupeParClient ? t('groupFlat') : t('groupByClient');
+}
+$('#groupBtn').addEventListener('click', ()=>{
+  groupeParClient = !groupeParClient;
+  try{ localStorage.setItem('ds_group_client', groupeParClient ? '1' : '0'); }catch(e){}
+  majGroupBtn();
+  renderList();
+});
 
 function renderClientsTop3(){
   const el = $('#clientsTop3');
@@ -3671,7 +3783,8 @@ function photosDe(o){
 const foldsOuverts = new Set();
 document.addEventListener('toggle', (e)=>{
   const d = e.target;
-  if(!d || !d.classList || !d.classList.contains('photos-fold')) return;
+  if(!d || !d.classList) return;
+  if(!d.classList.contains('photos-fold') && !d.classList.contains('client-fold')) return;
   const cle = d.dataset.fold;
   if(!cle) return;
   if(d.open) foldsOuverts.add(cle); else foldsOuverts.delete(cle);
@@ -4443,7 +4556,7 @@ function renderGuestWelcome(){
              && trashedOrders.length===0 && trashedClients.length===0;
   const show = appEntered && !isOwner && empty;
   el.style.display = show ? 'block' : 'none';
-  ['#kpisMain','#ordersSearch','#tabs','#list'].forEach(sel=>{
+  ['#kpisMain','#ordersSearch','#tabs','#groupBtn','#list'].forEach(sel=>{
     const node = $(sel);
     if(node) node.style.display = show ? 'none' : '';
   });

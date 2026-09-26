@@ -705,14 +705,27 @@
   .cat-browse svg{ width:15px; height:15px; flex:none; }
 
   /* La photo en grand, avec de quoi commander sans revenir en arrière. */
+  /* Un calque plein écran ne suit pas le `max-width` de #app : sur une
+     tablette en paysage il s'étalait sur toute la largeur, bouton compris.
+     Le fond reste plein écran, le CONTENU est ramené à la colonne de lecture. */
   .cat-lb{
     position:fixed; inset:0; z-index:220; display:none; flex-direction:column;
     background:rgba(0,0,0,.9); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
-    padding:calc(env(safe-area-inset-top) + 58px) 16px calc(env(safe-area-inset-bottom) + 20px);
+    padding-top:calc(env(safe-area-inset-top) + 58px);
+    padding-bottom:calc(env(safe-area-inset-bottom) + 20px);
+    padding-left:max(16px, calc((100% - 600px) / 2));
+    padding-right:max(16px, calc((100% - 600px) / 2));
   }
   .cat-lb.open{ display:flex; animation:lbFade .22s var(--ease-out); }
-  .cat-lb-img{ flex:1; min-height:0; display:grid; place-items:center; }
-  .cat-lb-img img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:16px; display:block; }
+  /* FLEX et non GRID : avec `place-items:center`, la piste se dimensionne sur
+     le contenu, donc le `max-height:100%` de l'image se résout contre
+     elle-même et ne borne rien. En paysage l'image sortait de sa zone et le
+     texte se retrouvait par-dessus. Mesuré : 900 px dans une zone de 560. */
+  .cat-lb-img{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+  .cat-lb-img img{
+    max-width:100%; max-height:100%; width:auto; height:auto;
+    object-fit:contain; border-radius:16px; display:block;
+  }
   .cat-lb-foot{ flex:none; text-align:center; margin-top:16px; }
   .cat-lb-foot b{
     display:block; font-family:var(--font-display); font-size:18px; font-weight:600;
@@ -803,7 +816,7 @@
   @keyframes pickIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
   .pick-bar{
     flex:none; display:flex; align-items:center; gap:10px;
-    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+    padding:calc(env(safe-area-inset-top) + 12px) max(16px, calc((100% - 600px) / 2)) 12px;
     border-bottom:0.5px solid var(--hairline); background:var(--mat);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
   }
@@ -812,10 +825,13 @@
     font-weight:600; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   /* Le corps défile, pas la page : c'est ce qui fait que rien ne bouge dessous. */
-  .pick-body{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px; }
+  .pick-body{
+    flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:16px max(16px, calc((100% - 600px) / 2));
+  }
   .pick-foot{
     flex:none; display:flex; align-items:center; gap:12px;
-    padding:12px 16px calc(env(safe-area-inset-bottom) + 14px);
+    padding:12px max(16px, calc((100% - 600px) / 2)) calc(env(safe-area-inset-bottom) + 14px);
     border-top:0.5px solid var(--hairline); background:var(--mat);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
   }
