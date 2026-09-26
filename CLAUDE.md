@@ -454,10 +454,44 @@ mesuré, vingt modèles dans un seul document feraient déjà 2 040 Ko, cent en
 feraient 10 200. Le découpage marque → modèle n'est donc pas qu'une jolie
 navigation, **c'est ce qui rend le catalogue possible**.
 
-**Deux tailles par fiche**, pour la même raison : une vignette de 400 px
-(~25 Ko) pour la grille, la photo pleine de 900 px (~102 Ko) seulement à
-l'ouverture. Sans ça, ouvrir une marque de dix modèles téléchargerait 1 Mo au
-lieu de 250 Ko. Le même cadrage produit les deux, en un seul geste.
+**Deux tailles par fiche** : une vignette de 400 px (~30 Ko) pour la grille, la
+photo pleine de 900 px (~105 Ko) seulement à l'ouverture. Le même cadrage
+produit les deux, en un seul geste.
+
+**ET LES DEUX NE VIVENT PAS DANS LE MÊME DOCUMENT, parce que Firestore renvoie
+des documents ENTIERS.** C'était le défaut de conception du premier jet : la
+photo pleine était dans la fiche, donc la grille la téléchargeait aussi, et le
+découpage en deux tailles ne servait à rien. On ne peut pas demander un champ,
+il n'y a pas de projection.
+
+Mesuré sur les vraies données, cinq coloris d'une seule marque :
+
+| | poids |
+|---|---|
+| vignettes | 155 Ko |
+| photos pleines, que personne ne regardait à cet instant | **524 Ko** |
+| **total téléchargé à chaque ouverture du portail** | **679 Ko** |
+
+À cent fiches, plus de 13 Mo par ouverture. C'est la lenteur qui a été
+constatée sur tablette.
+
+La photo pleine vit donc dans **`catalogPhotos/{id}`**, au même identifiant que
+la fiche, et le portail ne la lit **que** lorsqu'un coloris s'ouvre en grand.
+Quatre conséquences :
+
+- **La vignette s'affiche tout de suite, la photo pleine la remplace** quand
+  elle arrive, avec un battement discret pendant ce temps. Un écran vide se lit
+  comme une panne ; une vignette un peu douce ne se remarque pas. Si la photo
+  manque, la vignette reste — jamais de trou.
+- **La migration est accrochée à l'écouteur**, comme la copie publique des
+  commandes : à la première ouverture de l'app, toute fiche portant encore sa
+  photo la voit déplacée, par paquets de cinq. Pas de script, pas de commande à
+  lancer, et le portail lit les deux formes en attendant (piège 24).
+- **L'enregistrement n'écrit la photo que s'il l'a sous la main.** La fiche
+  d'édition ne travaille qu'avec les vignettes : renommer un coloris ne doit
+  pas effacer sa photo faute de l'avoir chargée. Vérifié.
+- **Supprimer une fiche supprime les deux documents.** Sinon la photo resterait
+  seule dans la base, invisible et payante.
 
 **La lecture de `catalog` est OUVERTE dans les règles**, et il faut savoir
 pourquoi : le portail n'est jamais connecté à Firebase, Firestore le voit comme
@@ -1827,24 +1861,20 @@ fidélité dans les statistiques.
   une commande par modèle (plusieurs références #A7F3, plusieurs suivis) ou une
   commande unique à plusieurs lignes ? C'est elle qui décidera s'il faut porter
   `items` jusqu'à `orders`.
-- **LE CATALOGUE TÉLÉCHARGE LES PHOTOS PLEINES POUR RIEN, ET C'EST MESURÉ.**
-  Le découpage en deux tailles (vignette 400 px / photo 900 px) devait faire que
-  la grille ne coûte que les vignettes. **Il ne marche pas** : Firestore renvoie
-  des documents ENTIERS, on ne peut pas demander un champ. Le portail télécharge
-  donc les deux, à chaque ouverture. Relevé sur les vraies données du 26
-  septembre, cinq coloris d'une seule marque :
-
-  | | poids |
-  |---|---|
-  | vignettes | 155 Ko |
-  | **photos pleines, jamais regardées à ce moment-là** | **524 Ko** |
-  | **total téléchargé** | **679 Ko** |
-
-  À cent fiches, ça ferait plus de 13 Mo à chaque ouverture du portail. C'est la
-  lenteur constatée sur tablette, et ça rend le catalogue inutilisable dès
-  qu'il grossit. **Le correctif est de sortir la photo pleine dans sa propre
-  collection** (`catalogPhotos/{id}`), lue seulement à l'ouverture d'un coloris.
-  Nouvelle collection = nouvelles règles à publier (piège 29).
+- **Lever la limite de cinq articles par demande.** Aujourd'hui les vignettes
+  des coloris cochés sont **recopiées** dans la demande, donc elles comptent
+  dans le plafond du mégaoctet. La réponse décidée, et elle ne coûte rien :
+  **ne plus recopier, pointer la fiche du catalogue** (`catalogId`), que les
+  deux côtés ont déjà chargée. Le nombre de coloris par demande devient alors
+  illimité. Deux points à traiter en même temps : `product` est borné à
+  200 caractères par les règles, donc au-delà de quelques lignes il devient un
+  résumé et c'est `items[]` qu'il faut porter jusqu'à `orders` et afficher côté
+  vendeur ; et **une fiche supprimée du catalogue ferait perdre l'image des
+  anciennes commandes** — d'où la règle à rappeler : masquer avec l'œil, ne pas
+  supprimer.
+  **Firebase Storage reste écarté** : il ne sert que le cas où le client
+  photographie lui-même plus de cinq articles absents du catalogue, qui est le
+  cas rare. À rouvrir seulement s'il se présente pour de vrai.
 
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
