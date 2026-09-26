@@ -2836,7 +2836,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-26f';
+const BUILD = '2026-09-27a';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3217,6 +3217,7 @@ function startListeners(){
   db.collection('catalog').where('ownerId','==',currentUid).onSnapshot(snap=>{
     catalogItems = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
     if(viewState === 'catalogue') renderCatalogue();
+    sortLesPhotos(catalogItems);
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
@@ -4066,6 +4067,40 @@ $('#previewBtn').addEventListener('click', openPreview);
 $('#previewClose').addEventListener('click', closePreview);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closePreview(); });
 
+
+// Les fiches d'avant portent encore leur photo pleine DANS la fiche, et c'est
+// tout le poids que le portail téléchargeait pour rien. On la déplace vers
+// `catalogPhotos` à la première ouverture de l'app — pas de script, pas de
+// migration à lancer : c'est le même principe que la copie publique des
+// commandes, accrochée à l'écouteur pour qu'aucun chemin ne puisse l'oublier.
+let migrationPhotos = false;
+async function sortLesPhotos(items){
+  if(migrationPhotos) return;
+  const aBouger = items.filter(i => i.photo);
+  if(!aBouger.length) return;
+  migrationPhotos = true;
+  try{
+    // Par petits paquets : un lot Firestore plafonne, et une photo pèse ~100 Ko.
+    for(let d = 0; d < aBouger.length; d += 5){
+      const lot = db.batch();
+      aBouger.slice(d, d + 5).forEach(i=>{
+        lot.set(db.collection('catalogPhotos').doc(i.id),
+                { ownerId: currentUid, photo: i.photo, photoType: i.photoType || 'image/jpeg' });
+        lot.update(db.collection('catalog').doc(i.id), {
+          photo: firebase.firestore.FieldValue.delete(),
+          photoType: firebase.firestore.FieldValue.delete()
+        });
+      });
+      await lot.commit();
+    }
+  }catch(err){
+    // Elle prévient quand elle échoue : sans ça le catalogue resterait lent
+    // pour toujours et personne ne saurait pourquoi (piège 9).
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }
+  migrationPhotos = false;
+}
+
 $('#saveBrandBtn').addEventListener('click', async ()=>{
   const nom = $('#b_name').value.trim();
   // setFieldError, pas un textContent à la main : c'est la classe `.invalid`
@@ -4088,22 +4123,35 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
       ? catalogItems.filter(i => (i.brand||'').trim() === brandOrigine) : [];
     const gardes = new Set();
     modeles.forEach(g => g.items.forEach(i => { if(i.id) gardes.add(i.id); }));
-    avant.filter(i=>!gardes.has(i.id)).forEach(i=>lot.delete(db.collection('catalog').doc(i.id)));
+    avant.filter(i=>!gardes.has(i.id)).forEach(i=>{
+      lot.delete(db.collection('catalog').doc(i.id));
+      lot.delete(db.collection('catalogPhotos').doc(i.id));
+    });
     let rang = 0;
     modeles.forEach(g=>{
       const nomModele = g.model.trim();
       g.items.forEach(it=>{
+        // La fiche ne porte QUE la vignette. La photo pleine part dans son
+        // propre document, au même identifiant : Firestore renvoie des
+        // documents entiers, donc tout ce qui reste ici est téléchargé par
+        // chaque client à chaque ouverture de sa vitrine.
         const donnees = {
           ownerId: currentUid, brand: nom, model: nomModele,
           name: (it.name || '').trim(),
-          photo: it.photo, photoType: it.photoType,
           thumb: it.thumb, thumbType: it.thumbType,
           active: it.active !== false,
           rang: rang++,
           createdAt: it.createdAt || Date.now()
         };
-        if(it.id) lot.set(db.collection('catalog').doc(it.id), donnees);
-        else      lot.set(db.collection('catalog').doc(), donnees);
+        const ref = it.id ? db.collection('catalog').doc(it.id) : db.collection('catalog').doc();
+        lot.set(ref, donnees);
+        // On n'écrit la photo QUE si on l'a sous la main : la fiche d'édition
+        // ne travaille qu'avec les vignettes, donc renommer un coloris ne doit
+        // pas effacer sa photo faute de l'avoir chargée.
+        if(it.photo){
+          lot.set(db.collection('catalogPhotos').doc(ref.id),
+                  { ownerId: currentUid, photo: it.photo, photoType: it.photoType || 'image/jpeg' });
+        }
       });
     });
     await lot.commit();
@@ -4125,7 +4173,10 @@ $('#deleteBrandBtn').addEventListener('click', async ()=>{
   try{
     const lot = db.batch();
     catalogItems.filter(i => (i.brand||'').trim() === brandOrigine)
-                .forEach(i => lot.delete(db.collection('catalog').doc(i.id)));
+                .forEach(i => {
+                  lot.delete(db.collection('catalog').doc(i.id));
+                  lot.delete(db.collection('catalogPhotos').doc(i.id));
+                });
     await lot.commit();
     closeBrandSheet();
     showToast(t('toastBrandDeleted'));

@@ -108,6 +108,22 @@ service cloud.firestore {
       allow update, delete: if isOwner() || isMine();
     }
 
+    // ── LES PHOTOS PLEINES DU CATALOGUE ──
+    // Séparées, et ce n'est pas du rangement : Firestore renvoie des documents
+    // ENTIERS, on ne peut pas demander un seul champ. Tant que la photo de
+    // 900 px vivait dans la fiche, la grille la téléchargeait aussi — mesuré,
+    // 679 Ko pour cinq coloris dont 524 Ko que personne ne regardait à cet
+    // instant. À cent fiches, 13 Mo à chaque ouverture du portail.
+    //
+    // Le portail ne lit donc ce document QUE lorsqu'un coloris est ouvert en
+    // grand, et par son identifiant. Même ouverture que `catalog`, et même
+    // conséquence : rien de confidentiel ici.
+    match /catalogPhotos/{itemId} {
+      allow read: if true;
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isOwner() || isMine();
+    }
+
     // ── RÉGLAGES ──
     // La liste des accès : lisible par tout compte connecté (nécessaire pour qu'un
     // invité vérifie sa propre autorisation), modifiable uniquement par le propriétaire.

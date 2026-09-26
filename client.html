@@ -733,6 +733,10 @@
   }
   .cat-lb-foot > span{ display:block; font-size:12.5px; color:rgba(255,255,255,.6); margin-top:3px; }
   .cat-lb-foot .btn-primary{ margin-top:15px; }
+  /* La vignette pendant que la photo pleine arrive. Un battement discret dit
+     « ça charge » sans écrire le mot. */
+  .cat-lb-img img.chargement{ animation:catLoad 1.15s var(--ease-io) infinite; }
+  @keyframes catLoad{ 0%,100%{ opacity:.68; } 50%{ opacity:1; } }
 
   /* Mode aperçu : le vendeur regarde sa propre vitrine. Tout ce qui appartient
      à un client précis disparaît, puisqu'il n'y en a pas. */
@@ -1428,7 +1432,12 @@
     .shop-item.affordable, .track.animate .track-dot,
     .track.animate .track-label, .hello-aura,
     #aurora i, .skel::after,
+    .cat-lb-img img.chargement,
     .order-card::before{ animation:none !important; }
+    /* Une animation infinie ne se raccourcit pas, elle se coupe : accélérée,
+       elle clignote. Sans elle la vignette reste simplement pleinement
+       opaque, et la photo la remplace quand elle arrive. */
+    .cat-lb-img img.chargement{ opacity:1 !important; }
     .skel::after{ display:none !important; }
     .order-card::before{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
@@ -3436,6 +3445,9 @@ function listenCatalog(ownerId){
                             // publication : une fiche masquée n'existe pas ici.
                             .filter(i => i.active !== false && (i.thumb || i.photo));
     catalogLoaded = true; catalogError = '';
+    // Le vendeur a pu remplacer une photo : on ne garde pas l'ancienne en
+    // mémoire. Le catalogue ne change pas souvent, ça ne coûte rien.
+    catPhotos.clear();
     if(currentTab === 'catalog') renderCatalog();
   }, err=>{
     // Jamais en silence : un catalogue vide et un catalogue en panne se
@@ -3706,11 +3718,47 @@ function libellePicked(){
 }
 
 
+// La photo pleine ne vit plus dans la fiche : elle est dans `catalogPhotos`,
+// lue UNIQUEMENT quand un coloris s'ouvre en grand. C'est ce qui fait passer
+// l'ouverture de la vitrine de 679 Ko à 155 Ko sur les cinq premiers coloris —
+// Firestore renvoie des documents entiers, tout ce qui reste dans la fiche est
+// téléchargé par tout le monde, tout le temps.
+const catPhotos = new Map();
+function catPhotoPleine(id){
+  if(catPhotos.has(id)) return Promise.resolve(catPhotos.get(id));
+  return db.collection('catalogPhotos').doc(id).get().then(doc=>{
+    if(!doc.exists) return null;
+    const d = doc.data();
+    if(!d || !d.photo) return null;
+    const src = 'data:' + (d.photoType || 'image/jpeg') + ';base64,' + d.photo;
+    catPhotos.set(id, src);
+    return src;
+  });
+}
+
 function openCatLb(id){
   const i = catalogItems.find(x => x.id === id);
   if(!i) return;
   catCurrent = i;
-  $('#catLbImg').src = catImg(i, true);
+  const img = $('#catLbImg');
+  if(i.photo){
+    // Fiche pas encore migrée : elle porte encore sa photo. On lit les deux
+    // formes, on n'écrit que la nouvelle — comme pour photo/photos[].
+    img.src = catImg(i, true);
+    img.classList.remove('chargement');
+  }else{
+    // La vignette s'affiche TOUT DE SUITE et la photo pleine la remplace
+    // quand elle arrive : un écran vide pendant le téléchargement se lit
+    // comme une panne, une vignette un peu douce ne se remarque pas.
+    img.src = catImg(i, false);
+    img.classList.add('chargement');
+    catPhotoPleine(id).then(src=>{
+      if(catCurrent && catCurrent.id === id){
+        if(src) img.src = src;
+        img.classList.remove('chargement');
+      }
+    }).catch(()=>{ img.classList.remove('chargement'); });
+  }
   $('#catLbName').textContent = [i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ')
                                 || (i.brand || '');
   $('#catLbSub').textContent = i.brand || '';
@@ -3721,6 +3769,7 @@ function closeCatLb(){
   if(!lb.classList.contains('open')) return;
   lb.classList.remove('open');
   $('#catLbImg').removeAttribute('src');
+  $('#catLbImg').classList.remove('chargement');
   catCurrent = null;
 }
 $('#catLbClose').addEventListener('click', closeCatLb);
