@@ -575,7 +575,32 @@
     position:absolute; pointer-events:none; border-radius:4px;
     box-shadow:0 0 0 9999px rgba(0,0,0,.62); outline:1.5px solid rgba(255,255,255,.9);
   }
-  .crop-tools{ flex:none; display:flex; justify-content:center; gap:12px; padding:16px 16px 6px; }
+  /* Les poignées : visibles seulement en mode libre, et assez grandes pour
+     être attrapées au doigt sans viser. */
+  .crop-h{ display:none; position:absolute; width:30px; height:30px; pointer-events:auto; cursor:grab; }
+  .cropper[data-libre="1"] .crop-h{ display:block; }
+  .crop-h::after{
+    content:''; position:absolute; width:16px; height:16px;
+    border:2.5px solid #fff; border-radius:2px;
+  }
+  .crop-h.nw{ left:-15px; top:-15px; }    .crop-h.nw::after{ right:0; bottom:0; border-right:none; border-bottom:none; }
+  .crop-h.ne{ right:-15px; top:-15px; }   .crop-h.ne::after{ left:0;  bottom:0; border-left:none;  border-bottom:none; }
+  .crop-h.sw{ left:-15px; bottom:-15px; } .crop-h.sw::after{ right:0; top:0;    border-right:none; border-top:none; }
+  .crop-h.se{ right:-15px; bottom:-15px; }.crop-h.se::after{ left:0;  top:0;    border-left:none;  border-top:none; }
+
+  .crop-ratios{
+    flex:none; display:flex; gap:7px; padding:14px 16px 0;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .crop-ratios::-webkit-scrollbar{ display:none; }
+  .crop-ratios button{
+    flex:none; padding:8px 14px; border-radius:999px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.12); color:rgba(255,255,255,.72);
+    font-family:var(--font-body); font-size:13px; font-weight:700;
+    font-variant-numeric:tabular-nums; transition:background .2s ease, color .2s ease;
+  }
+  .crop-ratios button.active{ background:#fff; color:#000; }
+  .crop-tools{ flex:none; display:flex; justify-content:center; gap:12px; padding:12px 16px 6px; }
   .crop-tools button{
     width:46px; height:40px; border-radius:11px; border:none; cursor:pointer;
     background:rgba(255,255,255,.12); color:#fff;
@@ -2195,7 +2220,22 @@
     <!-- Un CANVAS et non une <img> : pivoter revient alors à redessiner, sans
          jamais repasser par une compression JPEG qui abîmerait la photo. -->
     <canvas class="crop-img" id="cropImg"></canvas>
-    <div class="crop-hole" id="cropHole"></div>
+    <!-- Les quatre poignées ne servent qu'en mode libre : sur un format imposé,
+         le cadre est calculé et n'a pas à être tiré. -->
+    <div class="crop-hole" id="cropHole">
+      <i class="crop-h nw" data-h="nw"></i><i class="crop-h ne" data-h="ne"></i>
+      <i class="crop-h sw" data-h="sw"></i><i class="crop-h se" data-h="se"></i>
+    </div>
+  </div>
+  <!-- Les formats. « Libre » laisse tirer les coins ; les autres imposent leur
+       proportion et se contentent du glisser-zoomer. -->
+  <div class="crop-ratios" id="cropRatios">
+    <button type="button" data-r="free" class="active" data-i18n="ratioFree">Libre</button>
+    <button type="button" data-r="1">1:1</button>
+    <button type="button" data-r="0.8">4:5</button>
+    <button type="button" data-r="0.75">3:4</button>
+    <button type="button" data-r="0.5625">9:16</button>
+    <button type="button" data-r="1.7778">16:9</button>
   </div>
   <div class="crop-tools">
     <button type="button" id="cropRotL" data-i18n-title="cropRotLeft" title="Pivoter à gauche" aria-label="Pivoter à gauche">
@@ -2398,9 +2438,10 @@ const I18N = {
     errNoModel:'Ajoute au moins un modèle.',
     errBrandName:'Indique le nom de la marque.',
     toastBrandSaved:'Marque enregistrée.', toastBrandDeleted:'Marque supprimée.',
-    cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
+    cropTitle:'Cadre le modèle', cropHint:'Choisis un format, glisse pour placer, pince pour zoomer',
     cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
     cropRotLeft:'Pivoter à gauche', cropRotRight:'Pivoter à droite',
+    ratioFree:'Libre',
     toastPhotoUnreadable:'Impossible de lire cette image.',
     brandsTitle:'Marques & modèles', addBrand:'+ Marque', addModel:'+ Ajouter un modèle',
     modelSingular:'modèle', modelsPlural:'modèles',
@@ -2583,9 +2624,10 @@ const I18N = {
     errNoModel:'Add at least one model.',
     errBrandName:'Enter the brand name.',
     toastBrandSaved:'Brand saved.', toastBrandDeleted:'Brand deleted.',
-    cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
+    cropTitle:'Frame the item', cropHint:'Pick a format, drag to position, pinch to zoom',
     cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
     cropRotLeft:'Rotate left', cropRotRight:'Rotate right',
+    ratioFree:'Free',
     toastPhotoUnreadable:'This image could not be read.',
     brandsTitle:'Brands & models', addBrand:'+ Brand', addModel:'+ Add a model',
     modelSingular:'model', modelsPlural:'models',
@@ -2667,7 +2709,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-26b';
+const BUILD = '2026-09-26c';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3913,12 +3955,12 @@ function chargeImageFichier(file){
 // Exporte la portion carrée choisie, à la taille demandée. La qualité descend
 // tant que c'est trop lourd : les photos sont écrites EN BASE64 DANS le
 // document Firestore, qui plafonne à 1 Mo (piège 23).
-function exporteCarre(source, sx, sy, taille, cote, viseKo){
+function exporteCarre(source, sx, sy, sw, sh, ow, oh, viseKo){
   const c = document.createElement('canvas');
-  c.width = cote; c.height = cote;
+  c.width = ow; c.height = oh;
   const x = c.getContext('2d');
-  x.fillStyle = '#fff'; x.fillRect(0, 0, cote, cote);
-  x.drawImage(source, sx, sy, taille, taille, 0, 0, cote, cote);
+  x.fillStyle = '#fff'; x.fillRect(0, 0, ow, oh);
+  x.drawImage(source, sx, sy, sw, sh, 0, 0, ow, oh);
   let q = 0.72;
   let url = c.toDataURL('image/jpeg', q);
   while(url.length > viseKo * 1024 && q > 0.35){
@@ -3928,29 +3970,56 @@ function exporteCarre(source, sx, sy, taille, cote, viseKo){
   return { media_type:'image/jpeg', data:url.split(',')[1], url };
 }
 
-let cropEtat = null;    // {src, iw, ih, S, cx, cy, min, scale, x, y}
+let cropEtat = null;    // {src, iw, ih, Sw, Sh, cx, cy, min, scale, x, y, ratio}
 let cropRendu = null;
 
-function placeCrop(src){
+// Le cadre a deux dimensions, pas une : Massif choisit son format, du carré au
+// 9:16, ou tire les coins en mode libre. `ratio` vaut null en libre, sinon
+// largeur/hauteur.
+//
+// La grille du catalogue reste régulière malgré les formats mélangés : la
+// vignette y est affichée cadrée au centre (`object-fit:cover`), alors que la
+// photo stockée garde le format choisi. Liberté de cadrage d'un côté, grille
+// lisible de l'autre — il n'y avait pas à choisir.
+function cadreDuRatio(W, H, ratio){
+  const marge = 0.86;
+  if(!ratio){ const c = Math.round(Math.min(W, H) * marge); return { Sw:c, Sh:c }; }
+  let Sw = W * marge, Sh = Sw / ratio;
+  if(Sh > H * marge){ Sh = H * marge; Sw = Sh * ratio; }
+  return { Sw: Math.round(Sw), Sh: Math.round(Sh) };
+}
+
+function poseTrou(){
   const e = cropEtat;
+  const trou = document.getElementById('cropHole');
+  trou.style.width = e.Sw + 'px';  trou.style.height = e.Sh + 'px';
+  trou.style.left  = e.cx + 'px';  trou.style.top    = e.cy + 'px';
+  document.getElementById('cropper').setAttribute('data-libre', e.ratio ? '0' : '1');
+}
+
+// `garde` rejoue le placement sans toucher au zoom ni à la position de l'image :
+// changer de format ne doit pas défaire le cadrage qu'on vient de faire.
+function placeCrop(src, ratio, garde){
+  const e = cropEtat || {};
   const stage = document.getElementById('cropStage');
   const W = stage.clientWidth, H = stage.clientHeight;
-  const S = Math.round(Math.min(W, H) * 0.86);
-  const cx = Math.round((W - S) / 2), cy = Math.round((H - S) / 2);
-  const trou = document.getElementById('cropHole');
-  trou.style.width = S + 'px';  trou.style.height = S + 'px';
-  trou.style.left  = cx + 'px'; trou.style.top    = cy + 'px';
-  // le canvas affiché est une copie à l'échelle 1 : c'est la transform qui zoome
-  const vue = document.getElementById('cropImg');
-  vue.width = src.width; vue.height = src.height;
-  vue.getContext('2d').drawImage(src, 0, 0);
+  const { Sw, Sh } = cadreDuRatio(W, H, ratio);
+  const cx = Math.round((W - Sw) / 2), cy = Math.round((H - Sh) / 2);
+  if(!garde){
+    // le canvas affiché est une copie à l'échelle 1 : c'est la transform qui zoome
+    const vue = document.getElementById('cropImg');
+    vue.width = src.width; vue.height = src.height;
+    vue.getContext('2d').drawImage(src, 0, 0);
+  }
   // L'image doit toujours COUVRIR le cadre : en dessous, on exporterait du vide.
-  const min = Math.max(S / src.width, S / src.height);
-  cropEtat = Object.assign(e || {}, {
-    src, iw:src.width, ih:src.height, S, cx, cy, min, scale:min,
-    x: cx + (S - src.width  * min) / 2,
-    y: cy + (S - src.height * min) / 2
+  const min = Math.max(Sw / src.width, Sh / src.height);
+  const scale = garde ? Math.max(min, e.scale || min) : min;
+  cropEtat = Object.assign(e, {
+    src, iw:src.width, ih:src.height, Sw, Sh, cx, cy, min, scale, ratio: ratio || null,
+    x: garde ? e.x : cx + (Sw - src.width  * scale) / 2,
+    y: garde ? e.y : cy + (Sh - src.height * scale) / 2
   });
+  poseTrou();
   appliqueCrop();
 }
 
@@ -3959,15 +4028,23 @@ function ouvreRecadreur(src){
     cropRendu = resolve;
     cropEtat = {};
     document.getElementById('cropper').classList.add('open');
-    placeCrop(src);
+    majBoutonsRatio(null);
+    placeCrop(src, null, false);
+  });
+}
+
+function majBoutonsRatio(ratio){
+  document.querySelectorAll('#cropRatios button').forEach(b=>{
+    const r = b.dataset.r === 'free' ? null : Number(b.dataset.r);
+    b.classList.toggle('active', r === ratio || (r === null && !ratio));
   });
 }
 
 function appliqueCrop(){
   const e = cropEtat; if(!e || !e.src) return;
   const w = e.iw * e.scale, h = e.ih * e.scale;
-  e.x = Math.min(e.cx, Math.max(e.cx + e.S - w, e.x));
-  e.y = Math.min(e.cy, Math.max(e.cy + e.S - h, e.y));
+  e.x = Math.min(e.cx, Math.max(e.cx + e.Sw - w, e.x));
+  e.y = Math.min(e.cy, Math.max(e.cy + e.Sh - h, e.y));
   document.getElementById('cropImg').style.transform =
     'translate(' + e.x + 'px,' + e.y + 'px) scale(' + e.scale + ')';
 }
@@ -3984,7 +4061,7 @@ function tourneCrop(sens){
   x.translate(c.width / 2, c.height / 2);
   x.rotate(sens * Math.PI / 2);
   x.drawImage(src, -src.width / 2, -src.height / 2);
-  placeCrop(c);
+  placeCrop(c, e.ratio, false);
 }
 
 function fermeCrop(resultat){
@@ -3994,16 +4071,22 @@ function fermeCrop(resultat){
   if(rendre) rendre(resultat || null);
 }
 
-// Le même cadrage donne les DEUX tailles : la vignette de la grille et la
-// photo pleine. Deux appels, un seul geste de l'utilisateur.
+// Le même cadrage donne les DEUX tailles : la vignette de la grille et la photo
+// pleine. C'est la plus GRANDE dimension qui est bornée, pour qu'un 9:16 garde
+// autant de définition qu'un carré.
 function valideCrop(){
   const e = cropEtat; if(!e || !e.src) return;
   const sx = (e.cx - e.x) / e.scale;
   const sy = (e.cy - e.y) / e.scale;
-  const taille = e.S / e.scale;
+  const sw = e.Sw / e.scale, sh = e.Sh / e.scale;
+  const sortie = (cote)=>{
+    const k = cote / Math.max(e.Sw, e.Sh);
+    return { w: Math.max(1, Math.round(e.Sw * k)), h: Math.max(1, Math.round(e.Sh * k)) };
+  };
+  const p = sortie(CAT_PLEINE), v = sortie(CAT_VIGNETTE);
   fermeCrop({
-    photo: exporteCarre(e.src, sx, sy, taille, CAT_PLEINE, 150),
-    thumb: exporteCarre(e.src, sx, sy, taille, CAT_VIGNETTE, 40)
+    photo: exporteCarre(e.src, sx, sy, sw, sh, p.w, p.h, 150),
+    thumb: exporteCarre(e.src, sx, sy, sw, sh, v.w, v.h, 40)
   });
 }
 
@@ -4042,7 +4125,7 @@ function valideCrop(){
       cropEtat.x = x0 + (p.x - mx);
       cropEtat.y = y0 + (p.y - my);
     } else if(ev.touches.length >= 2){
-      const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+      const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 12,
                   echelle0 * (ecart(ev.touches[0], ev.touches[1]) / ecart0)));
       const c = milieu(ev.touches[0], ev.touches[1]);
       const m = local(c.x, c.y);
@@ -4073,7 +4156,7 @@ function valideCrop(){
     ev.preventDefault();
     const p = local(ev.clientX, ev.clientY);
     const avant = cropEtat.scale;
-    const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 8,
+    const s = Math.max(cropEtat.min, Math.min(cropEtat.min * 12,
                 avant * (ev.deltaY < 0 ? 1.12 : 1/1.12)));
     cropEtat.x = p.x - (p.x - cropEtat.x) * (s / avant);
     cropEtat.y = p.y - (p.y - cropEtat.y) * (s / avant);
@@ -4081,6 +4164,81 @@ function valideCrop(){
     appliqueCrop();
   }, { passive:false });
 })();
+
+// --- Les poignées du mode libre ---
+// On tire un coin, le coin OPPOSÉ reste fixe. Le cadre ne peut pas sortir de
+// l'image affichée : sinon on exporterait du vide, exactement ce que la règle
+// « l'image couvre le cadre » évite dans l'autre sens.
+(function(){
+  const stage = document.getElementById('cropStage');
+  let coin = null, fixeX = 0, fixeY = 0;
+  const MINI = 60;
+
+  function local(px, py){
+    const r = stage.getBoundingClientRect();
+    return { x: px - r.left, y: py - r.top };
+  }
+  function prend(nom, px, py){
+    const e = cropEtat;
+    coin = nom;
+    // le point diagonalement opposé, qui ne bougera pas
+    fixeX = nom.includes('w') ? e.cx + e.Sw : e.cx;
+    fixeY = nom[0] === 'n'    ? e.cy + e.Sh : e.cy;
+  }
+  function tire(px, py){
+    const e = cropEtat; if(!e || !e.src || !coin) return;
+    const p = local(px, py);
+    // l'image affichée : le cadre doit rester dedans
+    const gx = e.x, gy = e.y, dx = e.x + e.iw * e.scale, dy = e.y + e.ih * e.scale;
+    const bx = Math.max(gx, Math.min(dx, p.x));
+    const by = Math.max(gy, Math.min(dy, p.y));
+    let x1 = Math.min(fixeX, bx), x2 = Math.max(fixeX, bx);
+    let y1 = Math.min(fixeY, by), y2 = Math.max(fixeY, by);
+    if(x2 - x1 < MINI){ if(bx < fixeX) x1 = x2 - MINI; else x2 = x1 + MINI; }
+    if(y2 - y1 < MINI){ if(by < fixeY) y1 = y2 - MINI; else y2 = y1 + MINI; }
+    e.cx = Math.round(x1); e.cy = Math.round(y1);
+    e.Sw = Math.round(x2 - x1); e.Sh = Math.round(y2 - y1);
+    // le zoom minimal change avec la taille du cadre
+    e.min = Math.max(e.Sw / e.iw, e.Sh / e.ih);
+    if(e.scale < e.min) e.scale = e.min;
+    poseTrou();
+    appliqueCrop();
+  }
+  function lache(){ coin = null; }
+
+  document.getElementById('cropHole').addEventListener('touchstart', (ev)=>{
+    const h = ev.target.closest('.crop-h');
+    if(!h || !cropEtat || cropEtat.ratio) return;
+    ev.preventDefault(); ev.stopPropagation();
+    prend(h.dataset.h, ev.touches[0].clientX, ev.touches[0].clientY);
+  }, { passive:false });
+  stage.addEventListener('touchmove', (ev)=>{
+    if(!coin) return;
+    ev.preventDefault(); ev.stopPropagation();
+    tire(ev.touches[0].clientX, ev.touches[0].clientY);
+  }, { passive:false });
+  stage.addEventListener('touchend', lache, { passive:true });
+
+  document.getElementById('cropHole').addEventListener('mousedown', (ev)=>{
+    const h = ev.target.closest('.crop-h');
+    if(!h || !cropEtat || cropEtat.ratio) return;
+    ev.preventDefault(); ev.stopPropagation();
+    prend(h.dataset.h, ev.clientX, ev.clientY);
+  });
+  window.addEventListener('mousemove', (ev)=>{ if(coin) tire(ev.clientX, ev.clientY); });
+  window.addEventListener('mouseup', lache);
+})();
+
+// --- Le choix du format ---
+// Changer de format garde le zoom et la position : on affine son cadrage, on
+// ne recommence pas.
+document.getElementById('cropRatios').addEventListener('click', (e)=>{
+  const b = e.target.closest('button[data-r]');
+  if(!b || !cropEtat || !cropEtat.src) return;
+  const ratio = b.dataset.r === 'free' ? null : Number(b.dataset.r);
+  majBoutonsRatio(ratio);
+  placeCrop(cropEtat.src, ratio, true);
+});
 
 document.getElementById('cropOk').addEventListener('click', valideCrop);
 document.getElementById('cropCancel').addEventListener('click', ()=>fermeCrop(null));

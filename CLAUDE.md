@@ -459,17 +459,33 @@ d'achat ni de nom de fournisseur dans le catalogue.** Ce qui est là est public.
 Le catalogue est réservé au **propriétaire**, comme tout ce qui touche au client
 final (voir le tableau des invités).
 
-### Le recadreur carré
+### Le recadreur
 
-Le même dans les deux fichiers, et il sert au catalogue comme aux photos du
-client. Le cadre est **fixe**, l'image glisse et se zoome dessous : le geste de
-la photo de profil d'iOS.
+Le cadre ne bouge pas, l'image glisse et se zoome dessous : le geste de la
+photo de profil d'iOS.
 
-**Le carré est imposé, et c'est un choix, pas une limite.** Une grille aux
-formats mélangés devient un escalier et on ne compare plus rien — or un
-catalogue ne sert qu'à comparer. Si un second format devient nécessaire un
-jour, ce sera un format **fixe** de plus (portrait 4:5), jamais du recadrage
-libre.
+**Deux versions, et la différence est voulue.** Dans le **portail**, le cadre
+est carré, point : le client envoie une photo de produit, il n'a pas à choisir
+un format, et ses cartes restent régulières. Dans le **catalogue**, Massif
+choisit — **Libre, 1:1, 4:5, 3:4, 9:16, 16:9** — parce que c'est sa vitrine et
+que c'est lui qui sait comment un produit se montre.
+
+**J'avais soutenu l'inverse, et j'avais tort sur un point** : je pensais devoir
+choisir entre la liberté de cadrage et une grille lisible. Les deux tiennent
+ensemble — **la vignette est affichée cadrée au centre (`object-fit:cover`)
+alors que la photo stockée garde son format**. La grille reste régulière quoi
+qu'il cadre, et la photo s'ouvre entière. Il n'y avait pas d'arbitrage à faire,
+juste deux endroits à distinguer.
+
+En mode **Libre**, quatre poignées de coin redimensionnent le cadre : le coin
+opposé reste fixe, et le cadre ne peut pas sortir de l'image affichée — sinon
+on exporterait du vide, exactement ce que la règle « l'image couvre le cadre »
+évite dans l'autre sens. Changer de format **garde le zoom et la position** :
+on affine, on ne recommence pas.
+
+À l'export, c'est la **plus grande dimension** qui est bornée (900 px pour la
+photo, 400 pour la vignette), pour qu'un 9:16 garde autant de définition qu'un
+carré.
 
 **La source est un CANVAS, jamais une `<img>`.** Pivoter revient donc à
 redessiner : dix quarts de tour n'abîment rien, alors qu'un aller-retour par
