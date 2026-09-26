@@ -487,13 +487,43 @@ quatrième case devient « +N »), puis les modèles de la marque avec leurs
 coloris. `active` est respecté : **une fiche masquée n'existe pas ici** — c'est
 exactement à ça que sert ce bouton.
 
-**Le pont vers la commande** : la photo en grand porte un bouton « Passer
-commande » qui bascule sur l'onglet Demande avec le produit **déjà écrit**, ses
-trois niveaux compris (`Asics · Ensemble / Veste · Bleu Marine`). Le vendeur sait
-alors exactement quel article acheter. **La photo, elle, ne suit pas** : elle est
-déjà dans son catalogue, et la recopier dans la demande pèserait pour rien sur
-le plafond d'un document (piège 23). Le chemin inverse existe aussi, un bouton
-« Parcourir le catalogue » sous le champ produit.
+#### Commander depuis le catalogue
+
+**Le champ « Produit » n'est plus d'abord un champ de texte.** C'est un bouton
+qui ouvre une fenêtre plein écran : les marques, une marque, ses coloris qu'on
+**coche**. Le client en prend trois d'un coup, il valide, et les trois arrivent
+dans sa demande **chacun avec sa quantité** et **chacun avec sa photo**, sans
+qu'il ait rien à téléverser. Le champ texte reste en dessous pour ce qui n'est
+pas encore au catalogue : les deux chemins cohabitent, un seul suffit.
+
+**Une quantité par coloris, et le champ « Quantité » unique disparaît** dès
+qu'il y a une ligne. Deux endroits pour le même nombre, c'est une erreur de
+saisie qui attend son heure. Le `qty` envoyé est la somme des lignes.
+
+**Ce que ça écrit.** `product` reste **une seule chaîne lisible** —
+`Asics · Ensemble / Veste : Gris ×3, Noire, Blanc ×2` — parce que c'est elle qui
+voyage partout sans une ligne de code en plus : recherche du vendeur, fiche
+commande, copie publique, portail. **Elle est coupée à 190 caractères** : les
+règles bornent ce champ à 200, et au-delà la base refuse l'écriture — le client
+ne lirait qu'un « erreur d'envoi » qui ne lui apprend rien (piège 9 appliqué à
+l'écriture). La liste détaillée part en plus dans **`items[]`**
+(`catalogId`, `brand`, `model`, `name`, `qty`), que personne ne lit encore :
+c'est elle qui permettra un jour de découper une demande en plusieurs commandes.
+**Attention, `items` ne vit que sur la demande** — la validation côté vendeur ne
+la recopie pas, et la demande est supprimée ensuite. À traiter le jour où on
+construira la commande à plusieurs lignes.
+
+**Les vignettes comptent dans le plafond des photos.** Elles partent dans le
+**même document** que les photos du client, et Firestore plafonne à 1 Mo
+(piège 23) : le nombre de coloris cochés est donc borné par le même compteur —
+cinq en tout, coloris et photos confondus, avec un message qui le dit. C'est la
+**vignette de 400 px** qui part, pas la photo pleine : elle suffit à reconnaître
+l'article et pèse le quart. Trois coloris = 19 Ko, mesuré.
+
+**La vitrine et la fenêtre de choix partagent le même rendu** (`catVueMarques`,
+`catVueMarque`, avec un mode). « Passer commande » depuis la photo en grand
+remplit **le même panier** que la fenêtre. Deux listes différentes, c'est deux
+comportements qui divergent : la règle de `decodeAt`, encore.
 
 #### L'aperçu client, et pourquoi ce n'est pas une copie
 
@@ -1652,6 +1682,38 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    se connecte avec le **compte personnel**, coller n'est pas publier, et le
    sélecteur de base doit être sur `(default)`.
 
+31. **UN MOUVEMENT QU'ON N'A PAS DEMANDÉ DÉSORIENTE**, et il y en avait deux,
+   qui n'avaient pas la même cause. Symptôme rapporté : « ça le fait remonter
+   tout en haut sans toucher », en ouvrant l'onglet Catalogue et en ouvrant une
+   marque.
+
+   Mesuré plutôt que deviné, en relevant `scrollY` avant et après chaque geste :
+
+   | geste | avant → après |
+   |---|---|
+   | clic sur l'onglet Catalogue | 440 → 215 |
+   | clic sur une marque | 215 → **0** |
+   | retour aux marques | 250 → 215 |
+
+   **Deux causes, un seul symptôme.** Le saut à zéro venait d'un
+   `window.scrollTo({top:0, behavior:'smooth'})` que j'avais ajouté « pour bien
+   faire » — supprimé. Les deux autres ne sont **pas du code** : le panneau du
+   catalogue n'offre que 215 px de défilement, le navigateur ne peut pas laisser
+   la page à 440. Tout navigateur fait ça quand le contenu raccourcit, et il n'y
+   a rien à corriger là-dedans.
+
+   **La vraie réponse à ce genre de saut, c'est de ne plus changer la page.**
+   Le choix des produits se fait donc dans une **fenêtre posée par-dessus**, dont
+   le corps défile tout seul (`overflow-y:auto`) : rien dessous ne bouge, donc
+   rien ne peut sauter. Vérifié : la page reste à 300 px pendant tout le
+   parcours marques → coloris → validation.
+
+   Ce qui reste du défilement programmé tient en une fonction, `catRemonte()` :
+   elle **remonte seulement** si le panneau est passé au-dessus de l'écran, et
+   **d'un coup, sans animation**. Descendre tout seul, jamais. Une animation de
+   défilement qu'on n'a pas déclenchée du doigt se lit comme une app qui bouge
+   seule, pas comme une app qui aide.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1691,9 +1753,9 @@ page de formulaire client avec bannière propre et renvoi WhatsApp,
 mode discret qui masque montants et marges, catalogue par marques et modèles
 avec photos recadrées en carré (côté vendeur), scan de carte de visite
 fournisseur, scanner de QR avec l'algorithme de WeChat lui-même,
-vitrine du catalogue côté client (marques, modèles, coloris, photo en grand,
-« Passer commande » qui pré-remplit la demande) avec aperçu client depuis
-l'app pro, programme de fidélité complet
+vitrine du catalogue côté client (marques, modèles, coloris, photo en grand)
+avec aperçu client depuis l'app pro, commande depuis le catalogue (plusieurs
+coloris cochés, une quantité chacun, photos jointes automatiquement), programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques.
@@ -1704,13 +1766,14 @@ fidélité dans les statistiques.
   pré-remplir la date de livraison estimée
 - Photo du stand dans la fiche fournisseur (le champ `photo` existe déjà,
   rempli par le scan de carte : il reste à pouvoir en ajouter une à la main)
-- Catalogue côté client : **la vitrine est faite** (onglet Catalogue, marques →
-  modèles → coloris, « Passer commande » qui pré-remplit le produit). Reste la
-  **commande à plusieurs lignes** : choisir plusieurs coloris avec une quantité
-  chacun au lieu d'un seul produit écrit en texte.
-  **La question à trancher à ce moment-là** : une demande à plusieurs lignes
-  donne-t-elle une commande par modèle (plusieurs références, plusieurs suivis)
-  ou une commande unique à plusieurs lignes ?
+- **La demande à plusieurs lignes existe côté client** (coloris cochés,
+  quantité chacun, `items[]` écrit sur la demande). **Côté vendeur, elle reste
+  une commande unique** : `product` porte le texte lisible, `items` n'est pas
+  recopié à la validation et disparaît avec la demande.
+  **La question à trancher** : une demande à plusieurs lignes doit-elle donner
+  une commande par modèle (plusieurs références #A7F3, plusieurs suivis) ou une
+  commande unique à plusieurs lignes ? C'est elle qui décidera s'il faut porter
+  `items` jusqu'à `orders`.
 - Dupliquer une commande
 - Alerte sur les devis sans réponse depuis plusieurs jours
 - Plus tard : abonnement payant, inscription autonome
