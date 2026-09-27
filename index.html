@@ -3110,7 +3110,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27l';
+const BUILD = '2026-09-27m';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4700,6 +4700,19 @@ $('#importInput').addEventListener('change', async (e)=>{
 // En ANGLAIS : c'est la langue commune d'un marché chinois, et Massif relit ce
 // qu'il envoie. Une fiche qu'on ne peut pas relire, on ne l'envoie pas.
 const FICHE_L = 1080, FICHE_PAD = 56, MAX_FICHE_PHOTOS = 9;
+// Le vert de l'app. La fiche est une IMAGE sur fond blanc, envoyée dans
+// WeChat : elle ne suit pas le thème de l'app, donc jamais l'orange du mode
+// sombre — il serait illisible sur ce fond et ne voudrait rien dire chez le
+// destinataire.
+const FICHE_VERT = '#2eb35c', FICHE_VERT_DOUX = '#e7f6ed';
+const ETIQ_H = 56;   // la pastille de la référence
+// `roundRect` existe partout depuis Safari 16, mais un coin droit vaut mieux
+// qu'une exception : une fiche qui ne se dessine pas ne s'envoie pas.
+function coinsRonds(x, gx, gy, l, h, r){
+  x.beginPath();
+  if(typeof x.roundRect === 'function') x.roundRect(gx, gy, l, h, r);
+  else x.rect(gx, gy, l, h);
+}
 // Les polices du site viennent de Google Fonts, injoignable en Chine : la
 // fiche se rabat donc sur la pile système, et c'est voulu. Une fiche qui
 // dépend d'un CDN pour être lisible ne vaut rien là où on s'en sert.
@@ -4838,7 +4851,7 @@ async function fabriqueFiche(type, o, client, depuis){
   const rangs = grille ? Math.ceil(imgs.length / grille) : 0;
 
   let h = FICHE_PAD;
-  h += 34 + 18;                                   // la marque de l'app
+  h += 28 + ETIQ_H + 20;                          // marque + pastille de la réf
   h += 52 + 26;                                   // le grand titre
   h += lignesTitre.length * 44 + 16;              // marque · modèle
   h += nbArtLignes * 42 + 22;                     // les lignes d'articles
@@ -4846,7 +4859,7 @@ async function fabriqueFiche(type, o, client, depuis){
   if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16 + (coupees > 0 ? 34 : 0);
   h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
   if(lignesNote.length) h += 22 + lignesNote.length * 38;
-  h += 26 + 30 + FICHE_PAD;                       // le pied
+  h += 12 + FICHE_PAD;                            // le bas, sans pied
 
   const c = document.createElement('canvas');
   c.width = FICHE_L; c.height = Math.round(h);
@@ -4855,14 +4868,30 @@ async function fabriqueFiche(type, o, client, depuis){
   x.textBaseline = 'top';
 
   let y = FICHE_PAD;
-  // L'en-tête : la marque à gauche, la référence à droite. C'est cette
-  // référence qu'on écrit au marqueur sur le carton, elle doit sauter aux yeux.
-  x.fillStyle = '#9aa0a6'; x.font = '700 22px ' + BODY_F;
-  x.fillText('DOLLAR$ SOURCING', FICHE_PAD, y + 8);
-  x.fillStyle = '#111111'; x.font = '700 34px ' + BODY_F;
-  x.textAlign = 'right'; x.fillText('#' + ref, FICHE_L - FICHE_PAD, y);
+  // L'EN-TÊTE : la marque à gauche, la référence à droite — en VERT et dans
+  // une pastille, avec ce qu'elle veut dire écrit au-dessus. Un code à quatre
+  // signes posé en noir dans un coin ne dit pas ce qu'on doit en faire ;
+  // « ORDER No. · WRITE ON PARCEL » le dit, et la couleur le fait trouver
+  // d'un coup d'œil sur une photo de carton mal cadrée.
+  x.fillStyle = FICHE_VERT; x.font = '700 20px ' + BODY_F;
+  x.textAlign = 'right';
+  x.fillText('ORDER No. · WRITE ON PARCEL', FICHE_L - FICHE_PAD, y);
   x.textAlign = 'left';
-  y += 34 + 18;
+
+  x.font = '700 34px ' + BODY_F;
+  const largRef = x.measureText('#' + ref).width;
+  const etiqL = Math.ceil(largRef) + 44;
+  const etiqX = FICHE_L - FICHE_PAD - etiqL, etiqY = y + 28;
+  x.fillStyle = FICHE_VERT_DOUX;
+  coinsRonds(x, etiqX, etiqY, etiqL, ETIQ_H, 14); x.fill();
+  x.fillStyle = FICHE_VERT;
+  x.fillText('#' + ref, etiqX + 22, etiqY + 12);
+
+  // La marque se centre sur la hauteur de la pastille, pas sur la première
+  // ligne : accrochée en haut, elle flottait au-dessus du vide.
+  x.fillStyle = '#9aa0a6'; x.font = '700 22px ' + BODY_F;
+  x.fillText('DOLLAR$ SOURCING', FICHE_PAD, y + 28 + (ETIQ_H - 22) / 2 - 3);
+  y += 28 + ETIQ_H + 20;
 
   x.fillStyle = '#111111'; x.font = '700 46px ' + BODY_F;
   x.fillText(versFournisseur ? 'PRICE REQUEST' : 'SHIPPING', FICHE_PAD, y);
@@ -4940,11 +4969,12 @@ async function fabriqueFiche(type, o, client, depuis){
     lignesNote.forEach(l=>{ x.fillText(l, FICHE_PAD, y); y += 38; });
   }
 
-  y += 26;
-  x.fillStyle = '#9aa0a6'; x.font = '400 24px ' + BODY_F;
-  x.fillText(versFournisseur
-    ? 'Please send your best price per piece.'
-    : 'Please write the reference on the parcel.', FICHE_PAD, y);
+  // PAS DE PIED DE PAGE. Il portait « Please send your best price per
+  // piece. » — une consigne au fournisseur, qui n'a rien à faire sous les yeux
+  // du client. Massif envoie la même fiche aux deux pour montrer que c'est
+  // carré : ce qui ne s'adresse qu'à l'un des deux en sort. Le titre « PRICE
+  // REQUEST » dit déjà ce qu'on demande, et la consigne du carton est montée
+  // dans la pastille de la référence.
   return c;
 }
 

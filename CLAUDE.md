@@ -1215,6 +1215,37 @@ Le test ne compte pas les photos qu'on croit avoir passées, il **intercepte
 `drawImage`** : c'est ce qui a trouvé le `slice(0,4)`, qu'une lecture du code
 avait laissé passer deux fois.
 
+#### La fiche s'envoie AUSSI au client, et ça change deux choses
+
+Massif envoie la même image au fournisseur **et à son client**, pour lui
+montrer que c'est carré. Une fiche lue par deux destinataires ne peut donc
+plus porter une consigne qui ne s'adresse qu'à l'un des deux.
+
+- **Le pied de page a disparu.** Il disait « Please send your best price per
+  piece. » — une instruction au fournisseur, qui n'a rien à faire sous les
+  yeux du client. Le titre « PRICE REQUEST » dit déjà ce qu'on demande.
+- **La référence est devenue une pastille verte, avec ce qu'elle veut dire
+  écrit au-dessus** : `ORDER No. · WRITE ON PARCEL`. Un code à quatre signes
+  posé en noir dans un coin ne dit pas ce qu'on doit en faire ; la couleur le
+  fait trouver d'un coup d'œil, y compris sur une photo de carton mal cadrée.
+  C'est aussi ce qui a rendu l'ancien pied de la fiche transitaire
+  (« write the reference on the parcel ») inutile : la consigne est montée là
+  où est le code.
+
+**La fiche est une image sur fond blanc : elle ne suit pas le thème de
+l'app.** Le vert est donc écrit en dur (`FICHE_VERT`), jamais l'orange du mode
+sombre — il serait illisible sur ce fond et ne voudrait rien dire chez le
+destinataire.
+
+`roundRect` passe par `coinsRonds()`, qui retombe sur un coin droit s'il
+manque : une fiche qui ne se dessine pas ne s'envoie pas.
+
+**Ce qui reste à savoir avant d'envoyer** : la fiche **fournisseur** porte
+l'adresse du transitaire de Massif. L'envoyer au client ne lui montre aucun
+prix ni aucune marge, mais lui montre **chez qui transitent les colis**. La
+fiche **transitaire**, elle, porte l'adresse du client lui-même : c'est celle
+qui se montre au client sans rien se demander.
+
 #### Ce que la fiche fait de la chaîne produit
 
 Avec `items[]`, une ligne par coloris, sa quantité à droite. **Sans `items[]`
