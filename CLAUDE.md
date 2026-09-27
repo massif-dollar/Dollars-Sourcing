@@ -442,6 +442,23 @@ relire à chaque colis.
 **Ni les marques ni les modèles ne sont stockés à part** : les deux se déduisent
 des fiches. Rien à maintenir, et un dossier vide ne peut pas exister.
 
+**Le revers de cette déduction, et il est sérieux : les marques sont
+regroupées par leur nom EXACT.** « Asics » et « asics », ou un espace en trop,
+donneraient **deux marques séparées** dans la vitrine du client, les modèles
+éparpillés entre les deux — et rien ne préviendrait. Deux garde-fous, et
+seul le second protège vraiment :
+
+- **Les marques déjà au catalogue s'affichent sous le champ**, à toucher plutôt
+  qu'à retaper ; celle qui correspond à ce qui est tapé s'allume. Pas un
+  `<datalist>` : sur iOS il se cache derrière le clavier et ne se voit qu'une
+  fois qu'on a commencé à taper — or c'est **avant** de taper qu'il faut voir
+  qu'« Asics » existe déjà.
+- **À l'enregistrement, un nom qui ne diffère que par la casse ou les espaces
+  reprend l'orthographe déjà en place.** C'est ça, le vrai garde-fou : une
+  suggestion se contourne, une normalisation non. Vérifié — saisir « ␣ASICS␣ »
+  range le nouveau modèle sous « Asics », et la vitrine garde deux marques au
+  lieu de trois.
+
 **AUCUN STOCK.** Le catalogue est fixe : pas de quantité disponible, pas de
 décompte à la commande, pas de rupture. Massif achète chez le fournisseur
 *après*. Le seul interrupteur qui pourrait y ressembler, `active`, n'est pas du
