@@ -1171,10 +1171,65 @@ disant pourquoi, et la fiche reprend toute seule une fois l'adresse saisie —
 on ne renvoie pas quelqu'un au point de départ après lui avoir demandé un
 réglage.
 
+**Un transitaire par défaut, et une exception qui ne survit pas à la fiche.**
+`monTransitaire` est un réglage, il vaut pour toutes les fiches ;
+`ficheTransitaire` ne vaut que pour celle qui est à l'écran et meurt à sa
+fermeture. Les séparer est tout l'intérêt : **changer de transitaire pour un
+colis ne doit pas reconfigurer l'app**, et préparer un envoi ne doit pas
+reconfigurer l'app par inadvertance. Le formulaire porte donc deux sorties —
+« Enregistrer par défaut » et « Utiliser pour cette fiche seulement » — et
+enregistrer un défaut **lève l'exception en cours**, sinon on enregistrerait
+un transitaire qu'on continuerait à ne pas voir.
+
+Trois points qui ne sont pas du confort :
+
+- **Le formulaire se préremplit avec le transitaire EFFECTIF**, pas avec le
+  défaut : corriger une exception doit partir de l'exception.
+- **Une exception se dit à l'écran** (`#ficheExcep`). L'adresse est bien sur
+  l'image, mais rien ne distingue un transitaire de passage de l'habituel —
+  et c'est au moment d'envoyer qu'il faut le savoir.
+- **« Pour cette fiche seulement » est masqué tant qu'il n'y a pas de
+  défaut** : il n'y aurait rien à quoi faire exception, et chaque fiche
+  redemanderait l'adresse.
+
 **Les boutons sont aux deux endroits** : sur la demande *et* sur la fiche
 commande. La demande disparaît à la validation, or c'est **après** qu'on
 achète et qu'on expédie — c'est le piège 25, une donnée qui n'est pas là où la
 décision se prend ne sert à rien.
+
+#### Ce que la fiche fait de la chaîne produit
+
+Avec `items[]`, une ligne par coloris, sa quantité à droite. **Sans `items[]`
+— une demande tapée à la main, ou une commande d'avant le catalogue — il ne
+reste que la chaîne produit**, et le premier jet la recopiait telle quelle en
+titre ET en ligne d'article. Vu sur une vraie fiche : le même texte imprimé
+deux fois, sa version longue sortant du cadre, et « × 25 » imprimé **par-dessus**
+« Bleu Mar… ».
+
+Deux corrections, et la seconde vaut pour tout ce qu'on dessinera à droite :
+
+- **On relit la chaîne** (`decoupeProduit`). Elle a une forme connue, celle
+  qu'écrit le portail : `Asics · Ensemble / Veste : Gris ×5, Blanc ×5`. Deux
+  garde-fous, parce qu'une chaîne tapée à la main peut y ressembler sans en
+  être : le résumé (« 12 coloris (27 pièces) ») ne se découpe pas, et **un
+  découpage dont la somme ne tombe pas sur `qty` est abandonné** — mieux vaut
+  une ligne unique honnête que cinq lignes qui ne font pas le compte.
+- **Ce qui est aligné à droite se mesure AVANT de couper ce qui est à
+  gauche.** Un canvas ne va pas à la ligne tout seul et ne s'arrête à aucun
+  bord : `fillText` écrit par-dessus, ou dans le vide. La largeur de « × N »
+  est donc mesurée, réservée, et le nom se plie contre ce qui reste. La
+  quantité se pose sur la **première** ligne du nom, les suivantes s'alignent
+  sous le texte et pas sous la puce.
+
+Le test ne relit pas du texte dans un canvas, il regarde les **pixels** : le
+couloir vertical juste à gauche de la quantité la plus large doit rester
+blanc. Vérifié dans les deux sens — 367 pixels sales sur la version d'avant,
+zéro après, sur la demande exacte de la capture.
+
+Piège de vérification rencontré en l'écrivant : le premier couloir attrapait
+la **référence de l'en-tête**, alignée à droite elle aussi, et déclarait donc
+le correctif raté. Une mesure qui échoue sur du code juste coûte autant qu'un
+bug.
 
 Deux détails du rendu qui ne s'inventent pas. Le canvas ne connaît pas
 `object-fit` : le cadrage des photos est **fait à la main**, sinon une photo
