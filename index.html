@@ -3110,7 +3110,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27k';
+const BUILD = '2026-09-27l';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4699,7 +4699,7 @@ $('#importInput').addEventListener('change', async (e)=>{
 //
 // En ANGLAIS : c'est la langue commune d'un marché chinois, et Massif relit ce
 // qu'il envoie. Une fiche qu'on ne peut pas relire, on ne l'envoie pas.
-const FICHE_L = 1080, FICHE_PAD = 56;
+const FICHE_L = 1080, FICHE_PAD = 56, MAX_FICHE_PHOTOS = 9;
 // Les polices du site viennent de Google Fonts, injoignable en Chine : la
 // fiche se rabat donc sur la pile système, et c'est voulu. Une fiche qui
 // dépend d'un CDN pour être lisible ne vaut rien là où on s'en sert.
@@ -4787,7 +4787,14 @@ function adresseClient(c){
 // l'écran, on envoie ce qu'on a décidé d'envoyer.
 async function fabriqueFiche(type, o, client, depuis){
   const ref = o.ref || derivedRef(o.id || '');
-  const photos = (typeof photosDe === 'function' ? photosDe(o) : []).slice(0, 4);
+  // UNE PHOTO PAR COLORIS DEMANDÉ, et le plafond ne doit pas passer sous le
+  // nombre de lignes : un fournisseur qui chiffre un coloris qu'il n'a pas vu
+  // se trompe, et rien ne le lui dirait. Le premier jet coupait à quatre, donc
+  // une demande de cinq coloris en cachait un. Au-delà de neuf on prévient
+  // plutôt que de tronquer en silence — la liste, elle, reste complète.
+  const toutes = (typeof photosDe === 'function' ? photosDe(o) : []);
+  const photos = toutes.slice(0, MAX_FICHE_PHOTOS);
+  const coupees = toutes.length - photos.length;
   const imgs = [];
   for(const p of photos){
     try{ imgs.push(await chargeImg('data:' + (p.type||'image/jpeg') + ';base64,' + p.data)); }
@@ -4823,7 +4830,10 @@ async function fabriqueFiche(type, o, client, depuis){
     coupeTexte(mes, a.nom, L - 4 - retrait - largQte[i] - 24));
   const nbArtLignes = artLignes.reduce((n, l)=>n + l.length, 0);
 
-  const grille = imgs.length ? (imgs.length === 1 ? 1 : 2) : 0;
+  // Deux colonnes jusqu'à quatre photos, trois au-delà : à cinq coloris et
+  // deux colonnes la fiche devenait une tour qu'on fait défiler au lieu de la
+  // lire d'un coup d'œil.
+  const grille = imgs.length ? (imgs.length === 1 ? 1 : imgs.length <= 4 ? 2 : 3) : 0;
   const cote = grille ? Math.floor((L - (grille - 1) * 16) / grille) : 0;
   const rangs = grille ? Math.ceil(imgs.length / grille) : 0;
 
@@ -4833,7 +4843,7 @@ async function fabriqueFiche(type, o, client, depuis){
   h += lignesTitre.length * 44 + 16;              // marque · modèle
   h += nbArtLignes * 42 + 22;                     // les lignes d'articles
   h += 44;                                        // le total
-  if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16;
+  if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16 + (coupees > 0 ? 34 : 0);
   h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
   if(lignesNote.length) h += 22 + lignesNote.length * 38;
   h += 26 + 30 + FICHE_PAD;                       // le pied
@@ -4903,6 +4913,12 @@ async function fabriqueFiche(type, o, client, depuis){
       x.strokeRect(cx + 1, cy + 1, cote - 2, cote - 2);
     });
     y += rangs * cote + (rangs - 1) * 16;
+    if(coupees > 0){
+      x.fillStyle = '#9aa0a6'; x.font = '400 24px ' + BODY_F;
+      x.fillText('+ ' + coupees + (coupees > 1 ? ' more colours' : ' more colour')
+               + ' — see the list above', FICHE_PAD, y + 8);
+      y += 34;
+    }
   }
 
   y += 30;

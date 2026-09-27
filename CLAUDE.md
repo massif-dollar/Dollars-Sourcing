@@ -1197,6 +1197,24 @@ commande. La demande disparaît à la validation, or c'est **après** qu'on
 achète et qu'on expédie — c'est le piège 25, une donnée qui n'est pas là où la
 décision se prend ne sert à rien.
 
+**UNE PHOTO PAR COLORIS DEMANDÉ, et le plafond ne passe jamais sous le nombre
+de lignes.** Le premier jet coupait à quatre (`slice(0,4)`) : une demande de
+cinq coloris en cachait donc un, et **le fournisseur chiffrait une pièce qu'il
+n'avait jamais vue** — sans que rien ne le signale, ni à lui ni à Massif. Le
+plafond est à neuf, la grille passe à **trois colonnes au-delà de quatre**
+photos (à cinq coloris en deux colonnes la fiche devenait une tour qu'on fait
+défiler au lieu de la lire), et au-delà de neuf une ligne le dit plutôt que de
+tronquer en silence — la liste des coloris, elle, reste complète.
+
+Les photos viennent de `photosDe()`, qui réunit celles du **catalogue**
+(résolues depuis `items[]`, donc rien n'est dupliqué) et celles que le client a
+prises lui-même. Une demande tapée dans le champ texte n'a ni l'un ni l'autre :
+sa fiche part **sans photo**, et c'est normal.
+
+Le test ne compte pas les photos qu'on croit avoir passées, il **intercepte
+`drawImage`** : c'est ce qui a trouvé le `slice(0,4)`, qu'une lecture du code
+avait laissé passer deux fois.
+
 #### Ce que la fiche fait de la chaîne produit
 
 Avec `items[]`, une ligne par coloris, sa quantité à droite. **Sans `items[]`
