@@ -760,6 +760,27 @@
   }
   .cat-lb-foot > span{ display:block; font-size:12.5px; color:rgba(255,255,255,.6); margin-top:3px; }
   .cat-lb-foot .btn-primary{ margin-top:15px; }
+  .cat-lb-img{ position:relative; }
+  .cat-lb-nav{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:3;
+    width:40px; height:40px; border-radius:50%; display:none; place-items:center;
+    background:rgba(0,0,0,.45); border:0.5px solid rgba(255,255,255,.18); color:#fff;
+    cursor:pointer; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    transition:transform .3s var(--spring), opacity .2s var(--ease-io);
+  }
+  .cat-lb-nav svg{ width:19px; height:19px; }
+  .cat-lb-nav.prev{ left:-4px; }
+  .cat-lb-nav.next{ right:-4px; }
+  .cat-lb-nav:active{ transform:translateY(-50%) scale(.9); }
+  .cat-lb-nav[disabled]{ opacity:.25; pointer-events:none; }
+  .cat-lb.has-details .cat-lb-nav{ display:grid; }
+  .cat-lb-dots{ display:none; justify-content:center; gap:6px; margin-top:12px; }
+  .cat-lb.has-details .cat-lb-dots{ display:flex; }
+  .cat-lb-dots i{
+    width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.3);
+    transition:background .25s var(--ease-io), transform .3s var(--spring);
+  }
+  .cat-lb-dots i.on{ background:#fff; transform:scale(1.35); }
   /* La vignette pendant que la photo pleine arrive. Un battement discret dit
      « ça charge » sans écrire le mot. */
   .cat-lb-img img.chargement{ animation:catLoad 1.15s var(--ease-io) infinite; }
@@ -1722,7 +1743,19 @@
   <button type="button" class="lightbox-close" id="catLbClose" data-i18n-title="photoCloseTitle" title="Fermer la photo" aria-label="Fermer la photo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
-  <div class="cat-lb-img"><img id="catLbImg" alt=""></div>
+  <div class="cat-lb-img">
+    <img id="catLbImg" alt="">
+    <!-- Les flèches et les pastilles n'existent QUE s'il y a des détails.
+         Une flèche sur une photo seule, c'est une promesse qui ne mène nulle
+         part — et le client l'essaie avant de comprendre. -->
+    <button type="button" class="cat-lb-nav prev" id="catLbPrev" aria-label="Précédent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button type="button" class="cat-lb-nav next" id="catLbNext" aria-label="Suivant">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+  <div class="cat-lb-dots" id="catLbDots"></div>
   <div class="cat-lb-foot">
     <b id="catLbName"></b>
     <span id="catLbSub"></span>
@@ -3849,6 +3882,9 @@ function libellePicked(){
 // l'ouverture de la vitrine de 679 Ko à 155 Ko sur les cinq premiers coloris —
 // Firestore renvoie des documents entiers, tout ce qui reste dans la fiche est
 // téléchargé par tout le monde, tout le temps.
+// Le document porte la photo pleine ET les photos de détail : elles voyagent
+// donc ensemble, en une seule lecture, et seulement quand un coloris s'ouvre.
+// C'est ce qui permet d'en avoir plusieurs sans alourdir la grille d'un octet.
 const catPhotos = new Map();
 function catPhotoPleine(id){
   if(catPhotos.has(id)) return Promise.resolve(catPhotos.get(id));
@@ -3856,33 +3892,78 @@ function catPhotoPleine(id){
     if(!doc.exists) return null;
     const d = doc.data();
     if(!d || !d.photo) return null;
-    const src = 'data:' + (d.photoType || 'image/jpeg') + ';base64,' + d.photo;
-    catPhotos.set(id, src);
-    return src;
+    const lot = {
+      src: 'data:' + (d.photoType || 'image/jpeg') + ';base64,' + d.photo,
+      details: (Array.isArray(d.details) ? d.details : [])
+        .filter(x => x && x.data)
+        .map(x => 'data:' + (x.type || 'image/jpeg') + ';base64,' + x.data)
+    };
+    catPhotos.set(id, lot);
+    return lot;
   });
 }
+
+// La couverture d'abord, les détails ensuite : c'est l'ordre dans lequel on
+// les regarde, et le premier point de la rangée est toujours la couverture.
+let catVues = [];    // les adresses des images de la fiche ouverte
+let catVue = 0;      // laquelle est à l'écran
+function majCatVue(){
+  const lb = $('#catLb'), img = $('#catLbImg');
+  if(!catVues.length) return;
+  catVue = Math.max(0, Math.min(catVue, catVues.length - 1));
+  img.src = catVues[catVue];
+  lb.classList.toggle('has-details', catVues.length > 1);
+  $('#catLbPrev').disabled = catVue === 0;
+  $('#catLbNext').disabled = catVue === catVues.length - 1;
+  $('#catLbDots').innerHTML = catVues.length > 1
+    ? catVues.map((_, k)=> '<i class="' + (k === catVue ? 'on' : '') + '"></i>').join('') : '';
+}
+function catVaVers(pas){
+  if(catVues.length < 2) return;
+  catVue = Math.max(0, Math.min(catVue + pas, catVues.length - 1));
+  majCatVue();
+}
+$('#catLbPrev').addEventListener('click', (e)=>{ e.stopPropagation(); catVaVers(-1); });
+$('#catLbNext').addEventListener('click', (e)=>{ e.stopPropagation(); catVaVers(1); });
+// Le glissement, parce que c'est le geste que la main connaît sur une photo.
+// Un seuil de 40 px : en dessous, c'est un tremblement, pas une intention.
+let catSwipeX = null;
+$('#catLbImg').addEventListener('touchstart', (e)=>{
+  catSwipeX = e.touches.length === 1 ? e.touches[0].clientX : null;
+}, { passive:true });
+$('#catLbImg').addEventListener('touchend', (e)=>{
+  if(catSwipeX === null) return;
+  const dx = (e.changedTouches[0] || {}).clientX - catSwipeX;
+  catSwipeX = null;
+  if(Math.abs(dx) > 40) catVaVers(dx < 0 ? 1 : -1);
+}, { passive:true });
 
 function openCatLb(id){
   const i = catalogItems.find(x => x.id === id);
   if(!i) return;
   catCurrent = i;
+  catVue = 0;
   const img = $('#catLbImg');
+  $('#catLb').classList.remove('has-details');
+  $('#catLbDots').innerHTML = '';
   if(i.photo){
-    // Fiche pas encore migrée : elle porte encore sa photo. On lit les deux
-    // formes, on n'écrit que la nouvelle — comme pour photo/photos[].
-    img.src = catImg(i, true);
+    // Fiche pas encore migrée : elle porte encore sa photo, et n'a jamais eu
+    // de détails. On lit les deux formes, on n'écrit que la nouvelle.
+    catVues = [catImg(i, true)];
     img.classList.remove('chargement');
+    majCatVue();
   }else{
     // La vignette s'affiche TOUT DE SUITE et la photo pleine la remplace
     // quand elle arrive : un écran vide pendant le téléchargement se lit
     // comme une panne, une vignette un peu douce ne se remarque pas.
-    img.src = catImg(i, false);
+    catVues = [catImg(i, false)];
+    img.src = catVues[0];
     img.classList.add('chargement');
-    catPhotoPleine(id).then(src=>{
-      if(catCurrent && catCurrent.id === id){
-        if(src) img.src = src;
-        img.classList.remove('chargement');
-      }
+    catPhotoPleine(id).then(lot=>{
+      if(!catCurrent || catCurrent.id !== id) return;
+      if(lot) catVues = [lot.src].concat(lot.details);
+      img.classList.remove('chargement');
+      majCatVue();
     }).catch(()=>{ img.classList.remove('chargement'); });
   }
   $('#catLbName').textContent = [i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ')
@@ -3894,8 +3975,11 @@ function closeCatLb(){
   const lb = $('#catLb');
   if(!lb.classList.contains('open')) return;
   lb.classList.remove('open');
+  lb.classList.remove('has-details');
   $('#catLbImg').removeAttribute('src');
   $('#catLbImg').classList.remove('chargement');
+  $('#catLbDots').innerHTML = '';
+  catVues = []; catVue = 0;
   catCurrent = null;
 }
 $('#catLbClose').addEventListener('click', closeCatLb);
@@ -3903,7 +3987,15 @@ $('#catLbClose').addEventListener('click', closeCatLb);
 // le bouton, et un bouton qui ferme la fenêtre en même temps qu'il agit est
 // un bouton qui ment sur ce qu'il fait.
 $('#catLb').addEventListener('click', (e)=>{
+  // Les flèches sont DANS la zone photo : sans cette garde, avancer d'une
+  // image fermerait la visionneuse dans le même geste.
+  if(e.target.closest('.cat-lb-nav')) return;
   if(e.target.id === 'catLb' || e.target.closest('.cat-lb-img')) closeCatLb();
+});
+document.addEventListener('keydown', (e)=>{
+  if(!$('#catLb').classList.contains('open')) return;
+  if(e.key === 'ArrowRight') catVaVers(1);
+  if(e.key === 'ArrowLeft')  catVaVers(-1);
 });
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeCatLb(); });
 

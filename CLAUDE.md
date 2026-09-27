@@ -510,6 +510,70 @@ Quatre conséquences :
 - **Supprimer une fiche supprime les deux documents.** Sinon la photo resterait
   seule dans la base, invisible et payante.
 
+#### Les photos de détail d'un coloris
+
+Une couverture ne suffit pas à vendre une doudoune : le client veut voir la
+doublure, l'étiquette, le logo. Chaque coloris porte donc **jusqu'à cinq photos
+de détail**, et le client les fait défiler dans la photo en grand — flèches,
+points, et le glissement du doigt (seuil de 40 px : en dessous c'est un
+tremblement, pas une intention). **La couverture est toujours la première**, et
+un coloris qui n'a qu'elle n'affiche ni flèche ni point : rien ne suggère un
+contenu qui n'existe pas.
+
+**Elles vivent dans `catalogPhotos`, avec la photo pleine, et c'est tout
+l'intérêt** : elles ne coûtent rien tant que personne n'ouvre le coloris. La
+grille ne télécharge que des vignettes, quelle que soit la richesse des fiches.
+Une seule lecture ramène la couverture *et* ses détails — elles voyagent
+ensemble parce qu'on les regarde ensemble.
+
+**Pas de recadrage sur un détail**, et c'est délibéré : Massif cadre sa
+couverture parce que c'est elle qui tient la grille ; un détail se regarde en
+entier. On se contente de redimensionner (900 px sur la plus grande dimension)
+et de compresser.
+
+**Le plafond porte sur le TOTAL du document**, couverture comprise, pas sur le
+nombre de photos — c'est le piège 23 appliqué au catalogue. Mesuré sur des
+images volontairement incompressibles : cinq détails sortent à 783 Ko, et avec
+la couverture on frôlerait le mégaoctet de Firestore. Deux gardes, donc : cinq
+détails au maximum, et un refus dès que l'ensemble dépasse 820 Ko.
+
+**La couverture d'une fiche déjà enregistrée n'est PAS sous la main** — la
+fiche d'édition ne travaille qu'avec les vignettes — donc la compter pour zéro
+rendrait cette marge fausse d'une centaine de kilooctets. Elle est estimée
+(`COUVERTURE_ESTIMEE`, 150 Ko pour ~105 Ko mesurés) : une marge qu'on ne sait
+pas calculer se prend large, elle ne s'ignore pas.
+
+**Et la règle de l'enregistrement s'étend aux détails** : on n'écrit que ce
+qu'on a chargé. Renommer un coloris sans ouvrir ses détails ne doit pas les
+effacer — d'où le drapeau `detailsCharges`, et un `set(..., {merge:true})`
+plutôt qu'un `update` : un document de photo manquant ferait échouer le lot
+entier et on perdrait l'enregistrement de toute la marque pour un détail.
+
+#### Importer un catalogue préparé ailleurs
+
+Vingt coloris à la main, c'est vingt recadrages et vingt noms tapés. Le bouton
+**« Importer un fichier »** lit un JSON plat et volontairement lisible — il n'y
+a pas de schéma à deviner :
+
+    { "catalogue":1, "brand":"Stone Island",
+      "models":[ { "model":"Doudoune",
+                   "colors":[ { "name":"Noire", "thumb":"<b64>", "photo":"<b64>",
+                                "details":["<b64>", ...] } ] } ] }
+
+Tout est du JPEG en base64 sans le préfixe `data:`, `details` est facultatif.
+C'est ce qui permet de **remplir le catalogue à deux** : Massif envoie ses
+photos, le fichier est préparé, il l'importe en un geste.
+
+Trois précautions :
+
+- **Le même garde-fou de casse qu'à la saisie** : « STONE  ISLAND » rejoint
+  « Stone Island » au lieu de créer une jumelle.
+- **La numérotation continue** au lieu de repartir de zéro, sinon l'import
+  passerait devant ce qui existe déjà.
+- **On écrit par paquets de trois**, et le plafond de poids est appliqué à la
+  lecture du fichier : un lot refusé par Firestore laisserait un catalogue à
+  moitié importé. Ce qui a été écarté est dit dans le toast, jamais en silence.
+
 **La lecture de `catalog` est OUVERTE dans les règles**, et il faut savoir
 pourquoi : le portail n'est jamais connecté à Firebase, Firestore le voit comme
 un visiteur anonyme (piège 11), et sans `list` ouvert il ne verrait rien — sans
@@ -1758,9 +1822,14 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    tests avait un `batch()` qui ne connaissait que `delete`, pas `set`. Une
    écriture par lot passait donc en silence sans rien écrire.
 
+   **Et ça recommence à chaque option**, pas seulement à chaque méthode : le
+   `set()` du mock ignorait `{merge:true}` et remplaçait donc le document. Un
+   test qui passe sur un mock qui fusionne mal ne prouve rien du jour où on
+   fusionne pour de vrai.
+
    Le réflexe à avoir : devant un test qui échoue sur une API peu courante
-   (`batch`, `transaction`, `arrayUnion`…), **vérifier que le mock la
-   supporte avant de soupçonner le code** — et compléter le mock plutôt que
+   (`batch`, `transaction`, `arrayUnion`, `{merge:true}`…), **vérifier que le
+   mock la supporte avant de soupçonner le code** — et compléter le mock plutôt que
    d'abaisser le code à ce qu'il sait faire. Un batch est le bon outil ici :
    cinq modèles s'écrivent en une opération, et si une écriture échoue, aucune
    ne passe.
@@ -1888,6 +1957,31 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    à une seule.** Le portrait passait, le paysage non, et c'est la même feuille
    de style.
 
+33. **UN SÉLECTEUR DE FICHIERS CONSOMME LE GESTE EXACTEMENT COMME LA CAMÉRA.**
+   C'est le piège du scanner (« la permission d'abord, sans aucun `await` avant
+   elle ») dans un endroit où on ne l'attendait pas, et il est passé à deux
+   doigts d'être livré.
+
+   Le bouton « Détails » d'un coloris devait charger les détails déjà en base
+   **avant** d'ouvrir le sélecteur — sinon on ajoute à une liste vide et
+   l'enregistrement efface le reste. Écrit naïvement, ça donne
+   `chargeDetails(it).then(()=> input.click())` : une lecture Firestore entre le
+   doigt et le `click()`. Sur iPhone, Safari considère alors que le geste est
+   dépensé et **le sélecteur de photos ne s'ouvre pas** — sans erreur, sans
+   message, un bouton qui ne fait rien.
+
+   Le correctif est le même que pour la caméra, et il vaut d'être retenu comme
+   forme générale : **lancer la lecture, ouvrir tout de suite, attendre au
+   retour.** La promesse part au clic, `input.click()` est appelé dans le même
+   tour, et c'est le gestionnaire `change` — qui s'exécute bien après, quand la
+   personne a choisi ses photos — qui fait le `await`. On ne perd rien : le
+   temps de choisir une photo est mille fois celui d'une lecture Firestore.
+
+   **Règle générale : tout ce qui demande une permission ou ouvre une interface
+   du système (caméra, micro, sélecteur de fichiers, presse-papiers) s'appelle
+   dans le geste, jamais après un `await`.** Ce qui doit être chargé se charge
+   en parallèle.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -1931,6 +2025,8 @@ vitrine du catalogue côté client (marques, modèles, coloris, photo en grand)
 avec aperçu client depuis l'app pro, commande depuis le catalogue (une marque et
 un modèle par demande, plusieurs coloris cochés avec une quantité chacun,
 photos pointées au lieu d'être recopiées donc sans limite de nombre),
+photos de détail par coloris (jusqu'à cinq, feuilletées par le client),
+import d'un catalogue préparé en JSON,
 programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la

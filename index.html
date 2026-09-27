@@ -598,6 +598,30 @@
     color:var(--text); letter-spacing:-0.012em;
   }
 
+  /* Le bouton des photos de détail, sous chaque coloris. Allumé quand il y en
+     a : on doit voir d'un coup d'œil lesquels sont complets. */
+  .cat-det{
+    width:100%; margin-top:5px; padding:5px 6px; border-radius:9px; cursor:pointer; font:inherit;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-faint);
+    font-size:10.5px; font-weight:600; letter-spacing:-0.01em;
+    transition:transform .3s var(--spring), color .2s var(--ease-io), border-color .2s var(--ease-io);
+  }
+  .cat-det:active{ transform:scale(.95); }
+  .cat-det.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  .cat-det svg{ width:12px; height:12px; flex:none; }
+
+  /* L'import : un fichier préparé ailleurs, écrit en un lot. */
+  .import-btn{
+    width:100%; margin-bottom:12px; padding:11px; border-radius:13px; cursor:pointer; font:inherit;
+    background:var(--fill); border:0.5px dashed var(--hairline); color:var(--text-muted);
+    font-size:13px; font-weight:600; letter-spacing:-0.01em;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform .3s var(--spring), color .2s var(--ease-io), border-color .2s var(--ease-io);
+  }
+  .import-btn:active{ transform:scale(.975); }
+  .import-btn svg{ width:16px; height:16px; flex:none; }
+
   /* Les marques déjà connues, sous le champ. Une faute de frappe crée une
      marque fantôme dans la vitrine du client, et rien ne le signale : le plus
      sûr est de ne pas avoir à retaper le nom. */
@@ -1888,6 +1912,11 @@
        Comme un dossier qu'on ouvre. -->
   <div id="catalogueView" style="display:none;">
     <div class="search"><input type="text" id="catSearchInput" data-i18n-placeholder="searchCatalogue" placeholder="Rechercher une marque, un modèle..."></div>
+    <button type="button" class="import-btn" id="importBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M8 10.5l4 3.5 4-3.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+      <span data-i18n="importCatalog">Importer un fichier</span>
+    </button>
+    <input type="file" id="importInput" accept="application/json,.json" style="display:none;">
     <button type="button" class="preview-btn" id="previewBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 5.5h3"/></svg>
       <span data-i18n="previewClient">Voir comme le client</span>
@@ -2277,6 +2306,7 @@
     <div id="brandModels"></div>
     <button type="button" class="cat-add-model" id="addModelBtn" data-i18n="addModel">+ Ajouter un modèle</button>
     <input type="file" id="catPhotoInput" accept="image/*" multiple style="display:none;">
+    <input type="file" id="detailInput" accept="image/*" multiple style="display:none;">
     <div class="sheet-actions">
       <button type="button" class="btn-primary" id="saveBrandBtn" data-i18n="save">Enregistrer</button>
       <button type="button" class="btn-secondary" id="deleteBrandBtn" data-i18n="deleteBrand">Supprimer la marque</button>
@@ -2557,6 +2587,15 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
+    detailsAdd:'Détails', detailsN:'{n} détail(s)',
+    detailsMax:'{n} photos de détail au maximum par coloris.',
+    detailsWeight:"Ce coloris devient trop lourd. Retire une photo de détail.",
+    importCatalog:'Importer un fichier',
+    importAsk:'Importer {n} coloris dans « {brand} » ?',
+    importOk:'Importer',
+    importTrim:'{n} photo(s) de détail écartée(s) : coloris trop lourd.',
+    importDone:'{n} coloris importés.',
+    importBad:"Ce fichier n'est pas un catalogue lisible.",
     groupByClient:'Ranger par client',
     warnBrandUsed:"Attention : {n} commande(s) montrent ces photos. En les supprimant, elles perdront leur image. Pour retirer la marque de la vitrine sans rien perdre, masque ses coloris avec l'œil.",
     groupFlat:'Par date',
@@ -2751,6 +2790,15 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
+    detailsAdd:'Details', detailsN:'{n} detail(s)',
+    detailsMax:'{n} detail photos maximum per colour.',
+    detailsWeight:'This colour is getting too heavy. Remove a detail photo.',
+    importCatalog:'Import a file',
+    importAsk:'Import {n} colours into "{brand}"?',
+    importOk:'Import',
+    importTrim:'{n} detail photo(s) dropped: colour too heavy.',
+    importDone:'{n} colours imported.',
+    importBad:'This file is not a readable catalogue.',
     groupByClient:'Group by client',
     warnBrandUsed:'Careful: {n} order(s) show these photos. Deleting them will leave those orders without an image. To remove the brand from the shop window without losing anything, hide its colours with the eye.',
     groupFlat:'By date',
@@ -2857,7 +2905,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27e';
+const BUILD = '2026-09-27g';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3998,6 +4046,92 @@ $('#brandOverlay').addEventListener('click', (e)=>{ if(e.target===$('#brandOverl
 const OEIL_OUVERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OEIL_BARRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 3.6-.7"/></svg>';
 
+
+// ================= Les photos de détail d'un coloris =================
+// La couverture reste seule dans la grille ; les détails ne partent que dans
+// `catalogPhotos`, donc ils ne coûtent rien tant que personne n'ouvre le
+// coloris. C'est ce qui permet d'en avoir plusieurs sans alourdir la vitrine.
+const MAX_DETAILS = 5;
+const DETAIL_PX = 900;
+// Le poids de TOUT le document, couverture comprise. Firestore plafonne à
+// 1 Mo (piège 23) : on s'arrête bien avant, pour que la marge reste vraie.
+const DETAILS_POIDS_MAX = 820 * 1024;
+// La fiche d'édition ne travaille qu'avec les vignettes : la couverture d'un
+// coloris déjà enregistré n'est PAS sous la main, et la compter pour zéro
+// rendrait la marge fausse d'une centaine de kilooctets. On l'estime — une
+// photo pleine de 900 px pèse ~105 Ko mesurés, on prend large.
+const COUVERTURE_ESTIMEE = 150 * 1024;
+
+// Pas de recadrage sur un détail : Massif cadre sa couverture, le reste n'est
+// qu'un complément qu'on regarde en entier. On redimensionne, on compresse.
+function reduitPhoto(source, maxPx, viseKo){
+  const r = Math.min(1, maxPx / Math.max(source.width, source.height));
+  const w = Math.round(source.width * r), h = Math.round(source.height * r);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+  x.drawImage(source, 0, 0, w, h);
+  let q = 0.72, url = c.toDataURL('image/jpeg', q);
+  while(url.length > viseKo * 1024 && q > 0.35){ q -= 0.08; url = c.toDataURL('image/jpeg', q); }
+  return { type:'image/jpeg', data:url.split(',')[1] };
+}
+
+let detailCible = null;   // "gi:i" du coloris en cours
+// Les détails d'une fiche existante ne sont pas chargés avec la grille : on
+// va les chercher au moment où on y touche, et pas avant. Le drapeau dit
+// qu'on les a — sans lui, l'enregistrement les effacerait faute de les avoir.
+// La lecture est LANCÉE au clic et ATTENDUE au retour du sélecteur : c'est le
+// piège du scanner (la permission d'abord, aucun `await` avant elle). Un
+// `await` posé avant `input.click()` consomme le geste, et sur iPhone le
+// sélecteur de photos ne s'ouvre pas — sans le moindre message.
+function chargeDetails(it){
+  if(it.detailsPromesse) return it.detailsPromesse;
+  if(it.detailsCharges || !it.id){
+    it.details = it.details || []; it.detailsCharges = true;
+    return Promise.resolve();
+  }
+  it.detailsPromesse = db.collection('catalogPhotos').doc(it.id).get().then(doc=>{
+    const d = doc.exists ? doc.data() : null;
+    it.details = (d && Array.isArray(d.details)) ? d.details.filter(x=>x && x.data) : [];
+    it.detailsCharges = true;
+  }).catch(err=>{
+    // on NE marque pas comme chargé : mieux vaut réessayer qu'effacer
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }).then(()=>{ it.detailsPromesse = null; });
+  return it.detailsPromesse;
+}
+function itemCible(cle){
+  const [gi, i] = String(cle).split(':').map(Number);
+  return (brandDraft[gi] && brandDraft[gi].items[i]) ? brandDraft[gi].items[i] : null;
+}
+
+$('#detailInput').addEventListener('change', async (e)=>{
+  const fichiers = [...(e.target.files || [])];
+  e.target.value = '';
+  const it = itemCible(detailCible); detailCible = null;
+  if(!fichiers.length || !it) return;
+  // La lecture partie au clic se termine ici : on n'ajoute jamais à une liste
+  // qu'on n'a pas fini de charger, sinon l'enregistrement effacerait le reste.
+  await chargeDetails(it);
+  if(!it.detailsCharges) return;
+  it.details = it.details || [];
+  for(const f of fichiers){
+    if(it.details.length >= MAX_DETAILS){ showToast(t('detailsMax').replace('{n}', MAX_DETAILS)); break; }
+    let src;
+    try{ src = await chargeImageFichier(f); }
+    catch(err){ showToast(t('toastPhotoUnreadable')); continue; }
+    const petite = reduitPhoto(src, DETAIL_PX, 110);
+    // La garde porte sur le TOTAL, comme pour les photos du client : la boucle
+    // de qualité vise 110 Ko mais ne le garantit pas.
+    const poids = (it.photo ? it.photo.length : COUVERTURE_ESTIMEE)
+                + it.details.reduce((n,d)=>n + d.data.length, 0) + petite.data.length;
+    if(poids > DETAILS_POIDS_MAX){ showToast(t('detailsWeight')); break; }
+    it.details.push(petite);
+  }
+  renderBrandModels();
+});
+
 function renderBrandModels(){
   const vues = escapeHtml(t('catVisible')), masq = escapeHtml(t('catHidden'));
   $('#brandModels').innerHTML = brandDraft.map((g, gi)=>{
@@ -4010,6 +4144,15 @@ function renderBrandModels(){
         + '<button type="button" class="cat-del" data-del="' + gi + ':' + i + '" aria-label="' + escapeHtml(t('catRemove')) + '">\u2715</button>'
         + '<input type="text" class="cat-name-input" value="' + escapeHtml(it.name || '') + '" data-name="' + gi + ':' + i + '"'
         +   ' placeholder="' + escapeHtml(t('colorNamePh')) + '">'
+        // Les photos de détail : la couverture reste seule dans la grille,
+        // elles n'apparaissent qu'à l'ouverture du coloris chez le client.
+        + '<button type="button" class="cat-det' + (it.details && it.details.length ? ' on' : '')
+        +   '" data-det="' + gi + ':' + i + '">'
+        +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="13" rx="2"/><path d="M19 8v9a2 2 0 0 1-2 2H8"/></svg>'
+        +   '<span>' + (it.details && it.details.length
+                          ? t('detailsN').replace('{n}', it.details.length)
+                          : t('detailsAdd')) + '</span>'
+        + '</button>'
         + '</div>';
     }).join('');
     return '<div class="model-block">'
@@ -4039,6 +4182,17 @@ $('#addModelBtn').addEventListener('click', ()=>{
 
 $('#brandModels').addEventListener('click', async (e)=>{
   const add = e.target.closest('button[data-add]');
+  const det = e.target.closest('[data-det]');
+  if(det){
+    const it = itemCible(det.dataset.det);
+    if(!it) return;
+    detailCible = det.dataset.det;
+    // La lecture part maintenant, le sélecteur s'ouvre dans le même geste :
+    // c'est le retour de fichier qui l'attendra.
+    chargeDetails(it).then(()=> renderBrandModels());
+    $('#detailInput').click();
+    return;
+  }
   if(add){ modeleCible = Number(add.dataset.add); $('#catPhotoInput').click(); return; }
   const delM = e.target.closest('button[data-del-model]');
   if(delM){
@@ -4103,6 +4257,104 @@ $('#catPhotoInput').addEventListener('change', async (e)=>{
   $('#cropStep').textContent = '';
 });
 
+
+
+// ================= Importer un catalogue préparé ailleurs =================
+// Remplir vingt coloris à la main, c'est vingt recadrages et vingt noms tapés.
+// Un fichier préparé en amont les écrit en un geste. Le format est volontairement
+// plat et lisible — il n'y a pas de schéma à deviner :
+//
+//   { "catalogue":1, "brand":"Stone Island",
+//     "models":[ { "model":"Doudoune",
+//                  "colors":[ { "name":"Noire", "thumb":"<b64>", "photo":"<b64>",
+//                               "details":["<b64>", ...] } ] } ] }
+//
+// Tout est du JPEG en base64, sans le préfixe `data:`. `details` est facultatif.
+function litCatalogueImporte(txt){
+  let j;
+  try{ j = JSON.parse(txt); }catch(e){ return null; }
+  if(!j || typeof j !== 'object') return null;
+  const marque = String(j.brand || '').trim();
+  const modeles = Array.isArray(j.models) ? j.models : [];
+  if(!marque || !modeles.length) return null;
+  const lignes = [];
+  let coupes = 0;
+  modeles.forEach(m=>{
+    const nomModele = String((m && m.model) || '').trim();
+    (Array.isArray(m && m.colors) ? m.colors : []).forEach(c=>{
+      if(!c || !c.thumb || !c.photo) return;   // une fiche sans image n'a pas de sens
+      const photo = String(c.photo);
+      // Le même plafond qu'à la main, et il compte ici pour une raison
+      // précise : l'import écrit par paquets de trois. Un document au-dessus
+      // du mégaoctet ferait échouer un lot entier et laisserait l'import à
+      // moitié fait — un refus clair vaut mieux qu'un catalogue à trous.
+      let poids = photo.length;
+      const details = [];
+      (Array.isArray(c.details) ? c.details : [])
+        .filter(d => typeof d === 'string' && d)
+        .forEach(d=>{
+          if(details.length >= MAX_DETAILS || poids + d.length > DETAILS_POIDS_MAX){ coupes++; return; }
+          poids += d.length;
+          details.push({ type:'image/jpeg', data:d });
+        });
+      lignes.push({ model: nomModele, name: String(c.name || '').trim(),
+                    thumb: String(c.thumb), photo, details });
+    });
+  });
+  return lignes.length ? { marque, lignes, coupes } : null;
+}
+
+$('#importBtn').addEventListener('click', ()=> $('#importInput').click());
+$('#importInput').addEventListener('change', async (e)=>{
+  const f = (e.target.files || [])[0];
+  e.target.value = '';
+  if(!f) return;
+  let lu;
+  try{ lu = litCatalogueImporte(await f.text()); }
+  catch(err){ lu = null; }
+  if(!lu){ showToast(t('importBad')); return; }
+
+  // Le même garde-fou qu'à la saisie : un nom qui ne diffère que par la casse
+  // rejoint la marque existante au lieu d'en créer une jumelle.
+  const clef = (x)=> x.toLowerCase().replace(/\s+/g, ' ').trim();
+  const deja = marquesDuCatalogue().map(m => m.nom).find(n => clef(n) === clef(lu.marque));
+  const marque = deja || lu.marque;
+
+  if(!(await showConfirm(t('importAsk')
+        .replace('{n}', lu.lignes.length).replace('{brand}', marque),
+        { okLabel: t('importOk'), danger: false }))) return;
+
+  // On continue la numérotation de la marque au lieu de repartir de zéro :
+  // sinon l'import passerait devant ce qui existe déjà.
+  let rang = catalogItems.filter(i => (i.brand||'').trim() === marque)
+                         .reduce((n,i)=> Math.max(n, Number(i.rang)||0), 0) + 1;
+  const btn = $('#importBtn');
+  btn.disabled = true;
+  try{
+    // Par paquets : un lot Firestore plafonne en nombre ET en poids, et une
+    // fiche avec ses détails pèse un demi-mégaoctet.
+    for(let d = 0; d < lu.lignes.length; d += 3){
+      const lot = db.batch();
+      lu.lignes.slice(d, d + 3).forEach(l=>{
+        const ref = db.collection('catalog').doc();
+        lot.set(ref, {
+          ownerId: currentUid, brand: marque, model: l.model, name: l.name,
+          thumb: l.thumb, thumbType: 'image/jpeg',
+          active: true, rang: rang++, createdAt: Date.now() + rang
+        });
+        lot.set(db.collection('catalogPhotos').doc(ref.id), {
+          ownerId: currentUid, photo: l.photo, photoType: 'image/jpeg', details: l.details
+        });
+      });
+      await lot.commit();
+    }
+    showToast(t('importDone').replace('{n}', lu.lignes.length)
+      + (lu.coupes ? ' ' + t('importTrim').replace('{n}', lu.coupes) : ''));
+  }catch(err){
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }
+  btn.disabled = false;
+});
 
 // ---- L'aperçu client ----
 // On n'affiche pas une imitation de la vitrine : on ouvre `client.html` en
@@ -4223,9 +4475,19 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
         // On n'écrit la photo QUE si on l'a sous la main : la fiche d'édition
         // ne travaille qu'avec les vignettes, donc renommer un coloris ne doit
         // pas effacer sa photo faute de l'avoir chargée.
+        // Même garde que pour la photo : on n'écrit que ce qu'on a sous la
+        // main. Un coloris dont on n'a ouvert ni la photo ni les détails ne
+        // doit pas les perdre parce qu'on a renommé la marque.
         if(it.photo){
-          lot.set(db.collection('catalogPhotos').doc(ref.id),
-                  { ownerId: currentUid, photo: it.photo, photoType: it.photoType || 'image/jpeg' });
+          const doc = { ownerId: currentUid, photo: it.photo, photoType: it.photoType || 'image/jpeg' };
+          if(it.detailsCharges) doc.details = it.details || [];
+          lot.set(db.collection('catalogPhotos').doc(ref.id), doc);
+        }else if(it.detailsCharges && it.id){
+          // `merge` plutôt qu'`update` : un document de photo qui manquerait
+          // ferait échouer tout le lot, et on perdrait l'enregistrement entier
+          // de la marque pour un détail.
+          lot.set(db.collection('catalogPhotos').doc(it.id),
+                  { details: it.details || [] }, { merge: true });
         }
       });
     });
