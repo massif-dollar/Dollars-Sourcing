@@ -598,6 +598,19 @@
     color:var(--text); letter-spacing:-0.012em;
   }
 
+  /* Les marques déjà connues, sous le champ. Une faute de frappe crée une
+     marque fantôme dans la vitrine du client, et rien ne le signale : le plus
+     sûr est de ne pas avoir à retaper le nom. */
+  .brand-hints{ display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+  .brand-hint{
+    padding:6px 11px; border-radius:100px; cursor:pointer; font:inherit;
+    font-size:12.5px; font-weight:600; letter-spacing:-0.01em;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    position:relative; overflow:hidden; transition:transform .3s var(--spring), color .2s var(--ease-io), border-color .2s var(--ease-io);
+  }
+  .brand-hint:active{ transform:scale(.94); }
+  .brand-hint.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+
   /* ===== L'aperçu client =====
      Il n'affiche PAS une copie de la vitrine : il ouvre `client.html` en mode
      aperçu dans un cadre. Ce que le vendeur voit ici est littéralement la page
@@ -2249,8 +2262,14 @@
     <h2 id="brandSheetTitle">Marque</h2>
     <div class="field">
       <label data-i18n="brandName">Nom de la marque</label>
-      <input type="text" id="b_name" data-i18n-placeholder="brandNamePh" placeholder="Ex: Asics">
+      <input type="text" id="b_name" data-i18n-placeholder="brandNamePh" placeholder="Ex: Asics"
+             autocapitalize="words" autocorrect="off" spellcheck="false">
       <div class="field-error"></div>
+      <!-- Les marques déjà au catalogue, à toucher plutôt qu'à retaper. Pas un
+           `<datalist>` : sur iOS il se cache derrière le clavier et ne se voit
+           qu'une fois qu'on a commencé à taper — or c'est justement avant de
+           taper qu'il faut voir qu'« Asics » existe déjà. -->
+      <div class="brand-hints" id="brandHints" style="display:none;"></div>
     </div>
     <p class="section-title" data-i18n="brandModels">Modèles</p>
     <!-- Un bloc par modèle : son nom, puis SES photos. Ajouter un modèle ajoute
@@ -2838,7 +2857,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27d';
+const BUILD = '2026-09-27e';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3942,9 +3961,33 @@ function openBrandSheet(nom){
   $('#b_name').value = nom || '';
   $('#deleteBrandBtn').style.display = nom ? 'block' : 'none';
   clearFieldError($('#b_name'));
+  renderBrandHints();
   renderBrandModels();
   $('#brandOverlay').classList.add('open');
 }
+// Les marques déjà au catalogue, proposées sous le champ. Celle qui est déjà
+// tapée s'allume : on voit d'un coup d'œil si on est en train d'en créer une
+// nouvelle ou de rejoindre une existante.
+function renderBrandHints(){
+  const el = $('#brandHints');
+  if(!el) return;
+  const noms = marquesDuCatalogue().map(m => m.nom);
+  if(!noms.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  const tape = ($('#b_name').value || '').trim().toLowerCase();
+  el.style.display = 'flex';
+  el.innerHTML = noms.map(n =>
+    '<button type="button" class="brand-hint' + (n.toLowerCase() === tape ? ' on' : '')
+    + '" data-marque="' + escapeHtml(n) + '">' + escapeHtml(n) + '</button>').join('');
+}
+$('#brandHints').addEventListener('click', (e)=>{
+  const b = e.target.closest('.brand-hint');
+  if(!b) return;
+  $('#b_name').value = b.dataset.marque;
+  clearFieldError($('#b_name'));
+  renderBrandHints();
+});
+$('#b_name').addEventListener('input', renderBrandHints);
+
 function closeBrandSheet(){
   $('#brandOverlay').classList.remove('open');
   brandOrigine = null; brandDraft = []; modeleCible = null;
@@ -4126,7 +4169,15 @@ async function sortLesPhotos(items){
 }
 
 $('#saveBrandBtn').addEventListener('click', async ()=>{
-  const nom = $('#b_name').value.trim();
+  let nom = $('#b_name').value.trim();
+  // LE VRAI GARDE-FOU N'EST PAS LA SUGGESTION, C'EST ICI. Les marques sont
+  // regroupées par leur nom EXACT : « Asics » et « asics » donneraient deux
+  // marques séparées dans la vitrine du client, les modèles éparpillés entre
+  // les deux, et rien ne préviendrait. Un nom qui ne diffère que par la casse
+  // ou les espaces reprend donc l'orthographe déjà en place.
+  const clef = (x)=> x.toLowerCase().replace(/\s+/g, ' ').trim();
+  const deja = marquesDuCatalogue().map(m => m.nom).find(n => clef(n) === clef(nom));
+  if(deja && deja !== nom) nom = deja;
   // setFieldError, pas un textContent à la main : c'est la classe `.invalid`
   // qu'il pose qui rend le message visible — sans elle il reste en display:none.
   clearFieldError($('#b_name'));
