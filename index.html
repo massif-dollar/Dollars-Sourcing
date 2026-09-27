@@ -628,7 +628,15 @@
   #ficheSheet[data-mode="fiche"] .fiche-adresse{ display:none; }
   #ficheSheet[data-mode="adresse"] .fiche-vue,
   #ficheSheet[data-mode="adresse"] .btn-row:not(.fiche-adresse .btn-row),
-  #ficheSheet[data-mode="adresse"] .fiche-lien{ display:none; }
+  #ficheSheet[data-mode="adresse"] > .fiche-lien,
+  #ficheSheet[data-mode="adresse"] .fiche-excep{ display:none !important; }
+  /* Le lien « juste pour cette fiche » vit DANS le formulaire : la règle
+     ci-dessus prend le combinateur enfant pour ne pas l'emporter avec elle. */
+  .fiche-excep{
+    margin:12px 0 0; padding:9px 12px; border-radius:11px;
+    background:var(--accent-soft); color:var(--accent);
+    font-size:12.5px; line-height:1.45; text-align:center;
+  }
   .fiche-adresse textarea{
     width:100%; padding:11px 13px; border-radius:12px; resize:vertical;
     border:0.5px solid var(--hairline); background:var(--fill); color:var(--text);
@@ -2391,7 +2399,8 @@
               style="color:var(--accent); border-color:var(--accent);">Télécharger</button>
       <button type="button" class="btn-primary" id="fichePartage" data-i18n="ficheShare" style="flex:1;">Partager</button>
     </div>
-    <button type="button" class="fiche-lien" id="ficheAdrBtn" data-i18n="ficheEditForwarder">Modifier l’adresse du transitaire</button>
+    <p class="fiche-excep" id="ficheExcep" data-i18n="fwException" style="display:none;">Exception : ce transitaire ne vaut que pour cette fiche.</p>
+    <button type="button" class="fiche-lien" id="ficheAdrBtn" data-i18n="ficheEditForwarder">Changer le transitaire</button>
 
     <div class="fiche-adresse">
       <div class="field">
@@ -2409,8 +2418,9 @@
       </div>
       <div class="btn-row">
         <button type="button" class="btn-secondary" id="fwCancel" data-i18n="cancel">Annuler</button>
-        <button type="button" class="btn-primary" id="fwSave" data-i18n="save" style="flex:1;">Enregistrer</button>
+        <button type="button" class="btn-primary" id="fwSave" data-i18n="fwSaveDefault" style="flex:1;">Enregistrer par défaut</button>
       </div>
+      <button type="button" class="fiche-lien" id="fwOnce" data-i18n="fwOnceBtn">Utiliser pour cette fiche seulement</button>
     </div>
   </div>
 </div>
@@ -2743,7 +2753,7 @@ const I18N = {
     ficheSupplierSub:'À envoyer sur WeChat pour obtenir le prix. Le produit, les photos, les quantités et l’adresse de ton transitaire — ni le client, ni aucun prix.',
     ficheForwarderSub:'À envoyer à ton transitaire. L’adresse du client et le contenu du colis, aucun prix.',
     ficheDownload:'Télécharger', ficheShare:'Partager',
-    ficheEditForwarder:'Modifier l’adresse du transitaire',
+    ficheEditForwarder:'Changer le transitaire',
     ficheNoClientAddress:'Ce client n’a pas d’adresse enregistrée. Ajoute-la dans sa fiche.',
     fwTitle:'Mon transitaire', fwName:'Nom du transitaire',
     fwAddress:'Adresse complète', fwAddressPh:'Celle que le fournisseur doit écrire sur le colis',
@@ -2751,6 +2761,9 @@ const I18N = {
     fwSub:'C’est chez lui que le fournisseur livre. Cette adresse part sur chaque fiche fournisseur.',
     fwWhy:'Avant de fabriquer la fiche, il faut l’adresse où le fournisseur doit livrer. Elle ne sera demandée qu’une fois.',
     fwSaved:'Transitaire enregistré.', fwNeedAddress:'L’adresse est nécessaire, c’est elle qui part sur la fiche.',
+    fwSaveDefault:'Enregistrer par défaut', fwOnceBtn:'Utiliser pour cette fiche seulement',
+    fwOnceDone:'Transitaire changé pour cette fiche seulement.',
+    fwException:'Exception : ce transitaire ne vaut que pour cette fiche.',
     brandCover:'Image de garde', brandCoverPick:'Choisir une image',
     brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
     brandCoverAuto:'Sans image, le client voit les premiers coloris.',
@@ -2966,7 +2979,7 @@ const I18N = {
     ficheSupplierSub:'To send on WeChat to get a price. Product, photos, quantities and your forwarder’s address — no customer, no prices.',
     ficheForwarderSub:'To send to your forwarder. The customer’s address and what is in the parcel, no prices.',
     ficheDownload:'Download', ficheShare:'Share',
-    ficheEditForwarder:'Edit forwarder address',
+    ficheEditForwarder:'Change forwarder',
     ficheNoClientAddress:'This customer has no address on file. Add it to their profile.',
     fwTitle:'My forwarder', fwName:'Forwarder name',
     fwAddress:'Full address', fwAddressPh:'The one the supplier must write on the parcel',
@@ -2974,6 +2987,9 @@ const I18N = {
     fwSub:'This is where the supplier delivers. This address goes on every supplier sheet.',
     fwWhy:'Before building the sheet, we need the address the supplier must deliver to. You will only be asked once.',
     fwSaved:'Forwarder saved.', fwNeedAddress:'The address is required — it is what goes on the sheet.',
+    fwSaveDefault:'Save as default', fwOnceBtn:'Use for this sheet only',
+    fwOnceDone:'Forwarder changed for this sheet only.',
+    fwException:'Exception: this forwarder applies to this sheet only.',
     brandCover:'Cover image', brandCoverPick:'Choose an image',
     brandCoverRemove:'Remove', brandCoverReplace:'Change image',
     brandCoverAuto:'Without an image, customers see the first colours.',
@@ -3094,7 +3110,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27j';
+const BUILD = '2026-09-27k';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4711,21 +4727,45 @@ function coupeTexte(ctx, texte, large){
   return out.length ? out : [''];
 }
 
-// Ce qui est demandé, ligne par ligne : « Grey × 3 ». Sans `items`, on retombe
-// sur la chaîne produit, qui porte déjà tout (elle voyage partout, c'est fait
-// pour). Une fiche sans détail vaut mieux qu'une fiche fausse.
-function lignesArticles(o){
+// Ce qui est demandé : un titre (marque · modèle) et une ligne par coloris
+// avec sa quantité. `items[]` le donne directement.
+//
+// SANS `items[]` — une demande tapée à la main, ou une commande d'avant le
+// catalogue — il ne reste que la chaîne produit. Le premier jet la recopiait
+// telle quelle en titre ET en ligne d'article : le même texte imprimé deux
+// fois, et sa version longue passait sous la quantité alignée à droite.
+// Or cette chaîne a une forme connue, celle qu'écrit le portail :
+//
+//     Asics · Ensemble / Veste : Gris ×5, Blanc ×5, Noire ×5
+//
+// On la relit donc, et la fiche retrouve ses lignes. Deux garde-fous, parce
+// qu'une chaîne tapée à la main peut ressembler à ça sans en être :
+// le résumé (« 12 coloris (27 pièces) ») ne se découpe pas, et un découpage
+// dont la somme ne tombe pas sur `qty` est abandonné — mieux vaut une ligne
+// unique honnête que cinq lignes qui ne font pas le compte.
+const RE_QTE = /\s*[×x]\s*(\d+)\s*$/;
+function decoupeProduit(o){
   const it = Array.isArray(o.items) ? o.items : [];
-  if(it.length) return it.map(x=>({
-    nom: [x.name, ''].filter(Boolean)[0] || '—',
-    qte: Number(x.qty) || 1
-  }));
-  return [{ nom: String(o.product || '').trim() || '—', qte: Number(o.qty) || 1 }];
-}
-function titreProduit(o){
-  const it = Array.isArray(o.items) ? o.items : [];
-  if(it.length) return [it[0].brand, it[0].model].filter(Boolean).join(' · ');
-  return String(o.product || '').trim();
+  if(it.length) return {
+    titre: [it[0].brand, it[0].model].filter(Boolean).join(' · '),
+    articles: it.map(v=>({ nom: String(v.name || '').trim() || '—', qte: Number(v.qty) || 1 }))
+  };
+  const p = String(o.product || '').trim();
+  const qte = Number(o.qty) || 1;
+  const i = p.indexOf(' : ');
+  if(i < 0) return { titre: p, articles: [{ nom: p || '—', qte }] };
+  const titre = p.slice(0, i).trim();
+  const reste = p.slice(i + 3).trim();
+  const brut = { titre, articles: [{ nom: reste || '—', qte }] };
+  if(/^\d/.test(reste)) return brut;            // le résumé, pas une liste
+  const lots = reste.split(',').map(v=>v.trim()).filter(Boolean).map(v=>{
+    const m = v.match(RE_QTE);
+    return m ? { nom: v.replace(RE_QTE, '').trim() || '—', qte: Number(m[1]) || 1 }
+             : { nom: v, qte: 1 };
+  });
+  if(!lots.length) return brut;
+  if(Number(o.qty) > 0 && lots.reduce((s, a)=>s + a.qte, 0) !== Number(o.qty)) return brut;
+  return { titre, articles: lots };
 }
 
 // L'adresse du client, dans l'ordre où on la recopie sur un colis. La fiche
@@ -4754,15 +4794,15 @@ async function fabriqueFiche(type, o, client, depuis){
     catch(e){ /* une photo illisible ne doit pas emporter la fiche */ }
   }
   const versFournisseur = type === 'supplier';
+  const fw = transitaireEffectif();
   const dest = versFournisseur
-    ? (monTransitaire
-        ? [monTransitaire.name, monTransitaire.address, monTransitaire.phone]
+    ? (fw
+        ? [fw.name, fw.address, fw.phone]
             .map(x=>String(x||'').trim()).filter(Boolean)
         : [])
     : adresseClient(client);
 
-  const articles = lignesArticles(o);
-  const titre = titreProduit(o);
+  const { titre, articles } = decoupeProduit(o);
   const note = depuis === 'demande' ? String(o.note || '').trim() : '';
 
   // --- on mesure avant de dessiner : la hauteur dépend de ce qu'il y a dedans
@@ -4772,6 +4812,16 @@ async function fabriqueFiche(type, o, client, depuis){
   const lignesTitre = coupeTexte(mes, titre, L);
   mes.font = '400 28px ' + BODY_F;
   const lignesNote = note ? coupeTexte(mes, '“' + note + '”', L) : [];
+  // La quantité est alignée à droite : on mesure sa largeur AVANT de couper le
+  // nom, sinon un nom long passe dessous. C'est exactement ce qui se voyait sur
+  // la fiche d'une demande sans `items[]` — « × 25 » imprimé sur « Bleu Mar… ».
+  mes.font = '700 30px ' + BODY_F;
+  const largQte = articles.map(a=>Math.ceil(mes.measureText('× ' + a.qte).width));
+  mes.font = '400 30px ' + BODY_F;
+  const PUCE = '• ', retrait = Math.ceil(mes.measureText(PUCE).width);
+  const artLignes = articles.map((a, i)=>
+    coupeTexte(mes, a.nom, L - 4 - retrait - largQte[i] - 24));
+  const nbArtLignes = artLignes.reduce((n, l)=>n + l.length, 0);
 
   const grille = imgs.length ? (imgs.length === 1 ? 1 : 2) : 0;
   const cote = grille ? Math.floor((L - (grille - 1) * 16) / grille) : 0;
@@ -4781,7 +4831,7 @@ async function fabriqueFiche(type, o, client, depuis){
   h += 34 + 18;                                   // la marque de l'app
   h += 52 + 26;                                   // le grand titre
   h += lignesTitre.length * 44 + 16;              // marque · modèle
-  h += articles.length * 42 + 22;                 // les lignes d'articles
+  h += nbArtLignes * 42 + 22;                     // les lignes d'articles
   h += 44;                                        // le total
   if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16;
   h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
@@ -4812,18 +4862,24 @@ async function fabriqueFiche(type, o, client, depuis){
   lignesTitre.forEach(l=>{ x.fillText(l, FICHE_PAD, y); y += 44; });
   y += 16;
 
-  // Un coloris par ligne, avec sa quantité : c'est ce qu'on achète.
+  // Un coloris par ligne, avec sa quantité : c'est ce qu'on achète. La
+  // quantité se pose sur la PREMIÈRE ligne du nom ; les suivantes s'alignent
+  // sous le texte, pas sous la puce.
   let total = 0;
   x.font = '400 30px ' + BODY_F;
-  articles.forEach(a=>{
+  articles.forEach((a, i)=>{
     total += a.qte;
-    x.fillStyle = '#333333';
-    x.fillText('• ' + a.nom, FICHE_PAD + 4, y);
-    x.fillStyle = '#111111'; x.font = '700 30px ' + BODY_F;
-    x.textAlign = 'right';
-    x.fillText('× ' + a.qte, FICHE_L - FICHE_PAD, y);
-    x.textAlign = 'left'; x.font = '400 30px ' + BODY_F;
-    y += 42;
+    artLignes[i].forEach((ligne, j)=>{
+      x.fillStyle = '#333333'; x.font = '400 30px ' + BODY_F;
+      x.fillText((j ? '' : PUCE) + ligne, FICHE_PAD + 4 + (j ? retrait : 0), y);
+      if(!j){
+        x.fillStyle = '#111111'; x.font = '700 30px ' + BODY_F;
+        x.textAlign = 'right';
+        x.fillText('× ' + a.qte, FICHE_L - FICHE_PAD, y);
+        x.textAlign = 'left';
+      }
+      y += 42;
+    });
   });
   y += 22;
   x.fillStyle = '#111111'; x.font = '700 32px ' + BODY_F;
@@ -4885,6 +4941,16 @@ async function fabriqueFiche(type, o, client, depuis){
 // second, pour les appareils qui ne savent pas partager un fichier.
 let ficheBlob = null, ficheNom = '', ficheEnAttente = null;
 
+// LE TRANSITAIRE PAR DÉFAUT EST UN RÉGLAGE, L'EXCEPTION EST UN GESTE.
+// `monTransitaire` vit dans `userSettings` et vaut pour toutes les fiches ;
+// `ficheTransitaire` ne vaut que pour la fiche à l'écran et meurt avec elle.
+// Les garder séparés est tout l'intérêt : changer de transitaire pour un colis
+// ne doit pas reconfigurer l'app, et reconfigurer l'app ne doit pas se faire
+// par inadvertance en préparant un envoi.
+let ficheTransitaire = null;
+function transitaireEffectif(){ return ficheTransitaire || monTransitaire; }
+
+let ficheCible = null;      // {type, o, depuis} — la fiche affichée, pour la refaire
 let ficheCommande = null;   // la commande ouverte dans sa fiche, s'il y en a une
 function ouvreFiche(){ $('#ficheOverlay').classList.add('open'); }
 function fermeFiche(){
@@ -4892,18 +4958,27 @@ function fermeFiche(){
   $('#ficheSheet').dataset.mode = 'fiche';
   $('#ficheImg').removeAttribute('src');
   ficheBlob = null; ficheEnAttente = null;
+  // L'exception ne survit pas à la fermeture : la fiche suivante repart du
+  // transitaire par défaut, sinon un envoi exceptionnel contaminerait le
+  // suivant sans que rien ne le dise.
+  ficheTransitaire = null; ficheCible = null;
 }
 $('#closeFiche').addEventListener('click', fermeFiche);
 $('#ficheOverlay').addEventListener('click', (e)=>{ if(e.target === $('#ficheOverlay')) fermeFiche(); });
 
 function modeAdresse(){
-  const f = monTransitaire || {};
+  // On préremplit avec le transitaire EFFECTIF : corriger une exception doit
+  // partir de l'exception, pas la jeter pour repartir du défaut.
+  const f = transitaireEffectif() || {};
   $('#f_name').value = f.name || '';
   $('#f_address').value = f.address || '';
   $('#f_phone').value = f.phone || '';
   $('#ficheSheet').dataset.mode = 'adresse';
   $('#ficheTitre').textContent = t('fwTitle');
   $('#ficheSub').textContent = t('fwSub');
+  // Sans transitaire par défaut, « juste pour cette fiche » n'a rien à quoi
+  // faire exception : on demande d'abord le défaut, une seule fois.
+  $('#fwOnce').style.display = (monTransitaire && monTransitaire.address) ? 'block' : 'none';
 }
 $('#ficheAdrBtn').addEventListener('click', modeAdresse);
 $('#fwCancel').addEventListener('click', ()=>{
@@ -4911,26 +4986,45 @@ $('#fwCancel').addEventListener('click', ()=>{
   // pas de fiche derrière à montrer.
   if(ficheEnAttente) fermeFiche(); else $('#ficheSheet').dataset.mode = 'fiche';
 });
+// On reprend exactement là où on en était : c'est la fiche qu'il voulait, pas
+// un réglage qu'il est venu changer. Et la fiche AFFICHÉE se refait aussi —
+// changer d'adresse sans redessiner laisserait l'ancienne sous les yeux.
+function repriseFiche(){
+  const reprise = ficheEnAttente || ficheCible;
+  ficheEnAttente = null;
+  if(reprise) montreFiche(reprise.type, reprise.o, reprise.depuis);
+  else $('#ficheSheet').dataset.mode = 'fiche';
+}
+function adresseSaisie(){
+  return { name: $('#f_name').value.trim(),
+           address: $('#f_address').value.trim(),
+           phone: $('#f_phone').value.trim() };
+}
 $('#fwSave').addEventListener('click', async ()=>{
-  const v = { name: $('#f_name').value.trim(),
-              address: $('#f_address').value.trim(),
-              phone: $('#f_phone').value.trim() };
+  const v = adresseSaisie();
   if(!v.address){ showToast(t('fwNeedAddress')); return; }
   const btn = $('#fwSave'); btn.disabled = true;
   const ok = await saveTransitaire(v);
   btn.disabled = false;
   if(!ok) return;
+  // Le défaut explicite l'emporte sur l'exception : sans ça, on
+  // enregistrerait un transitaire qu'on continuerait à ne pas voir.
+  ficheTransitaire = null;
   showToast(t('fwSaved'));
-  // On reprend exactement là où on en était : c'est la fiche qu'il voulait,
-  // pas un réglage qu'il est venu changer.
-  const reprise = ficheEnAttente; ficheEnAttente = null;
-  if(reprise) montreFiche(reprise.type, reprise.o, reprise.depuis);
-  else $('#ficheSheet').dataset.mode = 'fiche';
+  repriseFiche();
+});
+$('#fwOnce').addEventListener('click', ()=>{
+  const v = adresseSaisie();
+  if(!v.address){ showToast(t('fwNeedAddress')); return; }
+  ficheTransitaire = v;
+  showToast(t('fwOnceDone'));
+  repriseFiche();
 });
 
 async function montreFiche(type, o, depuis){
   const client = clientById(o.clientId);
-  if(type === 'supplier' && !(monTransitaire && monTransitaire.address)){
+  ficheCible = { type, o, depuis };
+  if(type === 'supplier' && !(transitaireEffectif() || {}).address){
     // Sans adresse de livraison, la fiche fournisseur ne sert à rien : on la
     // demande AVANT de la fabriquer, en disant pourquoi.
     ficheEnAttente = { type, o, depuis };
@@ -4947,6 +5041,11 @@ async function montreFiche(type, o, depuis){
   $('#ficheTitre').textContent = t(type === 'supplier' ? 'ficheSupplier' : 'ficheForwarder');
   $('#ficheSub').textContent = t(type === 'supplier' ? 'ficheSupplierSub' : 'ficheForwarderSub');
   $('#ficheAdrBtn').style.display = type === 'supplier' ? 'block' : 'none';
+  // Une exception se dit à l'écran. L'adresse est bien sur l'image, mais rien
+  // n'y distingue un transitaire de passage du transitaire habituel — et c'est
+  // au moment d'envoyer qu'il faut le savoir.
+  $('#ficheExcep').style.display =
+    (type === 'supplier' && ficheTransitaire) ? 'block' : 'none';
   $('#ficheImg').removeAttribute('src');
   try{
     const c = await fabriqueFiche(type, o, client, depuis);
