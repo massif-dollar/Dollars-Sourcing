@@ -591,10 +591,22 @@ rechargement. Le même oubli existait des deux côtés, corrigé des deux côté
 `freshRef()` et `photosDe()` : si l'une des deux change, le vendeur et le
 client ne verraient plus les mêmes photos.
 
-**La vitrine et la fenêtre de choix partagent le même rendu** (`catVueMarques`,
-`catVueMarque`, avec un mode). « Passer commande » depuis la photo en grand
-remplit **le même panier** que la fenêtre. Deux listes différentes, c'est deux
-comportements qui divergent : la règle de `decodeAt`, encore.
+**LE CATALOGUE SERT À REGARDER, PAS À COMMANDER.** Le bouton « Passer
+commande » de la photo en grand ne fait qu'une chose : **amener le client sur
+l'onglet Demande**. Il ne coche rien, ne pré-remplit rien. C'est une porte, pas
+un raccourci qui remplirait le panier dans son dos — et la consigne de la
+vitrine le dit : « Pour commander, va dans l'onglet **Demande**. »
+
+Le premier jet faisait l'inverse (le bouton ajoutait le coloris au panier), et
+c'est Massif qui a tranché : **on regarde dans le catalogue, on choisit dans
+Demande.** Un seul endroit où l'on commande, c'est un endroit de moins où se
+tromper.
+
+**La vitrine et la fenêtre de choix partagent quand même le même rendu**
+(`catVueMarques`, `catVueMarque`, avec un mode) : les mêmes marques, les mêmes
+modèles, les mêmes coloris. Seul le geste change — regarder d'un côté, cocher
+de l'autre. Deux rendus séparés finiraient par se contredire, c'est la règle de
+`decodeAt`.
 
 #### Les consignes, et pourquoi elles sont en couleur
 

@@ -1813,7 +1813,7 @@ const I18N = {
     sumActive:'En cours', sumDelivered:'Livrées', sumWaiting:'En attente',
     tabHistory:'Commandes', tabOrder:'Demande', tabCatalog:'Catalogue', tabDollars:'Dollarz',
     catLead:'<b>Touche une marque</b> pour voir ses modèles et tous ses coloris.',
-    catLeadBrand:'<b>Touche un coloris</b> pour le voir en grand — tu pourras le commander de là.',
+    catLeadBrand:'<b>Touche un coloris</b> pour le voir en grand. Pour commander, va dans l\u2019onglet <b>Demande</b>.',
     catEmpty:"Le catalogue est encore vide.\nEnvoie ta demande directement, on trouve tout.",
     catDenied:"Le catalogue ne répond pas pour le moment.\nRéessaie dans un instant.",
     catModel:'{n} modèle', catModels:'{n} modèles',
@@ -1822,7 +1822,6 @@ const I18N = {
     catBack:'Retour aux marques',
     catBrowse:'Parcourir le catalogue',
     catOrderThis:'Passer commande',
-    catPicked:'Produit choisi. Indique la quantité, puis envoie.',
     catPreview:'Aperçu client',
     pickOpen:'Choisir dans le catalogue', pickOpenMore:'Ajouter un autre modèle',
     pickTitle:'Le catalogue', pickClose:'Fermer',
@@ -1922,7 +1921,7 @@ const I18N = {
     sumActive:'In progress', sumDelivered:'Delivered', sumWaiting:'Waiting',
     tabHistory:'Orders', tabOrder:'Request', tabCatalog:'Catalogue', tabDollars:'Dollarz',
     catLead:'<b>Tap a brand</b> to see its models and every colour.',
-    catLeadBrand:'<b>Tap a colour</b> to see it full size — you can order it from there.',
+    catLeadBrand:'<b>Tap a colour</b> to see it full size. To order, go to the <b>Request</b> tab.',
     catEmpty:"The catalogue is still empty.\nJust send your request, we find anything.",
     catDenied:"The catalogue is not responding right now.\nTry again in a moment.",
     catModel:'{n} model', catModels:'{n} models',
@@ -1931,7 +1930,6 @@ const I18N = {
     catBack:'Back to brands',
     catBrowse:'Browse the catalogue',
     catOrderThis:'Order this',
-    catPicked:'Product selected. Set the quantity, then send.',
     catPreview:'Client preview',
     pickOpen:'Pick from the catalogue', pickOpenMore:'Add another model',
     pickTitle:'The catalogue', pickClose:'Close',
@@ -3909,26 +3907,14 @@ $('#catLb').addEventListener('click', (e)=>{
 });
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeCatLb(); });
 
-// Le pont entre la vitrine et la commande : le produit part déjà écrit, avec
-// ses trois niveaux, donc le vendeur sait exactement quel article acheter.
-// La photo, elle, ne suit pas : elle est déjà dans SON catalogue, et la
-// recopier dans la demande pèserait sur le plafond d'un document (piège 23).
+// LE CATALOGUE SERT À REGARDER, PAS À COMMANDER. Le bouton de la photo en
+// grand ne fait donc qu'une chose : amener le client sur l'onglet Demande.
+// C'est là, et là seulement, qu'on choisit ce qu'on veut — une porte, pas un
+// raccourci qui remplirait le panier dans son dos.
 $('#catLbOrder').addEventListener('click', ()=>{
-  const i = catCurrent;
-  if(!i) return;
   closeCatLb();
-  if(apercuCat){ showToast([i.brand, i.model, i.name].filter(Boolean).join(' · ')); return; }
-  // Le même panier que la fenêtre de choix : la vitrine et le formulaire ne
-  // remplissent pas deux listes différentes.
-  if(!estChoisi(i.id)){
-    if(!memeModele(i)){ showToast(t('pickOneModel')); return; }
-    if(picked.length >= MAX_LIGNES){ showToast(t('pickMax').replace('{n}', MAX_LIGNES)); return; }
-    picked.push({ id:i.id, brand:i.brand, model:i.model, name:i.name, qty:1 });
-  }
-  renderPicked();
-  clearFormErrors();
+  if(apercuCat) return;   // en aperçu, les onglets sont inertes
   switchTab('order');
-  showToast(t('catPicked'));
 });
 
 // ---- Envoi de la demande ----
