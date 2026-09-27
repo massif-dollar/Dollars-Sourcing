@@ -549,6 +549,57 @@ effacer — d'où le drapeau `detailsCharges`, et un `set(..., {merge:true})`
 plutôt qu'un `update` : un document de photo manquant ferait échouer le lot
 entier et on perdrait l'enregistrement de toute la marque pour un détail.
 
+#### L'image de garde d'une marque
+
+Par défaut, la carte d'une marque montre une **mosaïque des premiers coloris**.
+C'est bien quand on découvre, moins quand on connaît : Massif voulait pouvoir y
+mettre **le logo de la marque**, qui se reconnaît d'un coup d'œil là où quatre
+produits se devinent.
+
+**Où ça vit, et pourquoi c'est une collection de plus.** Une marque n'est
+stockée nulle part — elle se déduit des fiches, et c'est ce qui fait qu'un
+dossier vide ne peut pas exister. Son image, elle, n'a nulle part où se poser :
+d'où **`catalogBrands/{slug}`**, un document par marque qui ne porte **que**
+la vignette. L'identifiant est un slug (`stone-island`), mais le portail
+retrouve la marque par le champ `brand`, pas par le slug : **aucune fonction
+partagée entre les deux fichiers**, donc rien qui puisse diverger.
+
+**Le poids est la seule vraie contrainte**, parce que le portail lit **toutes**
+les images de garde à l'ouverture — elles sont à l'écran d'emblée, il n'y a pas
+de chargement paresseux possible. D'où : **on n'enregistre que la vignette**
+(400 px), jamais la photo pleine. Mesuré : un logo sort à **8 à 10 Ko** — les
+aplats se compressent bien mieux qu'une photo — contre ~36 Ko pour une photo de
+produit. Vingt marques en logos coûtent 200 Ko, les mêmes en photos 700 Ko.
+Mettre une photo pleine par marque ramènerait l'ouverture du catalogue à ce
+qu'elle était avant le découpage de `catalogPhotos`.
+
+Quatre règles, chacune reprise d'ailleurs :
+
+- **On n'écrit que si on y a touché.** `coverDraft` reste `undefined` tant que
+  rien n'a changé — la même garde que `detailsCharges` : renommer une marque ne
+  doit pas effacer son logo.
+- **Renommer une marque emmène son image.** Le document est recréé sous le
+  nouveau slug et l'ancien est supprimé, sinon l'image resterait orpheline sous
+  un nom qui n'existe plus.
+- **Supprimer une marque supprime son image**, comme supprimer une fiche
+  supprime sa photo pleine. Sinon elle reste seule dans la base, invisible et
+  payante.
+- **Son échec n'est jamais fatal.** Si la lecture des images de garde échoue,
+  la mosaïque reprend la main : la vitrine se comporte exactement comme avant.
+
+Côté vendeur, la case montre **la mosaïque par défaut** plutôt qu'un carré
+vide : on compare ce qu'on a avec ce qu'on aurait avant de décider.
+
+**Piège rencontré en la construisant** : `classList.add('')` **lève une
+exception**. Le cas par défaut à quatre coloris donne une classe de forme vide,
+l'exception coupait la fonction juste avant le `innerHTML`, et la case gardait
+l'image d'avant — y compris après un « Retirer ». Une classe conditionnelle se
+pose **par concaténation**, jamais par `add`.
+
+**Et `.mini-btn` n'est pas un bouton de texte** : c'est une icône de 30×30. Le
+libellé « Changer l'image » s'y coupait en deux et débordait sur son voisin.
+D'où `.cover-btn`. Avant de réutiliser une classe, regarder ce qu'elle mesure.
+
 #### Le trait de séparation, DANS un modèle
 
 Massif remplit son catalogue par arrivages. Deux vestes aujourd'hui, trois la
@@ -2066,6 +2117,7 @@ un modèle par demande, plusieurs coloris cochés avec une quantité chacun,
 photos pointées au lieu d'être recopiées donc sans limite de nombre),
 photos de détail par coloris (jusqu'à cinq, feuilletées par le client),
 trait de séparation entre groupes de coloris d'un même modèle,
+image de garde par marque (le logo plutôt que la mosaïque des produits),
 import d'un catalogue préparé en JSON,
 programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la

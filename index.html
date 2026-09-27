@@ -611,6 +611,36 @@
   .cat-det.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
   .cat-det svg{ width:12px; height:12px; flex:none; }
 
+  /* L'image de garde de la marque, dans sa feuille. */
+  .brand-cover-row{ display:flex; gap:12px; align-items:flex-start; }
+  .brand-cover{
+    width:84px; height:84px; flex:none; border-radius:12px; overflow:hidden;
+    border:0.5px solid var(--hairline); background:var(--fill-2);
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1.5px;
+  }
+  .brand-cover.solo{ grid-template-columns:1fr; grid-template-rows:1fr; }
+  .brand-cover.duo{ grid-template-rows:1fr; }
+  .brand-cover.trio > *:first-child{ grid-row:span 2; }
+  .brand-cover img{ width:100%; height:100%; object-fit:cover; display:block; min-width:0; min-height:0; }
+  .brand-cover .vide{
+    grid-column:1 / -1; grid-row:1 / -1; display:grid; place-items:center;
+    color:var(--text-faint); font-size:11px;
+  }
+  .brand-cover-act{ display:flex; flex-wrap:wrap; gap:7px; align-items:center; flex:1; min-width:0; }
+  /* Un bouton de TEXTE : `.mini-btn` fait 30×30 et sert aux icônes, un libellé
+     n'y tient pas — il s'y coupait en deux et débordait sur son voisin. */
+  .cover-btn{
+    padding:7px 11px; border-radius:9px; cursor:pointer; font:inherit; flex:none;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    font-size:12px; font-weight:600; letter-spacing:-0.01em; white-space:nowrap;
+    transition:transform .3s var(--spring), color .2s var(--ease-io), border-color .2s var(--ease-io);
+  }
+  .cover-btn:active{ transform:scale(.95); }
+  .cover-btn.danger{ color:var(--danger); }
+  .brand-cover-hint{
+    flex-basis:100%; font-size:11px; color:var(--text-faint); line-height:1.35;
+  }
+
   /* Le séparateur de groupe, DANS un modèle. Massif range ses coloris par
      arrivage : les deux premières vestes, un trait, la suite. Ce n'est pas un
      niveau de plus dans les données — c'est un repère visuel, rien d'autre.
@@ -2320,6 +2350,21 @@
            taper qu'il faut voir qu'« Asics » existe déjà. -->
       <div class="brand-hints" id="brandHints" style="display:none;"></div>
     </div>
+    <!-- L'image de garde de la marque. Sans elle, le client voit une mosaïque
+         des premiers coloris ; avec elle, il voit ce que Massif a choisi — le
+         logo de la marque, le plus souvent. -->
+    <div class="field">
+      <label data-i18n="brandCover">Image de garde</label>
+      <div class="brand-cover-row">
+        <div class="brand-cover" id="brandCoverBox"></div>
+        <div class="brand-cover-act">
+          <button type="button" class="cover-btn" id="brandCoverBtn" data-i18n="brandCoverPick">Choisir une image</button>
+          <button type="button" class="cover-btn danger" id="brandCoverDel" data-i18n="brandCoverRemove" style="display:none;">Retirer</button>
+          <span class="brand-cover-hint" id="brandCoverHint" data-i18n="brandCoverAuto">Sans image, le client voit les premiers coloris.</span>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="brandCoverInput" accept="image/*" style="display:none;">
     <p class="section-title" data-i18n="brandModels">Modèles</p>
     <!-- Un bloc par modèle : son nom, puis SES photos. Ajouter un modèle ajoute
          un bloc, pas une photo de plus dans un tas. -->
@@ -2607,6 +2652,10 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
+    brandCover:'Image de garde', brandCoverPick:'Choisir une image',
+    brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
+    brandCoverAuto:'Sans image, le client voit les premiers coloris.',
+    brandCoverSet:'Le client verra cette image en couverture de la marque.',
     sepOn:'Commencer un groupe ici', sepOff:'Ne plus séparer ici',
     detailsAdd:'Détails', detailsN:'{n} détail(s)',
     detailsMax:'{n} photos de détail au maximum par coloris.',
@@ -2811,6 +2860,10 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
+    brandCover:'Cover image', brandCoverPick:'Choose an image',
+    brandCoverRemove:'Remove', brandCoverReplace:'Change image',
+    brandCoverAuto:'Without an image, customers see the first colours.',
+    brandCoverSet:'Customers will see this image as the brand cover.',
     sepOn:'Start a group here', sepOff:'Stop separating here',
     detailsAdd:'Details', detailsN:'{n} detail(s)',
     detailsMax:'{n} detail photos maximum per colour.',
@@ -2927,7 +2980,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27h';
+const BUILD = '2026-09-27i';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -2971,6 +3024,15 @@ let orders = [];
 let clients = [];
 let suppliers = [];
 let catalogItems = [];   // une fiche = un coloris précis, pas un modèle abstrait
+// L'image de garde d'une marque, par NOM de marque. Une marque n'est stockée
+// nulle part — elle se déduit des fiches — mais son image, elle, a besoin d'un
+// document : `catalogBrands/{slug}`, qui ne porte QUE la vignette.
+let brandCovers = {};
+let coverDraft;          // undefined = on n'y a pas touché ; null = retirée
+function slugMarque(nom){
+  return (nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'marque';
+}
 let pendingRequests = [];
 let currentTab = 'tous';
 let searchTerm = '';
@@ -3312,6 +3374,18 @@ function startListeners(){
     // manquent. On redessine donc l'écran courant quand elles arrivent.
     if(viewState === 'catalogue') renderCatalogue(); else renderCurrentView();
     sortLesPhotos(catalogItems);
+  }, ()=>showToast(t('toastSaveError')));
+  // Les images de garde des marques. Un document par marque, et rien d'autre
+  // dedans qu'une vignette : le portail les lit TOUTES à l'ouverture, elles
+  // doivent donc rester au poids d'une vignette (piège 23 appliqué à l'échelle
+  // du catalogue entier).
+  db.collection('catalogBrands').where('ownerId','==',currentUid).onSnapshot(snap=>{
+    brandCovers = {};
+    snap.docs.forEach(d=>{
+      const v = d.data() || {};
+      if(v.brand && v.cover) brandCovers[(v.brand||'').trim()] = v;
+    });
+    if(viewState === 'catalogue') renderCatalogue();
   }, ()=>showToast(t('toastSaveError')));
   db.collection('clients').where('ownerId','==',currentUid).onSnapshot(snap=>{
     const all = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
@@ -4031,10 +4105,57 @@ function openBrandSheet(nom){
   $('#b_name').value = nom || '';
   $('#deleteBrandBtn').style.display = nom ? 'block' : 'none';
   clearFieldError($('#b_name'));
+  coverDraft = undefined;
   renderBrandHints();
   renderBrandModels();
+  renderBrandCover();
   $('#brandOverlay').classList.add('open');
 }
+// Ce que montre la case : l'image choisie si elle existe, sinon la mosaïque
+// que le client voit aujourd'hui. Montrer le défaut plutôt qu'une case vide,
+// c'est ce qui permet de comparer avant de décider.
+function renderBrandCover(){
+  const box = $('#brandCoverBox'); if(!box) return;
+  const nom = ($('#b_name').value || '').trim() || brandOrigine || '';
+  const pose = coverDraft !== undefined ? coverDraft
+             : (brandCovers[nom] ? { data: brandCovers[nom].cover,
+                                     type: brandCovers[nom].coverType || 'image/jpeg' } : null);
+  // `classList.add('')` LÈVE UNE EXCEPTION, et elle s'arrêtait juste avant le
+  // `innerHTML` : la case gardait alors l'image d'avant, y compris après un
+  // « Retirer ». Une classe vide se pose donc par concaténation, jamais par
+  // `add`. Ça n'arrivait qu'à partir de quatre coloris — le cas par défaut.
+  if(pose){
+    box.className = 'brand-cover solo';
+    box.innerHTML = '<img src="data:' + pose.type + ';base64,' + pose.data + '" alt="">';
+  }else{
+    const vues = brandDraft.reduce((a,g)=>a.concat(g.items), []).slice(0, 4);
+    box.className = 'brand-cover' + (vues.length === 1 ? ' solo' : vues.length === 2 ? ' duo'
+                                   : vues.length === 3 ? ' trio' : '');
+    box.innerHTML = vues.length
+      ? vues.map(i=>'<img src="data:' + (i.thumbType||'image/jpeg') + ';base64,' + i.thumb + '" alt="">').join('')
+      : '<span class="vide">—</span>';
+  }
+  $('#brandCoverDel').style.display = pose ? 'block' : 'none';
+  $('#brandCoverBtn').textContent = t(pose ? 'brandCoverReplace' : 'brandCoverPick');
+  $('#brandCoverHint').textContent = t(pose ? 'brandCoverSet' : 'brandCoverAuto');
+}
+// Le sélecteur s'ouvre DANS le geste : aucun `await` avant lui (piège 33).
+$('#brandCoverBtn').addEventListener('click', ()=> $('#brandCoverInput').click());
+$('#brandCoverDel').addEventListener('click', ()=>{ coverDraft = null; renderBrandCover(); });
+$('#brandCoverInput').addEventListener('change', async (e)=>{
+  const f = (e.target.files || [])[0];
+  e.target.value = '';
+  if(!f) return;
+  let src;
+  try{ src = await chargeImageFichier(f); }
+  catch(err){ showToast(t('toastPhotoUnreadable')); return; }
+  const out = await ouvreRecadreur(src);
+  // On ne garde QUE la vignette : cette image part dans un document que le
+  // portail lit pour toutes les marques d'un coup. Une photo pleine par marque
+  // et l'ouverture du catalogue redeviendrait ce qu'elle était avant.
+  if(out) { coverDraft = { data: out.thumb.data, type: out.thumb.media_type }; renderBrandCover(); }
+});
+
 // Les marques déjà au catalogue, proposées sous le champ. Celle qui est déjà
 // tapée s'allume : on voit d'un coup d'œil si on est en train d'en créer une
 // nouvelle ou de rejoindre une existante.
@@ -4060,7 +4181,7 @@ $('#b_name').addEventListener('input', renderBrandHints);
 
 function closeBrandSheet(){
   $('#brandOverlay').classList.remove('open');
-  brandOrigine = null; brandDraft = []; modeleCible = null;
+  brandOrigine = null; brandDraft = []; modeleCible = null; coverDraft = undefined;
 }
 $('#closeBrandSheet').addEventListener('click', closeBrandSheet);
 $('#brandOverlay').addEventListener('click', (e)=>{ if(e.target===$('#brandOverlay')) closeBrandSheet(); });
@@ -4160,6 +4281,9 @@ const ICON_SEP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 
 function renderBrandModels(){
   const vues = escapeHtml(t('catVisible')), masq = escapeHtml(t('catHidden'));
+  // La case d'image de garde montre la mosaïque par défaut : elle doit donc
+  // se redessiner quand les coloris changent.
+  if(typeof renderBrandCover === 'function') setTimeout(renderBrandCover, 0);
   $('#brandModels').innerHTML = brandDraft.map((g, gi)=>{
     const cases = g.items.map((it, i)=>{
       const cache = it.active === false;
@@ -4532,6 +4656,28 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
         }
       });
     });
+
+    // L'image de garde. Elle vit dans son propre document, un par marque :
+    // une marque n'est stockée nulle part, mais son image a besoin d'un
+    // endroit. On n'y touche QUE si on y a touché — `coverDraft` reste
+    // `undefined` tant que Massif n'a rien changé, exactement comme pour les
+    // photos de détail : renommer une marque ne doit pas effacer son logo.
+    const refCover = db.collection('catalogBrands').doc(slugMarque(nom));
+    if(coverDraft !== undefined){
+      if(coverDraft) lot.set(refCover, { ownerId: currentUid, brand: nom,
+                                         cover: coverDraft.data,
+                                         coverType: coverDraft.type || 'image/jpeg' });
+      else lot.delete(refCover);
+    }else if(brandOrigine && brandOrigine !== nom && brandCovers[brandOrigine]){
+      // Marque renommée : l'image suit, sinon elle resterait orpheline sous
+      // l'ancien nom, invisible et payante.
+      lot.set(refCover, { ownerId: currentUid, brand: nom,
+                          cover: brandCovers[brandOrigine].cover,
+                          coverType: brandCovers[brandOrigine].coverType || 'image/jpeg' });
+    }
+    if(brandOrigine && brandOrigine !== nom)
+      lot.delete(db.collection('catalogBrands').doc(slugMarque(brandOrigine)));
+
     await lot.commit();
     closeBrandSheet();
     showToast(t('toastBrandSaved'));
@@ -4565,6 +4711,9 @@ $('#deleteBrandBtn').addEventListener('click', async ()=>{
                   lot.delete(db.collection('catalog').doc(i.id));
                   lot.delete(db.collection('catalogPhotos').doc(i.id));
                 });
+    // L'image de garde part avec la marque : sinon elle resterait seule dans
+    // la base, invisible et payante — la même règle que pour la photo pleine.
+    lot.delete(db.collection('catalogBrands').doc(slugMarque(brandOrigine)));
     await lot.commit();
     closeBrandSheet();
     showToast(t('toastBrandDeleted'));

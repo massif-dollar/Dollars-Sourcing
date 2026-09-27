@@ -3561,6 +3561,21 @@ function listenCatalog(ownerId){
     console.error('[catalogue] lecture refusée :', err && err.code, err && err.message);
     if(currentTab === 'catalog') renderCatalog();
   });
+  // Les images de garde des marques. Un document par marque, lu en même temps
+  // que le catalogue : sans `list` ouvert dans les règles, un visiteur anonyme
+  // n'en verrait aucune — et sans la moindre erreur (piège 11).
+  // Son échec n'est JAMAIS fatal : sans image de garde, la mosaïque des
+  // premiers coloris reprend la main, exactement comme avant.
+  db.collection('catalogBrands').where('ownerId','==',ownerId).onSnapshot(snap=>{
+    brandCovers = {};
+    snap.docs.forEach(d=>{
+      const v = d.data() || {};
+      if(v.brand && v.cover) brandCovers[(v.brand||'').trim()] = v;
+    });
+    if(currentTab === 'catalog') renderCatalog();
+  }, err=>{
+    console.error('[images de garde] lecture refusée :', err && err.code);
+  });
 }
 
 function catImg(i, grand){
@@ -3570,6 +3585,9 @@ function catImg(i, grand){
   return 'data:' + (ty || 'image/jpeg') + ';base64,' + d;
 }
 function catRang(a,b){ return (a.rang||0) - (b.rang||0) || (a.createdAt||0) - (b.createdAt||0); }
+// L'image de garde choisie par le vendeur, par nom de marque. Absente, c'est
+// la mosaïque des premiers coloris qui s'affiche — le comportement d'avant.
+let brandCovers = {};
 // Ni les marques ni les modèles ne sont stockés à part : les deux se déduisent
 // des fiches, donc un dossier vide ne peut pas exister.
 // Ce que le client a le droit de VOIR. `active` n'est pas du stock, c'est de
@@ -3655,13 +3673,20 @@ function catVueMarques(el, mode, intro){
   const marques = catBrands();
   el.innerHTML = catNote(intro)
     + '<div class="cat-grid">' + marques.map(m=>{
-        const vues = m.items.slice(0, 4);
-        const reste = m.items.length - vues.length;
-        const cases = vues.map((i,k)=>
-          (reste > 0 && k === 3)
-            ? '<div class="cat-more">+' + (reste + 1) + '</div>'
-            : '<img src="' + catImg(i) + '" alt="" loading="lazy">').join('');
-        const forme = vues.length === 1 ? ' solo' : vues.length === 2 ? ' duo'
+        // L'image de garde choisie par le vendeur passe AVANT la mosaïque :
+        // un logo dit la marque d'un coup d'œil, quatre produits font deviner.
+        const garde = brandCovers[m.nom];
+        const vues = garde ? [] : m.items.slice(0, 4);
+        const reste = garde ? 0 : m.items.length - vues.length;
+        const cases = garde
+          ? '<img src="data:' + (garde.coverType || 'image/jpeg') + ';base64,'
+            + garde.cover + '" alt="" loading="lazy">'
+          : vues.map((i,k)=>
+              (reste > 0 && k === 3)
+                ? '<div class="cat-more">+' + (reste + 1) + '</div>'
+                : '<img src="' + catImg(i) + '" alt="" loading="lazy">').join('');
+        const forme = garde ? ' solo'
+                    : vues.length === 1 ? ' solo' : vues.length === 2 ? ' duo'
                     : vues.length === 3 ? ' trio' : '';
         const nbModeles = catModelsOf(m.items).length;
         const coches = mode === 'choix' ? m.items.filter(i=>estChoisi(i.id)).length : 0;

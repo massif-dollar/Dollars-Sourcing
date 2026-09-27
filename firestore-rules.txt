@@ -124,6 +124,19 @@ service cloud.firestore {
       allow update, delete: if isOwner() || isMine();
     }
 
+    // ── L'IMAGE DE GARDE D'UNE MARQUE ──
+    // Une marque n'est stockée nulle part, elle se déduit des fiches. Son
+    // image de garde, elle, n'a nulle part où vivre : d'où ce document, un
+    // par marque, et RIEN D'AUTRE dedans qu'une vignette.
+    // Lecture ouverte pour la même raison que `catalog` : le portail est un
+    // visiteur anonyme (piège 11), sans `list` ouvert il ne verrait aucune
+    // image de garde — et sans la moindre erreur visible.
+    match /catalogBrands/{brandId} {
+      allow read: if true;
+      allow create: if isTeam() && claimingMine();
+      allow update, delete: if isOwner() || isMine();
+    }
+
     // ── RÉGLAGES ──
     // La liste des accès : lisible par tout compte connecté (nécessaire pour qu'un
     // invité vérifie sa propre autorisation), modifiable uniquement par le propriétaire.
