@@ -611,6 +611,26 @@
   .cat-det.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
   .cat-det svg{ width:12px; height:12px; flex:none; }
 
+  /* Le séparateur de groupe, DANS un modèle. Massif range ses coloris par
+     arrivage : les deux premières vestes, un trait, la suite. Ce n'est pas un
+     niveau de plus dans les données — c'est un repère visuel, rien d'autre.
+     La couleur est `--accent` : vert en thème clair, orange en sombre, donc
+     exactement ce qui a été demandé, et ça suit le thème tout seul. */
+  .cat-sep{
+    grid-column:1 / -1; height:2px; border-radius:2px; margin:7px 0 3px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity:.9;
+  }
+  /* Sous l'œil, et SUR la vignette : `.cat-item` englobe aussi le nom et le
+     bouton Détails, donc un `bottom:5px` viendrait se poser par-dessus eux. */
+  .cat-item .cat-sep-btn{
+    position:absolute; left:5px; top:34px; width:25px; height:25px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.6); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .cat-item .cat-sep-btn svg{ width:13px; height:13px; }
+  .cat-item .cat-sep-btn.on{ background:var(--accent); }
+
   /* L'import : un fichier préparé ailleurs, écrit en un lot. */
   .import-btn{
     width:100%; margin-bottom:12px; padding:11px; border-radius:13px; cursor:pointer; font:inherit;
@@ -2587,6 +2607,7 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
+    sepOn:'Commencer un groupe ici', sepOff:'Ne plus séparer ici',
     detailsAdd:'Détails', detailsN:'{n} détail(s)',
     detailsMax:'{n} photos de détail au maximum par coloris.',
     detailsWeight:"Ce coloris devient trop lourd. Retire une photo de détail.",
@@ -2790,6 +2811,7 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
+    sepOn:'Start a group here', sepOff:'Stop separating here',
     detailsAdd:'Details', detailsN:'{n} detail(s)',
     detailsMax:'{n} detail photos maximum per colour.',
     detailsWeight:'This colour is getting too heavy. Remove a detail photo.',
@@ -2905,7 +2927,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27g';
+const BUILD = '2026-09-27h';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4132,16 +4154,28 @@ $('#detailInput').addEventListener('change', async (e)=>{
   renderBrandModels();
 });
 
+// Le trait ne se dessine JAMAIS devant le premier coloris d'un modèle : il n'y
+// aurait rien à séparer, et une ligne en tête de grille se lit comme un bug.
+const ICON_SEP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16"/><path d="M8 7h8"/><path d="M8 17h8"/></svg>';
+
 function renderBrandModels(){
   const vues = escapeHtml(t('catVisible')), masq = escapeHtml(t('catHidden'));
   $('#brandModels').innerHTML = brandDraft.map((g, gi)=>{
     const cases = g.items.map((it, i)=>{
       const cache = it.active === false;
-      return '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
+      return (it.sep && i > 0 ? '<i class="cat-sep" aria-hidden="true"></i>' : '')
+        + '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
         + '<img class="cat-img" src="data:' + (it.thumbType||'image/jpeg') + ';base64,' + it.thumb + '" alt="">'
         + '<button type="button" class="cat-eye" data-eye="' + gi + ':' + i + '" title="' + (cache?masq:vues) + '" aria-label="' + (cache?masq:vues) + '">'
         +   (cache ? OEIL_BARRE : OEIL_OUVERT) + '</button>'
         + '<button type="button" class="cat-del" data-del="' + gi + ':' + i + '" aria-label="' + escapeHtml(t('catRemove')) + '">\u2715</button>'
+        // Le trait de séparation : il appartient au coloris qui OUVRE le
+        // groupe, pas à celui qui ferme le précédent. Déplacer un coloris
+        // emmène donc son trait avec lui, ce qui est ce qu'on attend.
+        + (i > 0 ? '<button type="button" class="cat-sep-btn' + (it.sep ? ' on' : '')
+            + '" data-sep="' + gi + ':' + i + '" title="' + escapeHtml(t(it.sep ? 'sepOff' : 'sepOn'))
+            + '" aria-label="' + escapeHtml(t(it.sep ? 'sepOff' : 'sepOn')) + '">'
+            + ICON_SEP + '</button>' : '')
         + '<input type="text" class="cat-name-input" value="' + escapeHtml(it.name || '') + '" data-name="' + gi + ':' + i + '"'
         +   ' placeholder="' + escapeHtml(t('colorNamePh')) + '">'
         // Les photos de détail : la couverture reste seule dans la grille,
@@ -4182,6 +4216,12 @@ $('#addModelBtn').addEventListener('click', ()=>{
 
 $('#brandModels').addEventListener('click', async (e)=>{
   const add = e.target.closest('button[data-add]');
+  const sep = e.target.closest('[data-sep]');
+  if(sep){
+    const it = itemCible(sep.dataset.sep);
+    if(it){ it.sep = !it.sep; renderBrandModels(); }
+    return;
+  }
   const det = e.target.closest('[data-det]');
   if(det){
     const it = itemCible(det.dataset.det);
@@ -4298,7 +4338,7 @@ function litCatalogueImporte(txt){
           details.push({ type:'image/jpeg', data:d });
         });
       lignes.push({ model: nomModele, name: String(c.name || '').trim(),
-                    thumb: String(c.thumb), photo, details });
+                    thumb: String(c.thumb), photo, details, sep: !!c.sep });
     });
   });
   return lignes.length ? { marque, lignes, coupes } : null;
@@ -4340,7 +4380,7 @@ $('#importInput').addEventListener('change', async (e)=>{
         lot.set(ref, {
           ownerId: currentUid, brand: marque, model: l.model, name: l.name,
           thumb: l.thumb, thumbType: 'image/jpeg',
-          active: true, rang: rang++, createdAt: Date.now() + rang
+          active: true, sep: l.sep, rang: rang++, createdAt: Date.now() + rang
         });
         lot.set(db.collection('catalogPhotos').doc(ref.id), {
           ownerId: currentUid, photo: l.photo, photoType: 'image/jpeg', details: l.details
@@ -4467,6 +4507,7 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
           name: (it.name || '').trim(),
           thumb: it.thumb, thumbType: it.thumbType,
           active: it.active !== false,
+          sep: !!it.sep,
           rang: rang++,
           createdAt: it.createdAt || Date.now()
         };
