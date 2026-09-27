@@ -704,6 +704,14 @@
   }
   .cat-model-h i{ font-style:normal; font-size:11.5px; font-weight:500; color:var(--text-faint); }
   .cat-colors{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  /* Le séparateur de groupe, DANS un modèle : les coloris d'un arrivage, un
+     trait, la suite. `--accent` vaut vert en clair et orange en sombre — la
+     ligne suit donc le thème sans une ligne de code de plus. */
+  .cat-sep{
+    grid-column:1 / -1; height:2px; border-radius:2px; margin:6px 0 2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity:.9;
+  }
   .cat-color{
     padding:0; border:0; background:none; cursor:pointer; text-align:center; color:inherit; font:inherit;
     animation:cardIn .45s var(--ease-out) backwards; animation-delay:var(--d, 0ms);
@@ -3671,6 +3679,26 @@ function catVueMarques(el, mode, intro){
   stagger(el.querySelectorAll('.cat-brand'), 55);
 }
 
+// Le trait vit sur le coloris qui OUVRE le groupe. Mais un coloris masqué
+// n'arrive pas jusqu'ici : si c'est lui qui portait le trait, la séparation
+// disparaîtrait sans rien dire. On relit donc la liste COMPLÈTE du modèle et
+// on reporte le trait sur le premier coloris visible qui suit.
+// Jamais devant le premier affiché : il n'y aurait rien à séparer.
+function catAvecSeps(marque, g){
+  const tous = catalogItems
+    .filter(i => (i.brand||'').trim() === marque && (i.model||'').trim() === (g.nom||''))
+    .sort(catRang);
+  const visibles = new Set(g.items.map(i => i.id));
+  const sortie = []; let attend = false;
+  tous.forEach(i=>{
+    if(i.sep) attend = true;
+    if(!visibles.has(i.id)) return;
+    sortie.push(Object.assign({}, i, { __sep: attend && sortie.length > 0 }));
+    attend = false;
+  });
+  return sortie.length ? sortie : g.items;
+}
+
 function catVueMarque(el, marque, mode){
   const items = catActifs().filter(i => (i.brand||'').trim() === marque).sort(catRang);
   if(!items.length) return false;   // la marque a disparu pendant qu'on la regardait
@@ -3695,8 +3723,9 @@ function catVueMarque(el, marque, mode){
         '<div class="cat-model"><div class="cat-model-h">'
         + escapeHtml(g.nom || t('catNoModel'))
         + '<i>' + catCount(g.items.length, 'catColor', 'catColors') + '</i></div>'
-        + '<div class="cat-colors">' + g.items.map(i=>
-            '<button type="button" class="cat-color'
+        + '<div class="cat-colors">' + catAvecSeps(marque, g).map(i=>
+            (i.__sep ? '<i class="cat-sep" aria-hidden="true"></i>' : '')
+            + '<button type="button" class="cat-color'
             + (mode === 'choix' && estChoisi(i.id) ? ' is-picked' : '')
             + (mode === 'choix' && !memeModele(i) ? ' is-locked' : '')
             + '" data-id="' + escapeHtml(i.id) + '">'

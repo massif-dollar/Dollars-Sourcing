@@ -549,6 +549,43 @@ effacer — d'où le drapeau `detailsCharges`, et un `set(..., {merge:true})`
 plutôt qu'un `update` : un document de photo manquant ferait échouer le lot
 entier et on perdrait l'enregistrement de toute la marque pour un détail.
 
+#### Le trait de séparation, DANS un modèle
+
+Massif remplit son catalogue par arrivages. Deux vestes aujourd'hui, trois la
+semaine prochaine, et il veut les voir séparées **sans les sortir du modèle** :
+un trait fin entre les groupes, et c'est tout.
+
+**J'avais poussé pour en faire deux modèles, et il a redit non.** Sa raison
+tient : ces pièces sont le même produit à ses yeux, il ne veut pas dix modèles
+« Doudoune quelque chose » dans sa vitrine. C'est sa vitrine.
+
+**La contrepartie est réelle et il faut la connaître** : un séparateur ne
+sépare que l'œil. Pour l'app, tout reste un seul modèle, donc un client peut
+cocher un coloris d'avant le trait et un coloris d'après **dans la même
+demande** — un seul colis, une seule référence. Si un jour ça pose problème,
+la réponse sera de passer au niveau modèle, pas d'épaissir le trait.
+
+**La couleur n'a rien demandé de spécial** : `--accent` vaut vert en thème
+clair et orange en thème sombre, soit exactement ce qui était demandé. La
+ligne suit donc le thème sans une ligne de code de plus.
+
+**Le trait appartient au coloris qui OUVRE le groupe** (`sep:true`), pas à
+celui qui ferme le précédent. Déplacer un coloris emmène donc son trait avec
+lui. Trois règles qui en découlent :
+
+- **Jamais devant le premier coloris affiché** : il n'y aurait rien à séparer,
+  et une ligne en tête de grille se lit comme un défaut d'affichage.
+- **Un coloris masqué ne fait pas disparaître le trait.** Le portail relit la
+  liste complète du modèle (masquées comprises) et reporte le trait sur le
+  premier coloris visible qui suit — sinon masquer une fiche effacerait une
+  séparation en silence, et c'est le piège du flou oublié appliqué au rangement.
+- **`grid-column:1 / -1`** : la ligne traverse la grille entière et force le
+  retour à la ligne, donc le groupe suivant repart proprement à gauche.
+
+Côté vendeur, le bouton est **sous l'œil, sur la vignette**. Pas en bas :
+`.cat-item` englobe aussi le nom et le bouton Détails, un `bottom:5px` serait
+venu se poser par-dessus eux — vérifié à l'image avant de s'en apercevoir.
+
 #### Importer un catalogue préparé ailleurs
 
 Vingt coloris à la main, c'est vingt recadrages et vingt noms tapés. Le bouton
@@ -561,6 +598,8 @@ a pas de schéma à deviner :
                                 "details":["<b64>", ...] } ] } ] }
 
 Tout est du JPEG en base64 sans le préfixe `data:`, `details` est facultatif.
+Un coloris peut porter `"sep": true` : il ouvre alors un groupe, précédé du
+trait de séparation.
 C'est ce qui permet de **remplir le catalogue à deux** : Massif envoie ses
 photos, le fichier est préparé, il l'importe en un geste.
 
@@ -2026,6 +2065,7 @@ avec aperçu client depuis l'app pro, commande depuis le catalogue (une marque e
 un modèle par demande, plusieurs coloris cochés avec une quantité chacun,
 photos pointées au lieu d'être recopiées donc sans limite de nombre),
 photos de détail par coloris (jusqu'à cinq, feuilletées par le client),
+trait de séparation entre groupes de coloris d'un même modèle,
 import d'un catalogue préparé en JSON,
 programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
