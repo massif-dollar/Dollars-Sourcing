@@ -241,7 +241,12 @@ déploiement est un choix assumé.
 
   **Trois leçons.** Le code sur GitHub est le vrai actif, il n'a rien risqué.
   L'app a un **bouton d'export** (icône dans l'en-tête, `exportData()`) qui
-  télécharge commandes, clients et fournisseurs en JSON : **s'en servir
+  télécharge commandes, clients, fournisseurs **et le catalogue entier** en
+  JSON — fiches, photos pleines, photos de détail et images de garde. Les
+  photos pleines ne sont pas en mémoire (elles ne se lisent qu'à l'ouverture
+  d'un coloris) : l'export va donc les chercher, et c'est ce qui fait peser le
+  fichier. C'est le prix d'une vraie sauvegarde — un export léger qui ne
+  contient pas le travail n'en est pas une : **s'en servir
   régulièrement**, c'est la seule sauvegarde qui ne dépend pas de Google. Et à
   terme, une activité ne doit pas reposer sur un Gmail gratuit : un domaine
   avec une adresse professionnelle payante ne se fait pas désactiver par un
@@ -1118,6 +1123,65 @@ WeChat** depuis la liste des fournisseurs. Un tap, on colle dans la recherche de
 WeChat, et contrairement au jeton du QR, un identifiant ne périme jamais. Le
 repli `execCommand('copy')` est là parce que Safari refuse le presse-papiers
 hors geste direct — un échec silencieux serait pire que pas de bouton.
+
+### Les fiches à envoyer : fournisseur et transitaire
+
+Massif recopiait à la main, dans WeChat, ce que l'app avait déjà. Deux boutons
+sur une demande — et sur une commande — produisent donc **une image prête à
+envoyer**. Une image, parce que c'est ce qui voyage partout et se lit sans
+rien installer.
+
+**DEUX FICHES, DEUX DESTINATAIRES, ET ELLES NE DISENT PAS LA MÊME CHOSE :**
+
+| | fiche fournisseur | fiche transitaire |
+|---|---|---|
+| produit, coloris, quantités, photos | oui | oui |
+| destinataire affiché | **le transitaire de Massif** | **le client** |
+| identité du client | **jamais** | oui, c'est le point |
+| prix, marge | **jamais** | **jamais** |
+
+**La raison d'être du bouton est là** : une capture d'écran de la demande dans
+l'app enverrait le prix client chez le fournisseur. Ce ne sont pas des copies
+de l'écran, ce sont des **vues construites pour quelqu'un**.
+
+**Le piège que le test a trouvé, et qui aurait fini chez un fournisseur** :
+sur une demande, `note` est le message du client (« taille M ») — utile. Sur
+une **commande**, `note` est le champ de Massif, où il écrit ce qu'il veut, y
+compris un prix. La fiche prend donc un paramètre `depuis` et **la note ne
+part que depuis une demande**. Vérifié en mesurant la hauteur de l'image avec
+et sans.
+
+**En anglais**, c'est le choix de Massif : la langue commune d'un marché
+chinois, et surtout une fiche qu'il peut relire avant d'envoyer. Une fiche
+qu'on ne peut pas relire, on ne l'envoie pas.
+
+**PARTAGER PLUTÔT QUE TÉLÉCHARGER**, et c'est ce qui fait gagner le geste : sur
+iPhone, `navigator.share` avec un fichier ouvre la feuille de partage, donc
+WeChat en un tap. Un téléchargement atterrit dans les Fichiers et il faut
+aller le rechercher. On teste `navigator.canShare({files})` **avant**, jamais
+`share` tout court — sur un navigateur qui partage du texte mais pas des
+fichiers, l'échec arriverait après coup et le bouton aurait l'air cassé. Le
+téléchargement reste là en second.
+
+**L'adresse du transitaire vit dans `userSettings/{uid}`**, le même document
+que le PIN. Ce n'est pas de la paresse : cette collection est déjà ouverte à
+son propriétaire dans les règles, donc **aucune collection nouvelle et rien à
+republier** (piège 29). Elle est demandée à la première fiche fournisseur, en
+disant pourquoi, et la fiche reprend toute seule une fois l'adresse saisie —
+on ne renvoie pas quelqu'un au point de départ après lui avoir demandé un
+réglage.
+
+**Les boutons sont aux deux endroits** : sur la demande *et* sur la fiche
+commande. La demande disparaît à la validation, or c'est **après** qu'on
+achète et qu'on expédie — c'est le piège 25, une donnée qui n'est pas là où la
+décision se prend ne sert à rien.
+
+Deux détails du rendu qui ne s'inventent pas. Le canvas ne connaît pas
+`object-fit` : le cadrage des photos est **fait à la main**, sinon une photo
+étirée sur une fiche commerciale se voit tout de suite. Et les polices
+viennent de Google Fonts, injoignable en Chine : la fiche se rabat sur la pile
+système, **c'est voulu** — une fiche qui dépend d'un CDN pour être lisible ne
+vaut rien là où on s'en sert.
 
 ### Dates de parcours
 
@@ -2118,6 +2182,7 @@ photos pointées au lieu d'être recopiées donc sans limite de nombre),
 photos de détail par coloris (jusqu'à cinq, feuilletées par le client),
 trait de séparation entre groupes de coloris d'un même modèle,
 image de garde par marque (le logo plutôt que la mosaïque des produits),
+fiches image à envoyer au fournisseur et au transitaire (partage direct),
 import d'un catalogue préparé en JSON,
 programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
