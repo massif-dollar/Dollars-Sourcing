@@ -611,7 +611,43 @@
   .cat-det.on{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
   .cat-det svg{ width:12px; height:12px; flex:none; }
 
+  /* La fiche à envoyer : aperçu, boutons, et le formulaire du transitaire.
+     Un seul attribut `data-mode` décide de ce qui est à l'écran — deux états
+     ne peuvent donc pas se contredire, comme pour le scanner. */
+  .fiche-sub{ margin:-6px 0 14px; font-size:12.5px; color:var(--text-faint); line-height:1.45; }
+  .fiche-vue{
+    border-radius:14px; overflow:hidden; border:0.5px solid var(--hairline);
+    background:var(--fill-2); max-height:46vh; overflow-y:auto;
+  }
+  .fiche-vue img{ width:100%; display:block; }
+  .fiche-lien{
+    display:block; width:100%; margin-top:12px; padding:9px; border:none; background:none;
+    color:var(--text-faint); font-family:var(--font-body); font-size:12.5px;
+    text-decoration:underline; cursor:pointer;
+  }
+  #ficheSheet[data-mode="fiche"] .fiche-adresse{ display:none; }
+  #ficheSheet[data-mode="adresse"] .fiche-vue,
+  #ficheSheet[data-mode="adresse"] .btn-row:not(.fiche-adresse .btn-row),
+  #ficheSheet[data-mode="adresse"] .fiche-lien{ display:none; }
+  .fiche-adresse textarea{
+    width:100%; padding:11px 13px; border-radius:12px; resize:vertical;
+    border:0.5px solid var(--hairline); background:var(--fill); color:var(--text);
+    font-family:var(--font-body); font-size:14px;
+  }
+  .fiche-adresse textarea:focus{ border-color:var(--accent); outline:none; }
+
   /* L'image de garde de la marque, dans sa feuille. */
+  /* Les deux fiches, sur la demande et sur la commande. Discrètes : ce ne
+     sont pas des actions qui décident, ce sont des actions qui préparent. */
+  .fiche-row{ display:flex; gap:8px; margin-top:10px; }
+  .fiche-btn{
+    flex:1; padding:9px 10px; border-radius:11px; cursor:pointer; font:inherit;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    font-size:12.5px; font-weight:600; letter-spacing:-0.01em;
+    transition:transform .3s var(--spring), color .2s var(--ease-io), border-color .2s var(--ease-io);
+  }
+  .fiche-btn:active{ transform:scale(.97); }
+
   .brand-cover-row{ display:flex; gap:12px; align-items:flex-start; }
   .brand-cover{
     width:84px; height:84px; flex:none; border-radius:12px; overflow:hidden;
@@ -2125,6 +2161,13 @@
         </div>
       </div>
 
+      <!-- Les deux fiches, sur une commande existante : la demande disparaît à
+           la validation, or c'est après qu'on achète et qu'on expédie. -->
+      <div class="fiche-row" id="ficheZone" style="display:none;">
+        <button type="button" class="fiche-btn" id="ordFicheSup" data-i18n="reqSupplier">Fiche fournisseur</button>
+        <button type="button" class="fiche-btn" id="ordFicheFw" data-i18n="reqForwarder">Fiche transitaire</button>
+      </div>
+
       <button type="submit" class="btn-primary" id="saveBtn" data-i18n="save">Enregistrer</button>
       <div class="btn-row" id="editActions" style="display:none;">
         <button type="button" class="btn-secondary" id="cancelOrderBtn">Annuler la commande</button>
@@ -2327,6 +2370,47 @@
     </div>
     <div class="btn-row" style="margin-top:14px;">
       <button type="button" class="btn-secondary" id="deleteSupplierBtn" data-i18n="deleteSupplier">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- La fiche à envoyer : son aperçu, et les deux façons de la sortir.
+     Deux états dans une seule feuille (`data-mode`) : l'aperçu, et le
+     formulaire de l'adresse du transitaire quand elle manque encore. -->
+<div class="overlay" id="ficheOverlay">
+  <div class="sheet" id="ficheSheet" data-mode="fiche">
+    <button class="icon-btn close-x" id="closeFiche">✕</button>
+    <h2 id="ficheTitre">Fiche</h2>
+    <p class="fiche-sub" id="ficheSub"></p>
+
+    <div class="fiche-vue">
+      <img id="ficheImg" alt="">
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button type="button" class="btn-secondary" id="ficheDl" data-i18n="ficheDownload"
+              style="color:var(--accent); border-color:var(--accent);">Télécharger</button>
+      <button type="button" class="btn-primary" id="fichePartage" data-i18n="ficheShare" style="flex:1;">Partager</button>
+    </div>
+    <button type="button" class="fiche-lien" id="ficheAdrBtn" data-i18n="ficheEditForwarder">Modifier l’adresse du transitaire</button>
+
+    <div class="fiche-adresse">
+      <div class="field">
+        <label data-i18n="fwName">Nom du transitaire</label>
+        <input type="text" id="f_name" placeholder="Ex: GZ Cargo">
+      </div>
+      <div class="field">
+        <label data-i18n="fwAddress">Adresse complète</label>
+        <textarea id="f_address" rows="3" data-i18n-placeholder="fwAddressPh"
+                  placeholder="Celle que le fournisseur doit écrire sur le colis"></textarea>
+      </div>
+      <div class="field">
+        <label data-i18n="fwPhone">Téléphone</label>
+        <input type="tel" id="f_phone" placeholder="+86 …">
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn-secondary" id="fwCancel" data-i18n="cancel">Annuler</button>
+        <button type="button" class="btn-primary" id="fwSave" data-i18n="save" style="flex:1;">Enregistrer</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2652,6 +2736,21 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
+    cancel:'Annuler',
+    exportPartial:'Sauvegarde incomplète : le catalogue n’a pas pu être lu en entier.',
+    reqSupplier:'Fiche fournisseur', reqForwarder:'Fiche transitaire',
+    ficheSupplier:'Fiche fournisseur', ficheForwarder:'Fiche transitaire',
+    ficheSupplierSub:'À envoyer sur WeChat pour obtenir le prix. Le produit, les photos, les quantités et l’adresse de ton transitaire — ni le client, ni aucun prix.',
+    ficheForwarderSub:'À envoyer à ton transitaire. L’adresse du client et le contenu du colis, aucun prix.',
+    ficheDownload:'Télécharger', ficheShare:'Partager',
+    ficheEditForwarder:'Modifier l’adresse du transitaire',
+    ficheNoClientAddress:'Ce client n’a pas d’adresse enregistrée. Ajoute-la dans sa fiche.',
+    fwTitle:'Mon transitaire', fwName:'Nom du transitaire',
+    fwAddress:'Adresse complète', fwAddressPh:'Celle que le fournisseur doit écrire sur le colis',
+    fwPhone:'Téléphone',
+    fwSub:'C’est chez lui que le fournisseur livre. Cette adresse part sur chaque fiche fournisseur.',
+    fwWhy:'Avant de fabriquer la fiche, il faut l’adresse où le fournisseur doit livrer. Elle ne sera demandée qu’une fois.',
+    fwSaved:'Transitaire enregistré.', fwNeedAddress:'L’adresse est nécessaire, c’est elle qui part sur la fiche.',
     brandCover:'Image de garde', brandCoverPick:'Choisir une image',
     brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
     brandCoverAuto:'Sans image, le client voit les premiers coloris.',
@@ -2860,6 +2959,21 @@ const I18N = {
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
+    cancel:'Cancel',
+    exportPartial:'Incomplete backup: the catalogue could not be read in full.',
+    reqSupplier:'Supplier sheet', reqForwarder:'Forwarder sheet',
+    ficheSupplier:'Supplier sheet', ficheForwarder:'Forwarder sheet',
+    ficheSupplierSub:'To send on WeChat to get a price. Product, photos, quantities and your forwarder’s address — no customer, no prices.',
+    ficheForwarderSub:'To send to your forwarder. The customer’s address and what is in the parcel, no prices.',
+    ficheDownload:'Download', ficheShare:'Share',
+    ficheEditForwarder:'Edit forwarder address',
+    ficheNoClientAddress:'This customer has no address on file. Add it to their profile.',
+    fwTitle:'My forwarder', fwName:'Forwarder name',
+    fwAddress:'Full address', fwAddressPh:'The one the supplier must write on the parcel',
+    fwPhone:'Phone',
+    fwSub:'This is where the supplier delivers. This address goes on every supplier sheet.',
+    fwWhy:'Before building the sheet, we need the address the supplier must deliver to. You will only be asked once.',
+    fwSaved:'Forwarder saved.', fwNeedAddress:'The address is required — it is what goes on the sheet.',
     brandCover:'Cover image', brandCoverPick:'Choose an image',
     brandCoverRemove:'Remove', brandCoverReplace:'Change image',
     brandCoverAuto:'Without an image, customers see the first colours.',
@@ -2980,7 +3094,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27i';
+const BUILD = '2026-09-27j';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3599,9 +3713,36 @@ function loadLangSync(){
 // L'export reste la seule sauvegarde qui ne dépend pas de Google : un invité y a
 // droit pour SES données. Le carnet de fournisseurs, lui, est prêté, pas donné —
 // un fichier survivrait à un retrait d'accès, alors il n'y entre pas.
-function exportData(){
+// LE CATALOGUE EST DANS L'EXPORT, et il a fallu s'en apercevoir : plusieurs
+// heures de recadrage, de photos de détail et de logos ne vivaient qu'à un
+// seul endroit, chez Google — le compte qui a déjà été désactivé une fois.
+// Les photos pleines et les détails ne sont PAS en mémoire (ils ne se lisent
+// qu'à l'ouverture d'un coloris) : on va donc les chercher ici, et seulement
+// ici. C'est ce qui fait peser le fichier, et c'est le prix d'une vraie
+// sauvegarde — un export léger qui ne contient pas le travail n'en est pas une.
+async function exportData(){
+  const btn = $('#exportBtn'); if(btn) btn.disabled = true;
+  let catalogPhotos = [], catalogBrands = [];
+  if(isOwner){
+    try{
+      for(let d = 0; d < catalogItems.length; d += 10){
+        const lot = await Promise.all(catalogItems.slice(d, d + 10).map(i =>
+          db.collection('catalogPhotos').doc(i.id).get()
+            .then(doc => doc.exists ? Object.assign({ id:i.id }, doc.data()) : null)
+            .catch(()=>null)));
+        catalogPhotos = catalogPhotos.concat(lot.filter(Boolean));
+      }
+      catalogBrands = Object.keys(brandCovers).map(k => brandCovers[k]);
+    }catch(e){
+      // Une sauvegarde incomplète qui ne le dit pas est pire que pas de
+      // sauvegarde : on prévient, et on laisse quand même le fichier.
+      showToast(t('exportPartial'));
+    }
+  }
+  if(btn) btn.disabled = false;
   const payload = isOwner
-    ? { exportedAt:new Date().toISOString(), orders, clients, suppliers }
+    ? { exportedAt:new Date().toISOString(), orders, clients, suppliers,
+        catalog: catalogItems, catalogPhotos, catalogBrands }
     : { exportedAt:new Date().toISOString(), orders, clients };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -3877,6 +4018,10 @@ function renderRequests(){
         <div class="card-mid">${escapeHtml(r.product||'')} × ${r.qty||1}</div>
         ${r.note ? `<div class="card-mid" style="margin-top:4px; font-style:italic;">"${escapeHtml(r.note)}"</div>` : ''}
         ${blocReqPhotos(r)}
+        <div class="fiche-row">
+          <button type="button" class="fiche-btn" data-action="fiche-supplier">${escapeHtml(t('reqSupplier'))}</button>
+          <button type="button" class="fiche-btn" data-action="fiche-forwarder">${escapeHtml(t('reqForwarder'))}</button>
+        </div>
         <div class="request-actions">
           <button type="button" class="req-reject" data-action="reject">${t('rejectRequest')}</button>
           <button type="button" class="req-validate" data-action="validate">${t('validateRequest')}</button>
@@ -4520,6 +4665,326 @@ $('#importInput').addEventListener('change', async (e)=>{
   btn.disabled = false;
 });
 
+
+// ================= Les fiches à envoyer : fournisseur et transitaire =================
+// Massif recopiait à la main, dans WeChat, ce que l'app avait déjà. Deux
+// boutons produisent donc une IMAGE prête à envoyer — une image, parce que
+// c'est ce qui voyage partout et se lit sans rien installer.
+//
+// DEUX FICHES, DEUX DESTINATAIRES, ET ELLES NE DISENT PAS LA MÊME CHOSE :
+//  - le FOURNISSEUR voit le produit, les photos, les quantités, et l'adresse
+//    du transitaire comme point de livraison. Jamais le client, JAMAIS un prix.
+//  - le TRANSITAIRE voit l'adresse du client et le contenu du colis, parce que
+//    c'est lui qui expédie. Jamais un prix non plus.
+//
+// La règle qui compte : une capture d'écran de l'app enverrait le prix client
+// chez le fournisseur. C'est toute la raison d'être de ces fiches — ce ne sont
+// pas des copies de l'écran, ce sont des vues construites pour quelqu'un.
+//
+// En ANGLAIS : c'est la langue commune d'un marché chinois, et Massif relit ce
+// qu'il envoie. Une fiche qu'on ne peut pas relire, on ne l'envoie pas.
+const FICHE_L = 1080, FICHE_PAD = 56;
+// Les polices du site viennent de Google Fonts, injoignable en Chine : la
+// fiche se rabat donc sur la pile système, et c'est voulu. Une fiche qui
+// dépend d'un CDN pour être lisible ne vaut rien là où on s'en sert.
+const BODY_F = "Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+
+function chargeImg(src){
+  return new Promise((ok, non)=>{
+    const i = new Image();
+    i.onload = ()=>ok(i);
+    i.onerror = non;
+    i.src = src;
+  });
+}
+
+// Le découpage des lignes : un canvas ne sait pas aller à la ligne tout seul.
+function coupeTexte(ctx, texte, large){
+  const mots = String(texte || '').split(/\s+/).filter(Boolean);
+  const out = []; let ligne = '';
+  mots.forEach(m=>{
+    const essai = ligne ? ligne + ' ' + m : m;
+    if(ctx.measureText(essai).width > large && ligne){ out.push(ligne); ligne = m; }
+    else ligne = essai;
+  });
+  if(ligne) out.push(ligne);
+  return out.length ? out : [''];
+}
+
+// Ce qui est demandé, ligne par ligne : « Grey × 3 ». Sans `items`, on retombe
+// sur la chaîne produit, qui porte déjà tout (elle voyage partout, c'est fait
+// pour). Une fiche sans détail vaut mieux qu'une fiche fausse.
+function lignesArticles(o){
+  const it = Array.isArray(o.items) ? o.items : [];
+  if(it.length) return it.map(x=>({
+    nom: [x.name, ''].filter(Boolean)[0] || '—',
+    qte: Number(x.qty) || 1
+  }));
+  return [{ nom: String(o.product || '').trim() || '—', qte: Number(o.qty) || 1 }];
+}
+function titreProduit(o){
+  const it = Array.isArray(o.items) ? o.items : [];
+  if(it.length) return [it[0].brand, it[0].model].filter(Boolean).join(' · ');
+  return String(o.product || '').trim();
+}
+
+// L'adresse du client, dans l'ordre où on la recopie sur un colis. La fiche
+// n'invente aucun champ : l'app n'en stocke que trois, et `address` porte déjà
+// les trois lignes regroupées — c'est l'assistant qui les rassemble en lisant
+// `formulaire.html`. Ajouter ici un `zipCity` qui n'existe nulle part aurait
+// donné une ligne vide sur toutes les fiches, sans que rien ne le signale.
+function adresseClient(c){
+  if(!c) return [];
+  return [c.name, c.address, c.phone]
+    .map(x=>String(x||'').trim()).filter(Boolean);
+}
+
+// `depuis` vaut 'demande' ou 'commande', et ce n'est pas cosmétique : sur une
+// DEMANDE, `note` est le message du client — « taille M », utile au
+// fournisseur. Sur une COMMANDE, `note` est le champ de Massif, où il écrit ce
+// qu'il veut, y compris un prix. La note ne part donc que depuis une demande.
+// C'est la même règle que le reste de la fiche : on n'envoie pas une copie de
+// l'écran, on envoie ce qu'on a décidé d'envoyer.
+async function fabriqueFiche(type, o, client, depuis){
+  const ref = o.ref || derivedRef(o.id || '');
+  const photos = (typeof photosDe === 'function' ? photosDe(o) : []).slice(0, 4);
+  const imgs = [];
+  for(const p of photos){
+    try{ imgs.push(await chargeImg('data:' + (p.type||'image/jpeg') + ';base64,' + p.data)); }
+    catch(e){ /* une photo illisible ne doit pas emporter la fiche */ }
+  }
+  const versFournisseur = type === 'supplier';
+  const dest = versFournisseur
+    ? (monTransitaire
+        ? [monTransitaire.name, monTransitaire.address, monTransitaire.phone]
+            .map(x=>String(x||'').trim()).filter(Boolean)
+        : [])
+    : adresseClient(client);
+
+  const articles = lignesArticles(o);
+  const titre = titreProduit(o);
+  const note = depuis === 'demande' ? String(o.note || '').trim() : '';
+
+  // --- on mesure avant de dessiner : la hauteur dépend de ce qu'il y a dedans
+  const mes = document.createElement('canvas').getContext('2d');
+  const L = FICHE_L - FICHE_PAD * 2;
+  mes.font = '600 34px ' + BODY_F;
+  const lignesTitre = coupeTexte(mes, titre, L);
+  mes.font = '400 28px ' + BODY_F;
+  const lignesNote = note ? coupeTexte(mes, '“' + note + '”', L) : [];
+
+  const grille = imgs.length ? (imgs.length === 1 ? 1 : 2) : 0;
+  const cote = grille ? Math.floor((L - (grille - 1) * 16) / grille) : 0;
+  const rangs = grille ? Math.ceil(imgs.length / grille) : 0;
+
+  let h = FICHE_PAD;
+  h += 34 + 18;                                   // la marque de l'app
+  h += 52 + 26;                                   // le grand titre
+  h += lignesTitre.length * 44 + 16;              // marque · modèle
+  h += articles.length * 42 + 22;                 // les lignes d'articles
+  h += 44;                                        // le total
+  if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16;
+  h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
+  if(lignesNote.length) h += 22 + lignesNote.length * 38;
+  h += 26 + 30 + FICHE_PAD;                       // le pied
+
+  const c = document.createElement('canvas');
+  c.width = FICHE_L; c.height = Math.round(h);
+  const x = c.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height);
+  x.textBaseline = 'top';
+
+  let y = FICHE_PAD;
+  // L'en-tête : la marque à gauche, la référence à droite. C'est cette
+  // référence qu'on écrit au marqueur sur le carton, elle doit sauter aux yeux.
+  x.fillStyle = '#9aa0a6'; x.font = '700 22px ' + BODY_F;
+  x.fillText('DOLLAR$ SOURCING', FICHE_PAD, y + 8);
+  x.fillStyle = '#111111'; x.font = '700 34px ' + BODY_F;
+  x.textAlign = 'right'; x.fillText('#' + ref, FICHE_L - FICHE_PAD, y);
+  x.textAlign = 'left';
+  y += 34 + 18;
+
+  x.fillStyle = '#111111'; x.font = '700 46px ' + BODY_F;
+  x.fillText(versFournisseur ? 'PRICE REQUEST' : 'SHIPPING', FICHE_PAD, y);
+  y += 52 + 26;
+
+  x.fillStyle = '#111111'; x.font = '600 34px ' + BODY_F;
+  lignesTitre.forEach(l=>{ x.fillText(l, FICHE_PAD, y); y += 44; });
+  y += 16;
+
+  // Un coloris par ligne, avec sa quantité : c'est ce qu'on achète.
+  let total = 0;
+  x.font = '400 30px ' + BODY_F;
+  articles.forEach(a=>{
+    total += a.qte;
+    x.fillStyle = '#333333';
+    x.fillText('• ' + a.nom, FICHE_PAD + 4, y);
+    x.fillStyle = '#111111'; x.font = '700 30px ' + BODY_F;
+    x.textAlign = 'right';
+    x.fillText('× ' + a.qte, FICHE_L - FICHE_PAD, y);
+    x.textAlign = 'left'; x.font = '400 30px ' + BODY_F;
+    y += 42;
+  });
+  y += 22;
+  x.fillStyle = '#111111'; x.font = '700 32px ' + BODY_F;
+  x.fillText('TOTAL: ' + total + (total > 1 ? ' pieces' : ' piece'), FICHE_PAD, y);
+  y += 44;
+
+  if(rangs){
+    y += 26;
+    imgs.forEach((im, i)=>{
+      const cx = FICHE_PAD + (i % grille) * (cote + 16);
+      const cy = y + Math.floor(i / grille) * (cote + 16);
+      // `cover` à la main : un canvas ne connaît pas object-fit, et une photo
+      // étirée sur une fiche commerciale se voit tout de suite.
+      const r = Math.max(cote / im.width, cote / im.height);
+      const w = im.width * r, hh = im.height * r;
+      x.save();
+      x.beginPath(); x.rect(cx, cy, cote, cote); x.clip();
+      x.drawImage(im, cx + (cote - w) / 2, cy + (cote - hh) / 2, w, hh);
+      x.restore();
+      x.strokeStyle = '#e6e6e6'; x.lineWidth = 2;
+      x.strokeRect(cx + 1, cy + 1, cote - 2, cote - 2);
+    });
+    y += rangs * cote + (rangs - 1) * 16;
+  }
+
+  y += 30;
+  const hBloc = 26 + dest.length * 38 + 30;
+  x.fillStyle = '#f4f5f6';
+  x.fillRect(FICHE_PAD, y, L, hBloc);
+  x.fillStyle = '#2eb35c';
+  x.fillRect(FICHE_PAD, y, 6, hBloc);
+  x.fillStyle = '#6b7075'; x.font = '700 22px ' + BODY_F;
+  x.fillText('SHIP TO', FICHE_PAD + 26, y + 18);
+  x.fillStyle = '#111111'; x.font = '500 30px ' + BODY_F;
+  let yy = y + 18 + 30;
+  (dest.length ? dest : ['—']).forEach(l=>{ x.fillText(l, FICHE_PAD + 26, yy); yy += 38; });
+  y += hBloc;
+
+  if(lignesNote.length){
+    y += 22;
+    x.fillStyle = '#555555'; x.font = 'italic 400 28px ' + BODY_F;
+    lignesNote.forEach(l=>{ x.fillText(l, FICHE_PAD, y); y += 38; });
+  }
+
+  y += 26;
+  x.fillStyle = '#9aa0a6'; x.font = '400 24px ' + BODY_F;
+  x.fillText(versFournisseur
+    ? 'Please send your best price per piece.'
+    : 'Please write the reference on the parcel.', FICHE_PAD, y);
+  return c;
+}
+
+
+// ---- La feuille : aperçu, partage, adresse du transitaire ----
+// PARTAGER PLUTÔT QUE TÉLÉCHARGER, et c'est le point qui fait gagner le
+// geste : sur iPhone, `navigator.share` avec un fichier ouvre la feuille de
+// partage, donc WeChat en un tap. Un téléchargement, lui, atterrit dans les
+// Fichiers et il faut aller le rechercher. Le téléchargement reste là en
+// second, pour les appareils qui ne savent pas partager un fichier.
+let ficheBlob = null, ficheNom = '', ficheEnAttente = null;
+
+let ficheCommande = null;   // la commande ouverte dans sa fiche, s'il y en a une
+function ouvreFiche(){ $('#ficheOverlay').classList.add('open'); }
+function fermeFiche(){
+  $('#ficheOverlay').classList.remove('open');
+  $('#ficheSheet').dataset.mode = 'fiche';
+  $('#ficheImg').removeAttribute('src');
+  ficheBlob = null; ficheEnAttente = null;
+}
+$('#closeFiche').addEventListener('click', fermeFiche);
+$('#ficheOverlay').addEventListener('click', (e)=>{ if(e.target === $('#ficheOverlay')) fermeFiche(); });
+
+function modeAdresse(){
+  const f = monTransitaire || {};
+  $('#f_name').value = f.name || '';
+  $('#f_address').value = f.address || '';
+  $('#f_phone').value = f.phone || '';
+  $('#ficheSheet').dataset.mode = 'adresse';
+  $('#ficheTitre').textContent = t('fwTitle');
+  $('#ficheSub').textContent = t('fwSub');
+}
+$('#ficheAdrBtn').addEventListener('click', modeAdresse);
+$('#fwCancel').addEventListener('click', ()=>{
+  // Annuler depuis un envoi qu'on n'a pas pu faire ferme tout : il n'y a
+  // pas de fiche derrière à montrer.
+  if(ficheEnAttente) fermeFiche(); else $('#ficheSheet').dataset.mode = 'fiche';
+});
+$('#fwSave').addEventListener('click', async ()=>{
+  const v = { name: $('#f_name').value.trim(),
+              address: $('#f_address').value.trim(),
+              phone: $('#f_phone').value.trim() };
+  if(!v.address){ showToast(t('fwNeedAddress')); return; }
+  const btn = $('#fwSave'); btn.disabled = true;
+  const ok = await saveTransitaire(v);
+  btn.disabled = false;
+  if(!ok) return;
+  showToast(t('fwSaved'));
+  // On reprend exactement là où on en était : c'est la fiche qu'il voulait,
+  // pas un réglage qu'il est venu changer.
+  const reprise = ficheEnAttente; ficheEnAttente = null;
+  if(reprise) montreFiche(reprise.type, reprise.o, reprise.depuis);
+  else $('#ficheSheet').dataset.mode = 'fiche';
+});
+
+async function montreFiche(type, o, depuis){
+  const client = clientById(o.clientId);
+  if(type === 'supplier' && !(monTransitaire && monTransitaire.address)){
+    // Sans adresse de livraison, la fiche fournisseur ne sert à rien : on la
+    // demande AVANT de la fabriquer, en disant pourquoi.
+    ficheEnAttente = { type, o, depuis };
+    ouvreFiche(); modeAdresse();
+    $('#ficheSub').textContent = t('fwWhy');
+    return;
+  }
+  if(type === 'forwarder' && !(client && (client.address || '').trim())){
+    showToast(t('ficheNoClientAddress'));
+    return;
+  }
+  ouvreFiche();
+  $('#ficheSheet').dataset.mode = 'fiche';
+  $('#ficheTitre').textContent = t(type === 'supplier' ? 'ficheSupplier' : 'ficheForwarder');
+  $('#ficheSub').textContent = t(type === 'supplier' ? 'ficheSupplierSub' : 'ficheForwarderSub');
+  $('#ficheAdrBtn').style.display = type === 'supplier' ? 'block' : 'none';
+  $('#ficheImg').removeAttribute('src');
+  try{
+    const c = await fabriqueFiche(type, o, client, depuis);
+    const blob = await new Promise(r=>c.toBlob(r, 'image/png'));
+    ficheBlob = blob;
+    ficheNom = (type === 'supplier' ? 'fournisseur-' : 'transitaire-')
+             + (o.ref || derivedRef(o.id || '')) + '.png';
+    $('#ficheImg').src = URL.createObjectURL(blob);
+  }catch(err){
+    showToast(t('toastSaveError') + ' [' + (err && err.message ? err.message : 'fiche') + ']');
+    fermeFiche();
+  }
+}
+
+$('#fichePartage').addEventListener('click', async ()=>{
+  if(!ficheBlob) return;
+  const f = new File([ficheBlob], ficheNom, { type:'image/png' });
+  // `canShare` d'abord : sur un navigateur qui partage du texte mais pas des
+  // fichiers, `share` échouerait après coup — et l'utilisateur aurait vu un
+  // bouton qui ne fait rien. On retombe alors sur le téléchargement.
+  if(navigator.canShare && navigator.canShare({ files:[f] })){
+    try{ await navigator.share({ files:[f] }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  telechargeFiche();
+});
+function telechargeFiche(){
+  if(!ficheBlob) return;
+  const url = URL.createObjectURL(ficheBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = ficheNom;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+$('#ficheDl').addEventListener('click', telechargeFiche);
+$('#ordFicheSup').addEventListener('click', ()=>{ if(ficheCommande) montreFiche('supplier', ficheCommande, 'commande'); });
+$('#ordFicheFw').addEventListener('click', ()=>{ if(ficheCommande) montreFiche('forwarder', ficheCommande, 'commande'); });
+
 // ---- L'aperçu client ----
 // On n'affiche pas une imitation de la vitrine : on ouvre `client.html` en
 // mode aperçu. Ce que le vendeur voit ici EST la page du client. Deux rendus
@@ -5068,6 +5533,11 @@ $('#requestsList').addEventListener('click', async (e)=>{
   const reqId = card.dataset.reqId;
   const req = pendingRequests.find(r=>r.id===reqId);
   if(!req) return;
+  // Les fiches ne décident de rien : elles sortent une image et s'arrêtent là.
+  // Elles passent donc AVANT le reste, et sortent — sinon un clic dessus
+  // tomberait dans la branche « valider / refuser » juste en dessous.
+  if(btn.dataset.action === 'fiche-supplier'){ montreFiche('supplier', req, 'demande'); return; }
+  if(btn.dataset.action === 'fiche-forwarder'){ montreFiche('forwarder', req, 'demande'); return; }
   if(req.type === 'coupon'){
     if(btn.dataset.action === 'grant'){
       const ok = await grantCoupon(req);
@@ -5495,6 +5965,10 @@ function openSheet(order, presetClientId, prefill){
   $('#shippingZone').style.display = order ? 'block' : 'none';
 
   $('#editActions').style.display = order ? 'flex' : 'none';
+  // Les fiches n'ont de sens que sur une commande qui existe : elles portent
+  // sa référence, et une référence se donne avant d'être enregistrée.
+  $('#ficheZone').style.display = order ? 'flex' : 'none';
+  ficheCommande = order || null;
   $('#stepperZone').style.display = order ? 'block' : 'none';
   $('#f_status').closest('.field').style.display = order ? 'none' : 'block';
   if(order) updateStepper(order.status);
@@ -8244,8 +8718,30 @@ function lockError(msg){
 async function loadPinHash(){
   try{
     const doc = await db.collection('userSettings').doc(currentUid).get();
-    storedPinHash = doc.exists ? (doc.data().pinHash || null) : null;
+    const d = doc.exists ? doc.data() : {};
+    storedPinHash = d.pinHash || null;
+    // L'adresse du transitaire voyage dans le MÊME document que le PIN :
+    // `userSettings/{uid}` est déjà ouvert à son propriétaire dans les règles,
+    // donc aucune collection nouvelle et rien à republier (piège 29).
+    monTransitaire = d.forwarder || null;
   }catch(e){ storedPinHash = null; }
+}
+// Le transitaire de Massif : c'est CHEZ LUI que le fournisseur livre, et c'est
+// LUI qui expédie ensuite au client. Les deux fiches en ont donc besoin, mais
+// pas pour la même raison — l'une le donne comme destination, l'autre lui donne
+// l'adresse du client.
+let monTransitaire = null;   // { name, address, phone }
+async function saveTransitaire(v){
+  try{
+    if(!currentUid) throw new Error('uid manquant');
+    await db.collection('userSettings').doc(currentUid)
+            .set({ forwarder: v, updatedAt: Date.now() }, { merge: true });
+    monTransitaire = v;
+    return true;
+  }catch(e){
+    showToast(t('toastSaveError') + ' [' + (e && e.code ? e.code : 'erreur') + ']');
+    return false;
+  }
 }
 let lastPinError = '';
 async function savePinHash(hash){
