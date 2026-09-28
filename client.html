@@ -1499,6 +1499,13 @@
   }
   .bio-enable-link.show{ display:block; }
 
+  /* Le numéro de version en pied de page, repris de l'app pro. */
+  .build-stamp{
+    text-align:center; padding:20px 16px 28px; font-size:11px;
+    color:var(--text-ghost); font-variant-numeric:tabular-nums;
+    letter-spacing:.03em; user-select:text; -webkit-user-select:text;
+  }
+
   /* ===== Ouverture du portail =====
      Elle ne fait pas attendre : elle couvre le chargement Firestore qui a lieu
      à cet instant précis. Sans elle, le client voit une page nue se peupler. */
@@ -1963,6 +1970,15 @@
   <div id="catalogPanel" style="display:none;"></div>
 
   <div id="dollarsPanel" style="display:none;"></div>
+
+  <!-- Le numéro de version, comme dans l'app pro (piège 18). Il manquait ICI,
+       et ça s'est payé au premier « j'arrive pas à voir » : toute la refonte de
+       la vitrine est dans ce fichier, mais seul `index.html` affichait sa
+       version. Ni Massif ni moi ne pouvions dire si son téléphone servait la
+       nouvelle page ou celle du cache. Un numéro qu'on lit à voix haute tranche
+       la question en trois secondes.
+       Discret mais pas caché : c'est la page d'un client, pas une console. -->
+  <div class="build-stamp" id="clientBuild"></div>
 </div>
 
 <div id="codeScreen">
@@ -2920,6 +2936,12 @@ $('#cwBioBtn').addEventListener('click', async ()=>{
   if(bioRegistered()){ showToast(t('cwBioDone')); dismissWelcome(); }
 });
 
+// Le numéro de version du PORTAIL. Il se change à chaque mise en ligne qui
+// corrige quelque chose de visible ici — c'est la seule façon de savoir, à
+// distance et par téléphone, si le client regarde la nouvelle page ou celle
+// que Safari garde en cache.
+const BUILD_CLIENT = '2026-09-28e';
+
 function enterApp(){
   document.getElementById('codeScreen').classList.remove('show');
   updateGreeting();
@@ -2938,6 +2960,8 @@ function enterApp(){
   }
 
   $('#app').style.display = 'block';
+  const tampon = $('#clientBuild');
+  if(tampon) tampon.textContent = 'DOLLAR$ SOURCING · v' + BUILD_CLIENT;
   renderWelcome();
   renderDollarsIntro();
   renderInstallCard();
