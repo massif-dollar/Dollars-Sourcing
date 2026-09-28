@@ -621,6 +621,24 @@
      toucher quoi que ce soit : elle porte donc la couleur de l'accent, une
      icône, et un reflet qui la balaie à l'arrivée. Grise et en petit, elle
      était simplement sautée. */
+  /* « Tu ne vois pas ce que tu cherches ? » — la sortie de la vitrine.
+     Discrète mais pas grise : une consigne grise et en petit se saute, et
+     celle-ci est la seule qui rattrape un client qui allait partir. */
+  .cat-ask{
+    margin:18px 0 4px; padding:15px 16px 14px; border-radius:16px;
+    background:var(--fill); border:0.5px solid var(--hairline); text-align:center;
+  }
+  .cat-ask b{ display:block; font-size:14.5px; letter-spacing:-0.015em; margin-bottom:5px; }
+  .cat-ask p{
+    margin:0 0 12px; font-size:12.5px; line-height:1.5; color:var(--text-muted);
+  }
+  .cat-ask button{
+    width:100%; padding:11px; border-radius:12px; cursor:pointer;
+    border:0.5px solid var(--accent); background:var(--accent-soft); color:var(--accent);
+    font-family:inherit; font-size:14px; font-weight:600;
+    transition:transform .3s var(--spring);
+  }
+  .cat-ask button:active{ transform:scale(.97); }
   .cat-note{
     position:relative; overflow:hidden; display:flex; align-items:flex-start; gap:10px;
     padding:11px 13px 12px; border-radius:14px; margin-bottom:15px;
@@ -1680,7 +1698,7 @@
             <span id="pickOpenLabel" data-i18n="pickOpen">Choisir dans le catalogue</span>
           </button>
           <div class="picked" id="pickedList" style="display:none;"></div>
-          <p class="free-hint" id="freeHint" style="display:none;" data-i18n="freeHint">Autre chose en plus ?</p>
+          <p class="free-hint" id="freeHint" data-i18n="freeHint">Autre chose en plus ?</p>
           <input type="text" id="f_product" data-i18n-placeholder="phProduct" placeholder="Ou écris-le toi-même">
           <div class="field-error"></div>
         </div>
@@ -1896,6 +1914,9 @@ const I18N = {
     catLead:'<b>Touche une marque</b> pour voir ses modèles et tous ses coloris.',
     catLeadBrand:'<b>Touche un coloris</b> pour le voir en grand. Pour commander, va dans l\u2019onglet <b>Demande</b>.',
     catEmpty:"Le catalogue est encore vide.\nEnvoie ta demande directement, on trouve tout.",
+    catMoreTitle:'Tu ne vois pas ce que tu cherches ?',
+    catMoreText:'Le catalogue n\u2019est qu\u2019une partie de ce que je peux trouver, et il s\u2019enrichit souvent — repasse y jeter un \u0153il. Si l\u2019article que tu veux n\u2019y est pas, demande-le-moi directement : je te réponds.',
+    catMoreBtn:'Me le demander',
     catDenied:"Le catalogue ne répond pas pour le moment.\nRéessaie dans un instant.",
     catModel:'{n} modèle', catModels:'{n} modèles',
     catColor:'{n} coloris', catColors:'{n} coloris',
@@ -1916,7 +1937,7 @@ const I18N = {
     pickOneModel:"Un autre modèle, c'est une seconde demande. Envoie d'abord celle-ci — ça prend dix secondes.",
     pickLocked:'Tu commandes {model}. <b>Prends autant de coloris que tu veux ici.</b> Pour un autre modèle, ce sera une seconde demande.',
     pieceOne:'{n} pièce', pieceMany:'{n} pièces',
-    freeHint:'Autre chose qui n\u2019est pas au catalogue ? Écris-le ici.',
+    freeHint:'Tu veux autre chose qui n\u2019est pas au catalogue ? Écris-le ici, je te réponds directement.',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
@@ -2005,6 +2026,9 @@ const I18N = {
     catLead:'<b>Tap a brand</b> to see its models and every colour.',
     catLeadBrand:'<b>Tap a colour</b> to see it full size. To order, go to the <b>Request</b> tab.',
     catEmpty:"The catalogue is still empty.\nJust send your request, we find anything.",
+    catMoreTitle:'Can\u2019t find what you are looking for?',
+    catMoreText:'The catalogue is only part of what I can source, and it grows often — come back and have a look. If what you want is not there, just ask me directly: I will get back to you.',
+    catMoreBtn:'Ask me',
     catDenied:"The catalogue is not responding right now.\nTry again in a moment.",
     catModel:'{n} model', catModels:'{n} models',
     catColor:'{n} colour', catColors:'{n} colours',
@@ -2025,7 +2049,7 @@ const I18N = {
     pickOneModel:'Another model means a second request. Send this one first — it takes ten seconds.',
     pickLocked:'You are ordering {model}. <b>Take as many colours as you want here.</b> For another model, that will be a second request.',
     pieceOne:'{n} item', pieceMany:'{n} items',
-    freeHint:'Something that is not in the catalogue? Type it here.',
+    freeHint:'Want something that is not in the catalogue? Type it here and I will get back to you.',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
@@ -3768,6 +3792,23 @@ function catNote(html, type){
        + '<span>' + html + '</span></div>';
 }
 
+// LE CATALOGUE N'EST PAS TOUT CE QUE MASSIF PEUT TROUVER, et le client n'a
+// aucun moyen de le deviner : une vitrine a l'air d'être l'offre entière. Le
+// bloc se pose donc À LA FIN de la grille des marques — c'est là qu'on se dit
+// « je n'ai pas trouvé », pas en arrivant — et il donne la porte de sortie
+// plutôt que de laisser partir quelqu'un qui aurait acheté.
+//
+// **Vitrine seulement.** Dans la fenêtre de choix, le client a déjà décidé
+// d'un modèle et le verrou tient la consigne : un second message y dirait le
+// contraire de ce qu'on lui demande à cet instant.
+function catAskHtml(){
+  return '<div class="cat-ask">'
+    + '<b>' + escapeHtml(t('catMoreTitle')) + '</b>'
+    + '<p>' + escapeHtml(t('catMoreText')) + '</p>'
+    + '<button type="button" id="catAskBtn">' + escapeHtml(t('catMoreBtn')) + '</button>'
+    + '</div>';
+}
+
 function catVueMarques(el, mode, intro){
   const marques = catBrands();
   el.innerHTML = catNote(intro)
@@ -3799,7 +3840,8 @@ function catVueMarques(el, mode, intro){
           + '<div class="cat-brand-n"><b>' + escapeHtml(m.nom) + '</b><span>'
           + catCount(nbModeles, 'catModel', 'catModels') + ' · '
           + catCount(m.items.length, 'catColor', 'catColors') + '</span></div></button>';
-      }).join('') + '</div>';
+      }).join('') + '</div>'
+    + (mode === 'vitrine' ? catAskHtml() : '');
   stagger(el.querySelectorAll('.cat-brand'), 55);
 }
 
@@ -4033,7 +4075,10 @@ function renderPicked(){
   // qui attend son heure.
   $('#qtyField').style.display = picked.length ? 'none' : 'block';
   $('#pickOpenLabel').textContent = picked.length ? t('pickOpenMore') : t('pickOpen');
-  $('#freeHint').style.display = picked.length ? 'block' : 'none';
+  // Toujours visible, et pas seulement une fois un coloris coché : c'est
+  // justement quand il n'a RIEN trouvé au catalogue qu'il faut lui dire
+  // qu'il peut demander autre chose.
+  $('#freeHint').style.display = 'block';
   rendPhotos();
 }
 $('#pickedList').addEventListener('click', (e)=>{
@@ -4221,6 +4266,21 @@ $('#catLbOrder').addEventListener('click', ()=>{
   closeCatLb();
   if(apercuCat) return;   // en aperçu, les onglets sont inertes
   switchTab('order');
+});
+
+// « Demande-le-moi » : on l'amène sur l'onglet Demande ET on lui pose le
+// curseur dans le champ libre. L'y amener sans lui montrer où écrire, c'est
+// le laisser chercher juste après lui avoir dit de parler.
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#catAskBtn')) return;
+  if(apercuCat) return;   // en aperçu, les onglets sont inertes
+  switchTab('order');
+  const ch = $('#f_product');
+  if(!ch) return;
+  ch.scrollIntoView({ block:'center' });
+  // Le focus après le changement d'onglet : pendant la transition, le champ
+  // n'est pas encore à sa place et iOS ferait remonter la page au clavier.
+  setTimeout(()=>{ try{ ch.focus({ preventScroll:true }); }catch(err){ ch.focus(); } }, 320);
 });
 
 // ---- Envoi de la demande ----

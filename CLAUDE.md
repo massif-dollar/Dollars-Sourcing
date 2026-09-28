@@ -750,6 +750,35 @@ quatrième case devient « +N »), puis les modèles de la marque avec leurs
 coloris. `active` est respecté : **une fiche masquée n'existe pas ici** — c'est
 exactement à ça que sert ce bouton.
 
+#### « Le catalogue n'est pas tout » — le dire, et donner la porte
+
+Une vitrine a l'air d'être **l'offre entière**, et le client n'a aucun moyen de
+deviner le contraire. Or le catalogue n'est qu'une partie de ce que Massif peut
+trouver, et il s'enrichit par arrivages. Un client qui ne trouve pas repart
+sans rien demander — c'est une vente perdue que personne ne voit passer.
+
+Le portail le dit donc à **deux endroits, et chacun a sa raison** :
+
+- **En fin de grille des marques** (`catAskHtml`), pas en tête : c'est après
+  avoir parcouru qu'on se dit « je n'ai pas trouvé ». Le bloc donne les deux
+  informations — la vitrine s'enrichit souvent, donc il faut y repasser ; et ce
+  qui n'y est pas se demande directement — puis **un bouton qui agit** :
+  il bascule sur l'onglet Demande et **pose le curseur dans le champ libre**.
+  L'y amener sans lui montrer où écrire, c'est le laisser chercher juste après
+  lui avoir dit de parler.
+- **Sous le champ libre de la demande**, et **désormais tout le temps** : il ne
+  s'affichait qu'une fois un coloris coché, alors que c'est précisément quand
+  on n'a rien trouvé au catalogue qu'il faut savoir qu'on peut demander autre
+  chose.
+
+**Vitrine seulement, jamais dans la fenêtre de choix.** Là, le client a déjà
+décidé d'un modèle et le verrou tient la consigne : un second message y dirait
+le contraire de ce qu'on lui demande à cet instant.
+
+Le focus part **après** la bascule d'onglet (320 ms) : pendant la transition le
+champ n'est pas à sa place, et iOS ferait remonter la page en ouvrant le
+clavier.
+
 #### Commander depuis le catalogue
 
 **Le champ « Produit » n'est plus d'abord un champ de texte.** C'est un bouton
