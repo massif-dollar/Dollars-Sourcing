@@ -1269,6 +1269,57 @@ Trois précautions dans le code :
   type de QR, donc `applyTranslations()` l'écraserait au changement de langue.
   Elle rappelle `showWechatQr()` à la fin, c'est ce qui tient les deux langues.
 
+#### Quinze fournisseurs sur la même marque
+
+La question de Massif : « comment je vais m'en sortir si j'ai trop de
+fournisseurs dans la même marque ? »
+
+**Le problème n'est pas d'en avoir trop, c'est que rien ne se souvenait.** Dix
+fournisseurs Stone Island, ce n'est pas un problème si l'app dit « la dernière
+fois : Chen, Baima 3/217, 95 € la pièce ». Sans mémoire, quinze noms sont
+quinze inconnues à chaque commande — et on ne saura jamais lequel fait la
+meilleure marge sur la même doudoune.
+
+Trois pièces, et la troisième est celle qui compte :
+
+- **La recherche couvre la marque, le modèle et l'adresse** (`texteFournisseur`),
+  plus seulement le nom. Sur le terrain on ne se demande jamais « où est
+  Chen », on se demande « qui fait du Stone Island ». Chercher par nom
+  obligeait à faire défiler la liste en lisant les pastilles : c'était une
+  omission, pas un choix.
+- **« Qui fait ça ? » s'ouvre depuis la demande ET depuis la commande**
+  (`fournisseursPour`), jamais depuis l'onglet Fournisseurs : c'est au moment
+  d'acheter qu'on se pose la question (piège 25). **Deux groupes séparés et
+  titrés** — ceux qui font le modèle exact, puis ceux qui ne font que la
+  marque. Les mélanger ferait choisir au hasard.
+- **Le fournisseur retenu est enregistré sur la commande** (`supplierId`), et
+  c'est lui qui alimente tout le reste : `histoFournisseur()` compte les
+  commandes et relit le dernier prix d'achat, la carte du fournisseur
+  l'affiche, et la liste « qui fait ça ? » **met en tête ceux chez qui on a
+  déjà acheté ce modèle**.
+
+Quatre décisions qui ne sont pas du détail :
+
+- **Le dernier prix est celui du MÊME modèle** quand il existe. Un prix pris
+  sur une autre pièce du même fournisseur ne veut rien dire, et mieux vaut ne
+  rien afficher que mentir sur un chiffre qui sert à négocier.
+- **Depuis une DEMANDE, la liste est informative** : il n'y a pas encore de
+  commande à qui attacher un fournisseur, et à ce moment-là on cherche à qui
+  écrire pour obtenir un prix, pas à trancher. Le bouton « Choisir »
+  n'apparaît que sur une commande.
+- **Choisir n'écrit rien tout de suite.** Le choix se pose sur la fiche
+  ouverte, et c'est l'enregistrement qui l'écrit — sinon annuler la fiche
+  laisserait un fournisseur enregistré que l'annulation ne défait pas.
+- **Les commandes sont privées à leur propriétaire**, donc cet historique est
+  le sien. Les fournisseurs, eux, restent partagés : un invité voit le carnet,
+  pas les achats de Massif.
+
+Piège de vérification rencontré ici : le test cliquait
+`.order-card[data-order-id]` pour ouvrir une fiche commande — l'attribut est
+`data-id`, et `data-order-id` n'existe que dans la corbeille. Le clic tombait
+donc dans le vide, la fiche ne s'ouvrait jamais, et le bouton mesuré était
+« invisible et vide » : un symptôme qui ressemble exactement à un bug du code.
+
 **Enregistrer la fiche propose d'ouvrir WeChat, et c'est là qu'est le lien entre
 l'onglet fournisseurs et WeChat.** On scanne, on valide, un toast propose
 « Ouvrir dans WeChat » (ou « Rejoindre le groupe ») et WeChat s'ouvre sur la
