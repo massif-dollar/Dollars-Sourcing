@@ -642,6 +642,59 @@ Côté vendeur, le bouton est **sous l'œil, sur la vignette**. Pas en bas :
 `.cat-item` englobe aussi le nom et le bouton Détails, un `bottom:5px` serait
 venu se poser par-dessus eux — vérifié à l'image avant de s'en apercevoir.
 
+#### Déplacer un coloris : on le maintient, on le glisse
+
+L'ordre des coloris est **ce que le client voit dans sa vitrine**. Le régler
+autrement qu'en le montrant aurait demandé deux flèches sur chaque tuile, et
+vingt coloris auraient fait vingt allers-retours.
+
+**Trois points qui ne s'inventent pas, et chacun casse le geste s'il manque :**
+
+- **L'appui long d'abord (380 ms), le glissement ensuite.** Sans délai, le
+  geste volerait le défilement de la feuille et on ne pourrait plus parcourir
+  la grille au doigt. Un mouvement de plus de 9 px avant la fin du délai
+  annule : c'est un défilement, pas un déplacement.
+- **On ne reprend pas un défilement déjà parti sur iOS.** D'où le
+  `preventDefault()` dans un `touchmove` **non passif**, posé une seule fois et
+  qui ne fait quelque chose que pendant le glissement. Le doigt étant resté
+  immobile 380 ms, aucun défilement n'a démarré : le refuser fonctionne.
+- **`-webkit-touch-callout:none` et `user-select:none` sur la tuile.** Sans
+  eux **le geste n'existe pas sur iPhone** : un appui long sur une image ouvre
+  « Enregistrer l'image », sur du texte la loupe de sélection — les deux
+  volent l'appui long avant nous. Le champ du nom garde `user-select:text`,
+  sinon on ne pourrait plus le sélectionner.
+
+**C'est une COPIE qui suit le doigt**, pas la vraie tuile : déplacer la vraie
+ferait se réagencer la grille sous la main à chaque pixel. L'originale reste en
+place en fantôme, et c'est le DOM qu'on réordonne en direct — l'ordre du
+tableau n'est relu qu'à la dépose, et seulement si on retrouve **tous** les
+coloris (une liste incomplète réordonnerait en perdant une fiche, donc une
+photo en base).
+
+**Le bord de la feuille fait défiler** pendant le glissement. Sans ça on ne
+peut pas remonter un coloris au-dessus de ce qui est à l'écran — c'est-à-dire
+pas faire ce qui a été demandé. Et l'écouteur `pointermove` est sur la
+**fenêtre**, pas sur la liste : posé sur la liste, il s'arrêterait à son bord,
+juste au moment où on remonte tout en haut.
+
+**Le trait de séparation disparaît pendant le geste** (`.reordering`). Il
+appartient au coloris qui ouvre le groupe : le laisser à l'écran le ferait
+sauter d'un coloris à l'autre sous le doigt. Il est redessiné au bon endroit à
+la dépose, et **le cas qui compte est vérifié** : monter en première position
+le coloris qui porte le trait garde son `sep` dans les données et n'affiche
+aucune ligne — une ligne en tête de grille se lirait comme un défaut.
+
+**Rien de neuf à écrire** : l'ordre part déjà dans `rang` à l'enregistrement.
+
+Piège de méthode rencontré en l'écrivant, deux fois : **la règle « avant ou
+après » du premier jet basculait dès qu'on passait sous la mi-hauteur de la
+tuile, même très à gauche** — donc viser le bas-gauche de la première tuile
+déposait *après* elle, exactement le geste pour monter un coloris tout en
+haut. Et le test, lui, lisait `window.drag` pour savoir si le glissement avait
+pris : un `let` de haut niveau n'est pas une propriété de `window`, la sonde
+répondait donc toujours « non » sans rien signaler. **Une sonde qui regarde
+l'écran ne peut pas mentir** ; une qui regarde une variable, si.
+
 #### Importer un catalogue préparé ailleurs
 
 Vingt coloris à la main, c'est vingt recadrages et vingt noms tapés. Le bouton
