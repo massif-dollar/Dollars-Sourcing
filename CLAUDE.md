@@ -2199,6 +2199,19 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    symptôme décrit à ce que le code déployé peut produire. Un symptôme qu'aucun
    chemin n'explique n'est pas un bug — c'est une autre version.
 
+   **Et il manquait la moitié du dispositif : `client.html` n'affichait aucune
+   version.** Ça s'est payé au premier « j'arrive pas à voir » après une refonte
+   entièrement située dans le portail — ni Massif ni moi ne pouvions dire si son
+   téléphone servait la nouvelle page ou celle du cache, et je ne peux pas
+   joindre le site déployé depuis l'environnement de développement. Le portail
+   porte donc son propre `BUILD_CLIENT`, affiché en pied de page comme dans
+   l'app pro. **Les deux se changent ensemble à chaque mise en ligne visible.**
+
+   **Corollaire, et il vaut pour toute cette app** : une refonte du portail ne
+   se voit PAS dans l'application du vendeur. Avant de chercher un bug de
+   déploiement, vérifier qu'on regarde le bon fichier — le raccourci est le
+   bouton « Voir comme le client » de l'onglet Catalogue.
+
    **Et son corollaire, appris au tour suivant** : quand une piste demande de
    deviner une valeur non documentée (ici la route d'un schéma d'URL), **ne pas
    enchaîner les devinettes**. La première a coûté un aller-retour ; la seconde
