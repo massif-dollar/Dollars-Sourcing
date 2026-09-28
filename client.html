@@ -179,9 +179,17 @@
   body{
     background:var(--bg); color:var(--text); font-family:var(--font-body);
     font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
-    min-height:100vh; position:relative; overflow-x:hidden;
+    min-height:100vh; position:relative;
     transition:background .45s var(--ease-io), color .45s var(--ease-io);
   }
+  /* PAS d'`overflow-x` sur le body, et ce n'est pas un oubli. Le piège 22 avait
+     montré que la déclaration ne rognait rien — c'est `html{overflow-x:clip}`
+     qui fait tout le travail. Elle n'était pas inoffensive pour autant :
+     `overflow-x:hidden` force `overflow-y` à `auto`, le body devient alors un
+     conteneur de défilement, et TOUT `position:sticky` à l'intérieur se cale
+     sur un conteneur qui ne défile jamais — donc ne colle pas. La barre des
+     rayons du catalogue s'est fait avoir exactement comme ça. Une déclaration
+     qui ne sert à rien finit par servir à quelque chose de faux. */
   #bgfill{
     position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:var(--bg); transition:background .45s var(--ease-io);
@@ -710,9 +718,41 @@
     display:grid; place-items:center; background:var(--fill-2); font-size:13px; font-weight:600;
     color:var(--text-faint); font-variant-numeric:tabular-nums; letter-spacing:-0.01em;
   }
-  .cat-brand-n{ padding:10px 12px 12px; }
+  .cat-brand-n{ padding:10px 12px 12px; position:relative; z-index:2; }
   .cat-brand-n b{ display:block; font-size:14.5px; font-weight:600; letter-spacing:-0.015em; }
   .cat-brand-n span{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+
+  /* ===== LA PLAQUE DE MARQUE =====
+     Un logo arrive avec SON fond : Asics est noir sur blanc, ON et Stone
+     Island sont blancs sur noir. Trois logos posés tels quels sur nos cartes,
+     c'est un carré blanc éclatant à côté de deux carrés noirs — on voit trois
+     images collées, pas une devanture.
+     On ne peut pas retirer le fond d'une image (on mangerait le dessin), mais
+     on peut faire l'inverse : DONNER À TOUTE LA CARTE la couleur du logo. La
+     marque devient sa propre enseigne, et les trois cartes se lisent alors
+     comme trois plaques voulues. La couleur est lue dans les coins de l'image
+     au premier rendu (voir `plaqueDe`), le texte passe en clair ou en sombre
+     selon la luminance — sinon on écrirait du gris sur du noir. */
+  .cat-brand.plaque{
+    background:var(--plaque); border-color:transparent;
+    box-shadow:var(--raise-lg);
+  }
+  .cat-brand.plaque .cat-cover{ background:transparent; padding:13% 15%; }
+  .cat-brand.plaque .cat-cover img{ object-fit:contain; }
+  .cat-brand.plaque .cat-brand-n b{ color:var(--plaque-ink); }
+  .cat-brand.plaque .cat-brand-n span{ color:var(--plaque-ink-2); }
+  /* Un liseré interne : sans lui, une plaque blanche sur fond blanc n'a plus
+     de bord, et une plaque noire en thème sombre disparaît dans la page. */
+  .cat-brand.plaque::after{
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1;
+    box-shadow:inset 0 0 0 0.5px var(--plaque-edge);
+  }
+  /* Un nombre impair de marques laisse un trou au bout de la grille. La
+     dernière prend alors toute la largeur : une devanture ne se termine pas
+     sur une case vide. */
+  .cat-grid > .cat-brand:last-child:nth-child(odd){ grid-column:1 / -1; }
+  .cat-grid > .cat-brand:last-child:nth-child(odd) .cat-cover{ aspect-ratio:2.4/1; }
+  .cat-grid > .cat-brand:last-child:nth-child(odd).plaque .cat-cover{ padding:5% 8%; }
 
   .cat-model{ margin-top:20px; }
   .cat-model:first-of-type{ margin-top:0; }
@@ -721,7 +761,73 @@
     margin-bottom:10px; display:flex; align-items:baseline; gap:8px;
   }
   .cat-model-h i{ font-style:normal; font-size:11.5px; font-weight:500; color:var(--text-faint); }
+  /* ===== LES RAYONS =====
+     Quarante-huit coloris dans un seul défilement, c'est un mur de 3 770 px :
+     pour atteindre le deuxième modèle, le client passe devant quarante vestes.
+     Un magasin a des rayons. Cette barre reste collée en haut et emmène
+     directement au bon modèle ; la puce active suit le défilement.
+     Elle se décale sous la barre compacte, qui est en position fixe et
+     passerait par-dessus. */
+  .cat-shelf{
+    position:sticky; top:calc(env(safe-area-inset-top) + 46px); z-index:6;
+    display:flex; gap:7px; overflow-x:auto; overflow-y:hidden;
+    margin:0 -16px 14px; padding:9px 16px;
+    scrollbar-width:none; -ms-overflow-style:none;
+    background:var(--mat-thick); border-bottom:0.5px solid var(--hairline);
+    backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
+  }
+  .cat-shelf::-webkit-scrollbar{ display:none; }
+  .cat-chip{
+    flex:none; padding:7px 13px; border-radius:999px; cursor:pointer; font:inherit;
+    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
+    font-size:12.5px; font-weight:600; letter-spacing:-0.01em; white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+    transition:background .25s var(--ease-io), color .25s var(--ease-io), transform .3s var(--spring);
+  }
+  .cat-chip:active{ transform:scale(.94); }
+  .cat-chip b{ font-weight:600; font-variant-numeric:tabular-nums; opacity:.55; }
+  .cat-chip.on{ background:var(--accent); border-color:transparent; color:var(--on-accent); }
+  .cat-chip.on b{ opacity:.75; }
+
   .cat-colors{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  /* ===== LA VITRINE =====
+     Trois par ligne avec le nom en 11 px dessous, c'est un inventaire. Deux
+     par ligne en 4:5, le nom posé SUR l'image, c'est une boutique. La densité
+     reste à trois dans la fenêtre de choix : là on coche, on ne flâne pas. */
+  .cat-colors.vitrine{ grid-template-columns:repeat(2,1fr); gap:12px; }
+  .cat-colors.vitrine .cat-color{ position:relative; border-radius:17px; overflow:hidden; }
+  .cat-colors.vitrine .cat-color img{
+    aspect-ratio:4/5; border-radius:17px; transition:transform .55s var(--ease-out);
+  }
+  .cat-colors.vitrine .cat-color:active img{ transform:scale(1.04); }
+  /* Le nom sur un voile, pas sur la photo nue : un libellé clair sur un
+     produit clair ne se lit plus. Le voile marche sur les deux thèmes parce
+     qu'il est posé sur l'image, jamais sur la page. */
+  .cat-colors.vitrine .cat-color span{
+    position:absolute; left:0; right:0; bottom:0; margin:0; z-index:2;
+    padding:26px 11px 10px; text-align:left; color:#fff; font-size:12.5px; font-weight:600;
+    letter-spacing:-0.01em; text-shadow:0 1px 3px rgba(0,0,0,.5);
+    background:linear-gradient(to top, rgba(0,0,0,.74), rgba(0,0,0,.38) 45%, transparent);
+  }
+  /* Sept fiches du catalogue n'ont pas de nom : sans cette règle, elles
+     porteraient un voile noir sur rien du tout. */
+  .cat-colors.vitrine .cat-color span:empty{ display:none; }
+  /* La pièce orpheline d'un groupe impair. `object-position` remonte le
+     cadrage à 38 % : les photos sont des vestes en portrait, et un cadrage
+     centré sur une tuile large ne montrerait que le ventre du vêtement. */
+  .cat-colors.vitrine .cat-color.is-large{ grid-column:1 / -1; }
+  .cat-colors.vitrine .cat-color.is-large img{
+    aspect-ratio:4/3; object-position:center 38%;
+  }
+  .cat-colors.vitrine .cat-color.is-large span{ font-size:13.5px; padding:30px 13px 12px; }
+  /* La tuile arrive au defilement. `animation:none` est indispensable : sans
+     lui, le cardIn de `.cat-color` se jouerait par-dessus la transition et la
+     tuile apparaitrait deux fois. */
+  .cat-color.tuile{
+    animation:none; opacity:0; transform:translateY(16px) scale(.97);
+    transition:opacity .5s var(--ease-out), transform .6s var(--ease-out);
+  }
+  .cat-color.tuile.revealed{ opacity:1; transform:none; }
   /* Le séparateur de groupe, DANS un modèle : les coloris d'un arrivage, un
      trait, la suite. `--accent` vaut vert en clair et orange en sombre — la
      ligne suit donc le thème sans une ligne de code de plus. */
@@ -800,13 +906,36 @@
   .cat-lb-nav:active{ transform:translateY(-50%) scale(.9); }
   .cat-lb-nav[disabled]{ opacity:.25; pointer-events:none; }
   .cat-lb.has-details .cat-lb-nav{ display:grid; }
-  .cat-lb-dots{ display:none; justify-content:center; gap:6px; margin-top:12px; }
-  .cat-lb.has-details .cat-lb-dots{ display:flex; }
-  .cat-lb-dots i{
-    width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.3);
-    transition:background .25s var(--ease-io), transform .3s var(--spring);
+  /* LA PELLICULE. Une pastille dit combien de photos il reste, une pellicule
+     dit lesquelles : le client voit la doublure et l'étiquette sans avoir à
+     feuilleter à l'aveugle. Elle défile si les six vignettes ne tiennent pas. */
+  .cat-lb-dots{
+    display:none; justify-content:flex-start; gap:7px; margin-top:12px;
+    overflow-x:auto; overflow-y:hidden; flex:none;
+    scrollbar-width:none; -ms-overflow-style:none; padding-bottom:2px;
   }
-  .cat-lb-dots i.on{ background:#fff; transform:scale(1.35); }
+  .cat-lb-dots::-webkit-scrollbar{ display:none; }
+  .cat-lb.has-details .cat-lb-dots{ display:flex; }
+  .cat-lb-vig{
+    flex:none; width:46px; height:58px; padding:0; border-radius:9px; cursor:pointer;
+    overflow:hidden; background:rgba(255,255,255,.08); border:1.5px solid transparent;
+    transition:border-color .25s var(--ease-io), transform .3s var(--spring), opacity .25s var(--ease-io);
+    opacity:.55;
+  }
+  .cat-lb-vig img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cat-lb-vig.on{ border-color:#fff; opacity:1; }
+  .cat-lb-vig:active{ transform:scale(.93); }
+  /* Les tailles du modèle, pour information : le client veut savoir si sa
+     taille existe AVANT d'aller dans Demande. Ce n'est pas du stock — la liste
+     dit dans quelles tailles le modèle existe, jamais combien il en reste. */
+  .cat-lb-sizes{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:5px; margin-top:10px;
+  }
+  .cat-lb-sizes i{
+    font-style:normal; font-size:11.5px; font-weight:600; letter-spacing:.01em;
+    padding:4px 9px; border-radius:7px; color:rgba(255,255,255,.82);
+    background:rgba(255,255,255,.12); border:0.5px solid rgba(255,255,255,.16);
+  }
   /* La vignette pendant que la photo pleine arrive. Un battement discret dit
      « ça charge » sans écrire le mot. */
   .cat-lb-img img.chargement{ animation:catLoad 1.15s var(--ease-io) infinite; }
@@ -1645,6 +1774,7 @@
     #aurora i, .skel::after,
     .cat-lb-img img.chargement, .fete-halo,
     .order-card::before{ animation:none !important; }
+    .cat-color.tuile{ opacity:1 !important; transform:none !important; }
     /* Une animation infinie ne se raccourcit pas, elle se coupe : accélérée,
        elle clignote. Sans elle la vignette reste simplement pleinement
        opaque, et la photo la remplace quand elle arrive. */
@@ -1917,6 +2047,10 @@
   <div class="cat-lb-foot">
     <b id="catLbName"></b>
     <span id="catLbSub"></span>
+    <!-- Les tailles du modèle, pour information. Vide s'il n'y en a pas :
+         un accessoire n'a pas de taille, et une rangée vide poserait la
+         question de ce qui manque. -->
+    <div class="cat-lb-sizes" id="catLbSizes"></div>
     <button type="button" class="btn-primary" id="catLbOrder" data-i18n="catOrderThis">Passer commande</button>
   </div>
 </div>
@@ -4084,6 +4218,64 @@ function catAskHtml(){
     + '</div>';
 }
 
+// ===== LA COULEUR D'UNE PLAQUE =====
+// Elle se lit dans les COINS de l'image : c'est là qu'est le fond du logo,
+// jamais le dessin. On echantillonne quatre petits carres et on ne garde la
+// couleur QUE si les quatre se ressemblent — sinon ce n'est pas un logo sur
+// fond uni mais une photo, et une plaque n'aurait aucun sens : on laisse alors
+// la carte normale. Le resultat est garde en memoire, la lecture ne se fait
+// qu'une fois par marque.
+const plaques = {};
+function plaqueDe(nom, b64, type){
+  if(nom in plaques) return Promise.resolve(plaques[nom]);
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=>{
+      let v = null;
+      try{
+        const N = 24, c = document.createElement('canvas');
+        c.width = N; c.height = N;
+        const x = c.getContext('2d', { willReadFrequently:true });
+        x.drawImage(im, 0, 0, N, N);
+        const d = x.getImageData(0, 0, N, N).data;
+        const coins = [[0,0],[N-3,0],[0,N-3],[N-3,N-3]].map(([cx,cy])=>{
+          let r=0, g=0, b=0;
+          for(let j=0;j<3;j++) for(let i=0;i<3;i++){
+            const k = ((cy+j)*N + (cx+i)) * 4; r+=d[k]; g+=d[k+1]; b+=d[k+2];
+          }
+          return [r/9, g/9, b/9];
+        });
+        const moy = coins.reduce((a,p)=>[a[0]+p[0]/4, a[1]+p[1]/4, a[2]+p[2]/4], [0,0,0]);
+        const ecart = Math.max.apply(null, coins.map(p=>
+          Math.sqrt(Math.pow(p[0]-moy[0],2) + Math.pow(p[1]-moy[1],2) + Math.pow(p[2]-moy[2],2))));
+        if(ecart < 42) v = moy.map(Math.round);
+      }catch(e){}
+      plaques[nom] = v; res(v);
+    };
+    im.onerror = ()=>{ plaques[nom] = null; res(null); };
+    im.src = 'data:' + (type || 'image/jpeg') + ';base64,' + b64;
+  });
+}
+// La lecture est asynchrone : la carte s'affiche normale, puis prend sa
+// couleur. Jamais l'inverse — une devanture qui attend une image ne s'affiche
+// pas, et c'est le piege 16 applique au rendu.
+function poseLesPlaques(el){
+  el.querySelectorAll('.cat-brand[data-brand]').forEach(node=>{
+    const g = brandCovers[node.dataset.brand];
+    if(!g || !g.cover) return;
+    plaqueDe(node.dataset.brand, g.cover, g.coverType).then(v=>{
+      if(!v || !node.isConnected) return;
+      const r = v[0], vert = v[1], b = v[2];
+      const clair = (0.2126*r + 0.7152*vert + 0.0722*b) / 255 > 0.55;
+      node.style.setProperty('--plaque', 'rgb(' + r + ',' + vert + ',' + b + ')');
+      node.style.setProperty('--plaque-ink',  clair ? 'rgba(0,0,0,.88)'  : 'rgba(255,255,255,.95)');
+      node.style.setProperty('--plaque-ink-2', clair ? 'rgba(0,0,0,.48)' : 'rgba(255,255,255,.56)');
+      node.style.setProperty('--plaque-edge', clair ? 'rgba(0,0,0,.15)'  : 'rgba(255,255,255,.17)');
+      node.classList.add('plaque');
+    });
+  });
+}
+
 function catVueMarques(el, mode, intro){
   const marques = catBrands();
   el.innerHTML = catNote(intro)
@@ -4118,6 +4310,27 @@ function catVueMarques(el, mode, intro){
       }).join('') + '</div>'
     + (mode === 'vitrine' ? catAskHtml() : '');
   stagger(el.querySelectorAll('.cat-brand'), 55);
+  poseLesPlaques(el);
+}
+
+// Dans une grille à DEUX colonnes, un groupe de taille impaire laisse son
+// dernier coloris seul avec un demi-écran vide à côté — et les groupes de
+// Massif font souvent trois pièces. Plutôt que de subir le trou, on le donne à
+// la pièce : la tuile orpheline prend toute la largeur et devient une mise en
+// avant. Chaque groupe remplit alors exactement ses lignes, et la grille prend
+// un rythme au lieu d'avoir des dents.
+// Seulement dans la vitrine : la fenêtre de choix est à trois colonnes, et une
+// tuile géante au milieu des cases à cocher ne voudrait rien dire.
+function marqueLesOrphelines(liste, mode){
+  if(mode !== 'vitrine') return liste;
+  let debut = 0;
+  const finir = (fin)=>{
+    if((fin - debut) % 2 === 1) liste[fin - 1].__large = true;
+    debut = fin;
+  };
+  liste.forEach((it, k)=>{ if(k > 0 && it.__sep) finir(k); });
+  finir(liste.length);
+  return liste;
 }
 
 // Le trait vit sur le coloris qui OUVRE le groupe. Mais un coloris masqué
@@ -4159,27 +4372,104 @@ function catVueMarque(el, marque, mode){
         ? catNote(t('pickLocked').replace('{model}', '<b>' + escapeHtml(verrou.model || verrou.brand) + '</b>'), 'lock')
         : catNote(t('pickHint')))
     : catNote(t('catLeadBrand'));
-  el.innerHTML = entete + consigne
-    + modeles.map(g=>
-        '<div class="cat-model"><div class="cat-model-h">'
+  // Les rayons : une puce par modele, seulement s'il y en a plusieurs — une
+  // barre de navigation a une seule entree ne navigue nulle part. Et seulement
+  // dans la vitrine : la fenetre de choix est deja bornee a un seul modele.
+  const rayons = (mode === 'vitrine' && modeles.length > 1)
+    ? '<div class="cat-shelf" id="catShelf">' + modeles.map((g,k)=>
+        '<button type="button" class="cat-chip' + (k === 0 ? ' on' : '') + '" data-rayon="' + k + '">'
+        + escapeHtml(g.nom || t('catNoModel')) + '<b>' + g.items.length + '</b></button>').join('')
+      + '</div>'
+    : '';
+  el.innerHTML = entete + consigne + rayons
+    + modeles.map((g,k)=>
+        '<div class="cat-model" id="catRayon' + k + '"><div class="cat-model-h">'
         + escapeHtml(g.nom || t('catNoModel'))
         + '<i>' + catCount(g.items.length, 'catColor', 'catColors') + '</i></div>'
-        + '<div class="cat-colors">' + catAvecSeps(marque, g).map(i=>
+        + '<div class="cat-colors' + (mode === 'vitrine' ? ' vitrine' : '') + '">'
+        + marqueLesOrphelines(catAvecSeps(marque, g), mode).map(i=>
             (i.__sep ? '<i class="cat-sep" aria-hidden="true"></i>' : '')
             + '<button type="button" class="cat-color'
             + (mode === 'choix' && estChoisi(i.id) ? ' is-picked' : '')
             + (mode === 'choix' && !memeModele(i) ? ' is-locked' : '')
+            + (i.__large ? ' is-large' : '')
             + '" data-id="' + escapeHtml(i.id) + '">'
             + '<img src="' + catImg(i) + '" alt="" loading="lazy">'
             + (mode === 'choix' ? '<i class="cat-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>' : '')
             + '<span>' + escapeHtml(i.name || '') + '</span></button>').join('')
         + '</div></div>').join('');
-  stagger(el.querySelectorAll('.cat-color'), 45);
+  // Quarante-huit tuiles avec un retard fixe, c'est quarante-huit animations
+  // jouees hors de l'ecran : le client n'en verrait que les six premieres. Les
+  // tuiles se revelent donc au defilement, comme les cartes du tableau de bord.
+  if(mode === 'vitrine') reveleTuiles(el); else stagger(el.querySelectorAll('.cat-color'), 45);
+  suitLesRayons(el);
   return true;
+}
+
+// La tuile arrive quand elle entre dans l'ecran, et une seule fois.
+let tuileObserver = null;
+function reveleTuiles(el){
+  const tuiles = el.querySelectorAll('.cat-color');
+  if(reduceMotion() || !('IntersectionObserver' in window)){
+    tuiles.forEach(n=>n.classList.add('revealed')); return;
+  }
+  if(!tuileObserver){
+    tuileObserver = new IntersectionObserver((ents)=>{
+      ents.forEach(en=>{
+        if(!en.isIntersecting) return;
+        en.target.classList.add('revealed');
+        tuileObserver.unobserve(en.target);
+      });
+    }, { rootMargin:'0px 0px -4% 0px', threshold:0.04 });
+  }
+  tuiles.forEach((n,i)=>{
+    n.classList.add('tuile');
+    // Le retard se compte DANS la ligne, pas dans toute la grille : sinon la
+    // centieme tuile attendrait sept secondes.
+    n.style.transitionDelay = (i % 2) * 70 + 'ms';
+    tuileObserver.observe(n);
+  });
+}
+
+// La puce active suit le defilement : sans ca elle mentirait des le premier
+// geste, et une barre qui ment est pire qu'une barre absente.
+let rayonObserver = null;
+function suitLesRayons(el){
+  if(rayonObserver){ rayonObserver.disconnect(); rayonObserver = null; }
+  const shelf = el.querySelector('#catShelf');
+  if(!shelf || !('IntersectionObserver' in window)) return;
+  const sections = [...el.querySelectorAll('.cat-model')];
+  rayonObserver = new IntersectionObserver((ents)=>{
+    const vus = ents.filter(e=>e.isIntersecting)
+                    .sort((a,b)=>a.boundingClientRect.top - b.boundingClientRect.top);
+    if(!vus.length) return;
+    const k = sections.indexOf(vus[0].target);
+    if(k < 0) return;
+    shelf.querySelectorAll('.cat-chip').forEach((c,i)=>c.classList.toggle('on', i === k));
+    const actif = shelf.querySelector('.cat-chip.on');
+    if(actif) actif.scrollIntoView({ block:'nearest', inline:'nearest' });
+  }, { rootMargin:'-45% 0px -45% 0px', threshold:0 });
+  sections.forEach(sec=>rayonObserver.observe(sec));
 }
 
 $('#catalogPanel').addEventListener('click', (e)=>{
   if(e.target.closest('#catBackBtn')){ catBrand = null; renderCatalog(); catRemonte(); return; }
+  // Un rayon emmene a son modele. Le defilement est anime ICI, et c'est la
+  // difference avec le piege 31 : il est declenche par le doigt, sur un bouton
+  // qui annonce exactement ca. Ce qui se lit comme une app qui bouge seule,
+  // c'est le defilement qu'on n'a pas demande.
+  const puce = e.target.closest('.cat-chip');
+  if(puce){
+    const sec = document.getElementById('catRayon' + puce.dataset.rayon);
+    const shelf = document.getElementById('catShelf');
+    if(sec){
+      const barre = shelf ? shelf.getBoundingClientRect() : null;
+      const marge = barre ? barre.height + Math.max(0, barre.top) + 10 : 10;
+      const y = window.scrollY + sec.getBoundingClientRect().top - marge;
+      window.scrollTo({ top:Math.max(0, y), behavior: reduceMotion() ? 'auto' : 'smooth' });
+    }
+    return;
+  }
   const marque = e.target.closest('.cat-brand');
   if(marque){
     catBrand = marque.dataset.brand;
@@ -4449,8 +4739,18 @@ function majCatVue(){
   lb.classList.toggle('has-details', catVues.length > 1);
   $('#catLbPrev').disabled = catVue === 0;
   $('#catLbNext').disabled = catVue === catVues.length - 1;
-  $('#catLbDots').innerHTML = catVues.length > 1
-    ? catVues.map((_, k)=> '<i class="' + (k === catVue ? 'on' : '') + '"></i>').join('') : '';
+  // Une pastille dit COMBIEN de photos il reste, une pellicule dit LESQUELLES.
+  // C'est la différence entre feuilleter à l'aveugle et choisir ce qu'on
+  // regarde — et sur une fiche produit, c'est tout ce qui compte.
+  const strip = $('#catLbDots');
+  strip.innerHTML = catVues.length > 1
+    ? catVues.map((src, k)=>
+        '<button type="button" class="cat-lb-vig' + (k === catVue ? ' on' : '')
+        + '" data-vue="' + k + '" aria-label="' + (k + 1) + '">'
+        + '<img src="' + src + '" alt="" loading="lazy"></button>').join('')
+    : '';
+  const actif = strip.querySelector('.cat-lb-vig.on');
+  if(actif) actif.scrollIntoView({ block:'nearest', inline:'nearest' });
 }
 function catVaVers(pas){
   if(catVues.length < 2) return;
@@ -4503,6 +4803,10 @@ function openCatLb(id){
   $('#catLbName').textContent = [i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ')
                                 || (i.brand || '');
   $('#catLbSub').textContent = i.brand || '';
+  // `taillesDe` est la même fonction que côté vendeur : la vitrine et la
+  // demande ne peuvent donc pas annoncer des tailles différentes.
+  const tailles = taillesDe(i) || [];
+  $('#catLbSizes').innerHTML = tailles.map(x=>'<i>' + escapeHtml(x) + '</i>').join('');
   $('#catLb').classList.add('open');
 }
 function closeCatLb(){
@@ -4524,6 +4828,8 @@ $('#catLb').addEventListener('click', (e)=>{
   // Les flèches sont DANS la zone photo : sans cette garde, avancer d'une
   // image fermerait la visionneuse dans le même geste.
   if(e.target.closest('.cat-lb-nav')) return;
+  const vig = e.target.closest('.cat-lb-vig');
+  if(vig){ catVue = Number(vig.dataset.vue) || 0; majCatVue(); return; }
   if(e.target.id === 'catLb' || e.target.closest('.cat-lb-img')) closeCatLb();
 });
 document.addEventListener('keydown', (e)=>{

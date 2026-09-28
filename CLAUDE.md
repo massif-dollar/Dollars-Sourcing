@@ -808,6 +808,63 @@ quatrième case devient « +N »), puis les modèles de la marque avec leurs
 coloris. `active` est respecté : **une fiche masquée n'existe pas ici** — c'est
 exactement à ça que sert ce bouton.
 
+#### La vitrine repensée : une devanture, des rayons, une fiche produit
+
+Massif : « faut que le client soit comme dans un magasin ». Mesuré avant de
+toucher à quoi que ce soit, sur ses 56 vraies fiches : la vitrine n'avait pas
+un problème d'animations, elle en avait trois de fond.
+
+**1. Les logos se battaient avec le thème.** Une image de garde arrive avec SON
+fond — Asics est noir sur blanc, ON et Stone Island sont blancs sur noir. Trois
+logos posés tels quels, c'est un carré blanc éclatant à côté de deux carrés
+noirs : on voit trois images collées, pas une devanture.
+
+On ne peut pas retirer le fond d'une image sans manger le dessin. On fait donc
+l'inverse : **toute la carte prend la couleur du logo**, et chaque marque
+devient sa propre enseigne. `plaqueDe()` lit la couleur dans les **coins** de
+l'image — c'est là qu'est le fond, jamais le dessin — et ne la retient que si
+les quatre coins se ressemblent (écart < 42). Sinon ce n'est pas un logo sur
+fond uni mais une photo, et la carte reste normale. Le texte passe en clair ou
+en sombre selon la luminance, et un liseré interne empêche une plaque blanche
+de disparaître sur fond blanc.
+
+**La lecture est asynchrone et la carte s'affiche AVANT** : c'est le piège 16
+appliqué au rendu. Une devanture qui attend une image ne s'affiche pas.
+
+**2. Il n'y avait aucune navigation dans une marque.** Quarante-huit coloris
+Stone Island font un mur de 7 700 px : pour atteindre le deuxième modèle, le
+client passe devant quarante vestes. D'où **les rayons** — une barre collante
+d'une puce par modèle, qui emmène au bon endroit et dont la puce active suit le
+défilement. Elle n'apparaît qu'à partir de deux modèles : une barre de
+navigation à une seule entrée ne navigue nulle part.
+
+**3. Les tuiles étaient un inventaire.** Trois par ligne, nom en 11 px dessous.
+La vitrine passe à **deux colonnes en 4:5, le nom posé sur l'image** derrière un
+voile. La fenêtre de choix, elle, reste à trois colonnes : là on coche, on ne
+flâne pas — même fonction de rendu, un seul modificateur de classe.
+
+**Le revers de deux colonnes, et il fallait le traiter** : les groupes séparés
+par un trait font souvent trois coloris, donc le dernier restait seul avec un
+demi-écran vide à côté. `marqueLesOrphelines()` donne le trou à la pièce : la
+tuile orpheline d'un groupe impair **prend toute la largeur** et devient une
+mise en avant. Chaque groupe remplit alors exactement ses lignes, et la grille
+prend un rythme au lieu d'avoir des dents. Son cadrage remonte à 38 % — les
+photos sont des vestes en portrait, et un cadrage centré sur une tuile large ne
+montrerait que le ventre du vêtement.
+
+**La fiche produit.** La photo en grand avait des pastilles : elles disent
+combien de photos il reste, jamais lesquelles. Elles sont devenues une
+**pellicule** de vignettes — le client voit la doublure et l'étiquette sans
+feuilleter à l'aveugle — et les **tailles du modèle** s'affichent sous le nom.
+Elles viennent de `taillesDe()`, la même fonction que côté vendeur : la vitrine
+et la demande ne peuvent donc pas annoncer des tailles différentes. Ce n'est
+pas du stock : la liste dit dans quelles tailles le modèle existe, jamais
+combien il en reste.
+
+**Les tuiles se révèlent au défilement** plutôt qu'avec un retard fixe :
+quarante-huit animations lancées d'un coup, ce sont quarante-deux jouées hors
+de l'écran. Le retard se compte dans la ligne (`i % 2`), pas dans la grille.
+
 #### « Le catalogue n'est pas tout » — le dire, et donner la porte
 
 Une vitrine a l'air d'être **l'offre entière**, et le client n'a aucun moyen de
@@ -2511,6 +2568,37 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    du système (caméra, micro, sélecteur de fichiers, presse-papiers) s'appelle
    dans le geste, jamais après un `await`.** Ce qui doit être chargé se charge
    en parallèle.
+
+34. **`body{overflow-x:hidden}` CASSE TOUT `position:sticky` DE LA PAGE**, et
+   c'est le piège 22 qui revient par la petite porte.
+
+   Le piège 22 avait établi que ce `body{overflow-x:hidden}` **ne rognait
+   rien** : c'est `html{overflow-x:clip}` qui fait le travail, mesuré à 474 px
+   contre 390. La déclaration était restée là, jugée inoffensive.
+
+   Elle ne l'était pas. **`overflow-x:hidden` force `overflow-y` à `auto`** —
+   on ne peut pas avoir un axe `visible` et l'autre `hidden` — donc le `body`
+   devient un conteneur de défilement. Or `position:sticky` se cale sur le
+   conteneur de défilement le plus proche : la barre se collait à un `body`
+   qui, lui, ne défile jamais (c'est `html` qui défile). Résultat vu à
+   l'écran : **une barre collante qui défile normalement**, sans erreur, sans
+   rien qui signale la cause.
+
+   Symptôme mesuré, avant / après : `shelf.top` passait de 346 à **−254** puis
+   **−1054** en défilant ; corrigé, il reste à **46** quel que soit le
+   défilement. Et la largeur de la page n'a pas bougé d'un pixel (390), ce qui
+   confirme au passage que la déclaration ne servait effectivement à rien.
+
+   **La leçon** : une déclaration qui « ne sert à rien » n'est pas neutre, elle
+   attend de servir à quelque chose de faux. Le piège 22 avait prouvé qu'elle
+   était inutile — il aurait fallu la supprimer ce jour-là, pas la laisser en
+   commentaire de sécurité.
+
+   Et le corollaire de méthode, le même qu'au piège 22 : devant un `sticky` qui
+   ne colle pas, **on ne relit pas la règle CSS du sticky**, on remonte la
+   chaîne des parents en lisant `overflow`, `transform`, `filter` et `contain`.
+   Une sonde de dix lignes a répondu là où trois relectures n'auraient rien
+   donné.
 
 ## Assistant IA
 
