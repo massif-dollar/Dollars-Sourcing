@@ -573,6 +573,72 @@ Quatre conséquences :
 - **Supprimer une fiche supprime les deux documents.** Sinon la photo resterait
   seule dans la base, invisible et payante.
 
+#### « Des fois quand on clique sur une image, elle charge longtemps »
+
+Le signalement de Massif, et la cause est le **même piège un cran plus bas**.
+Le découpage `catalog` / `catalogPhotos` avait réglé la grille ; à l'intérieur
+de `catalogPhotos`, la couverture et les cinq détails vivaient encore dans **un
+seul document**. Firestore renvoyant des documents entiers, voir une photo en
+téléchargeait six.
+
+Mesuré sur une vraie fiche du catalogue :
+
+| | poids |
+|---|---|
+| couverture pleine | 97 Ko |
+| cinq détails | 508 Ko |
+| **téléchargé pour afficher la couverture** | **605 Ko — 6,2× trop** |
+
+La couverture vit donc seule dans `catalogPhotos/{id}`, les détails dans
+**`catalogPhotos/{id}__d`**. Les deux lectures partent **dans le même tour** :
+les enchaîner aurait rendu les détails deux fois plus lents et n'aurait fait
+que déplacer le problème.
+
+**LE POINT QUI REND CE DÉCOUPAGE GRATUIT** : c'est la **même collection**, un
+identifiant différent. La règle est `match /catalogPhotos/{itemId}`, un joker —
+donc **rien à republier**. Une collection nouvelle aurait coûté le piège 29 et
+une manœuvre manuelle à Massif ; `idDetails()` ne coûte rien. Avant d'ajouter
+une collection, regarder si un second document dans celle qui existe ne suffit
+pas.
+
+`idDetails()` **existe à l'identique dans les deux fichiers**, comme
+`photosDe()` et `freshRef()` : si l'une change, le vendeur écrirait les détails
+là où le client ne les lit pas.
+
+**La migration ne relit pas tout.** Découper une fiche oblige à lire ses 605 Ko
+avant de les réécrire : les 56 fiches d'un coup, ce sont 34 Mo sur la connexion
+de Massif, en Chine. `sortLesDetails()` en fait donc **trois par ouverture de
+l'app**, et marque la fiche d'un `dsplit` — **dans `catalog`, pas dans le
+document de photo** : sinon il faudrait relire 605 Ko juste pour savoir si
+c'est déjà fait. Un booléen coûte quinze octets au client, une relecture en
+coûterait six cent mille. Une fiche enregistrée ou importée naît `dsplit`.
+
+**Et on lit les deux formes** (piège 24) : une fiche pas encore découpée porte
+ses détails dans le document de couverture. L'enregistrement efface alors
+l'ancien champ **explicitement** (`FieldValue.delete()`) — sans ça les détails
+resteraient aux deux endroits et le client continuerait de les télécharger avec
+la couverture.
+
+**Le bug que seule la mesure a trouvé, et il aurait cassé toutes les fiches
+existantes.** Les deux lectures courent en parallèle ; sur une fiche d'avant le
+découpage, `__d` **n'existe pas**, donc cette lecture-là répond la **première** —
+vide et instantanée. Mettre `[]` en cache écrasait les vrais détails que la
+couverture rapportait une seconde plus tard : **pellicule vide sur tout le
+catalogue actuel**. On ne met donc en cache que ce qu'on a vraiment lu, et la
+couverture réapplique les détails du cache en arrivant.
+
+**Piège de vérification, le même qu'au glissement des coloris** : le Firestore
+simulé des tests répond en **zéro milliseconde**, donc les deux lectures
+finissaient avant la première mesure et la sonde concluait « aucun gain » sur du
+code juste. Le mock a désormais une latence **proportionnelle au poids**
+(`window.__debit`, en octets par milliseconde) — sans quoi aucun découpage de
+documents n'est mesurable. Et le gain se lit en **temps**, pas en octets : le
+journal les compte à l'appel, or les deux lectures partent ensemble, c'est
+l'arrivée qui diffère.
+
+Résultat à 100 Ko/s, la connexion depuis laquelle Massif regarde :
+**photo nette en 6 212 ms → 1 008 ms.**
+
 #### Les photos de détail d'un coloris
 
 Une couverture ne suffit pas à vendre une doudoune : le client veut voir la

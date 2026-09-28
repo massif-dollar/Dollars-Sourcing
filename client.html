@@ -4730,24 +4730,67 @@ function libellePicked(){
 // l'ouverture de la vitrine de 679 Ko à 155 Ko sur les cinq premiers coloris —
 // Firestore renvoie des documents entiers, tout ce qui reste dans la fiche est
 // téléchargé par tout le monde, tout le temps.
-// Le document porte la photo pleine ET les photos de détail : elles voyagent
-// donc ensemble, en une seule lecture, et seulement quand un coloris s'ouvre.
-// C'est ce qui permet d'en avoir plusieurs sans alourdir la grille d'un octet.
-const catPhotos = new Map();
+// ===== ET LES DÉTAILS NE VIVENT PAS DANS LE MÊME DOCUMENT QUE LA COUVERTURE =====
+// C'est le même piège, un cran plus bas, et il a fallu que Massif le signale :
+// « des fois quand on clique sur une image, elle charge longtemps ».
+// Mesuré sur une vraie fiche : couverture 97 Ko, cinq détails 508 Ko,
+// **605 Ko téléchargés pour afficher une photo de 97** — six fois trop. Sur
+// une connexion bridée, c'est 7 secondes au lieu de 1.
+//
+// La couverture vit donc seule dans `catalogPhotos/{id}`, et les détails dans
+// `catalogPhotos/{id}__d`. **Le même collection, un identifiant différent** :
+// la règle est `match /catalogPhotos/{itemId}`, un joker, donc il n'y a RIEN à
+// republier — c'est ce qui rend ce découpage gratuit là où une collection
+// nouvelle aurait coûté le piège 29.
+//
+// Les deux lectures partent ENSEMBLE : les enchaîner rendrait les détails deux
+// fois plus lents qu'aujourd'hui, et on aurait déplacé le problème.
+//
+// ON LIT LES DEUX FORMES (piège 24) : une fiche d'avant le découpage porte
+// encore ses détails dans le document de couverture. On les prend là où ils
+// sont, et on n'écrit que la nouvelle forme.
+const catPhotos = new Map();     // id -> { src }
+const catDetails = new Map();    // id -> [src, ...]
+function idDetails(id){ return id + '__d'; }
+
 function catPhotoPleine(id){
   if(catPhotos.has(id)) return Promise.resolve(catPhotos.get(id));
   return db.collection('catalogPhotos').doc(id).get().then(doc=>{
     if(!doc.exists) return null;
     const d = doc.data();
     if(!d || !d.photo) return null;
-    const lot = {
-      src: 'data:' + (d.photoType || 'image/jpeg') + ';base64,' + d.photo,
-      details: (Array.isArray(d.details) ? d.details : [])
-        .filter(x => x && x.data)
-        .map(x => 'data:' + (x.type || 'image/jpeg') + ';base64,' + x.data)
-    };
+    // Ancienne forme : les détails sont là, on les garde plutôt que d'aller
+    // chercher un second document qui n'existe pas.
+    if(Array.isArray(d.details) && d.details.length){
+      catDetails.set(id, d.details.filter(x => x && x.data)
+        .map(x => 'data:' + (x.type || 'image/jpeg') + ';base64,' + x.data));
+    }
+    const lot = { src: 'data:' + (d.photoType || 'image/jpeg') + ';base64,' + d.photo };
     catPhotos.set(id, lot);
     return lot;
+  });
+}
+
+function catDetailsDe(id){
+  if(catDetails.has(id)) return Promise.resolve(catDetails.get(id));
+  return db.collection('catalogPhotos').doc(idDetails(id)).get().then(doc=>{
+    // LE DOCUMENT ABSENT NE VEUT PAS DIRE « PAS DE DÉTAILS ». C'est le bug que
+    // la mesure a trouvé : sur une fiche d'avant le découpage, `__d` n'existe
+    // pas, donc cette lecture-là répond la PREMIÈRE — elle est vide, elle est
+    // instantanée — et si on mettait `[]` en cache elle écraserait les vrais
+    // détails que la couverture rapporte une seconde plus tard. La pellicule
+    // restait vide sur toutes les fiches existantes.
+    // On ne met donc en cache QUE ce qu'on a vraiment lu.
+    if(!doc.exists) return catDetails.get(id) || [];
+    const d = doc.data();
+    const liste = (d && Array.isArray(d.details) ? d.details : [])
+      .filter(x => x && x.data)
+      .map(x => 'data:' + (x.type || 'image/jpeg') + ';base64,' + x.data);
+    catDetails.set(id, liste);
+    return liste;
+  }).catch(()=>{
+    // Un détail qui ne vient pas ne doit pas casser la photo en grand.
+    return catDetails.get(id) || [];
   });
 }
 
@@ -4817,12 +4860,26 @@ function openCatLb(id){
     catVues = [catImg(i, false)];
     img.src = catVues[0];
     img.classList.add('chargement');
+    // Les deux lectures partent DANS LE MÊME TOUR. La couverture fait 97 Ko et
+    // arrive donc la première ; les détails suivent et complètent la pellicule
+    // sans avoir fait attendre la photo.
     catPhotoPleine(id).then(lot=>{
       if(!catCurrent || catCurrent.id !== id) return;
-      if(lot) catVues = [lot.src].concat(lot.details);
+      // On reprend les détails du cache : sur une fiche d'avant le découpage,
+      // c'est LA COUVERTURE qui les rapporte, et l'autre lecture a déjà répondu
+      // dans le vide. Sans cette ligne, la pellicule ne s'afficherait jamais
+      // sur les fiches existantes.
+      if(lot) catVues = [lot.src].concat(catDetails.get(id) || catVues.slice(1));
       img.classList.remove('chargement');
       majCatVue();
     }).catch(()=>{ img.classList.remove('chargement'); });
+    catDetailsDe(id).then(det=>{
+      if(!catCurrent || catCurrent.id !== id || !det || !det.length) return;
+      // On recolle derrière la couverture, quelle qu'elle soit à cet instant :
+      // les détails peuvent arriver avant elle sur une fiche déjà en cache.
+      catVues = [catVues[0]].concat(det);
+      majCatVue();
+    });
   }
   $('#catLbName').textContent = [i.model, i.name].map(x=>(x||'').trim()).filter(Boolean).join(' · ')
                                 || (i.brand || '');
