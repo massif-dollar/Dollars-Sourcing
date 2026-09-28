@@ -1442,6 +1442,93 @@
   }
   @keyframes curtainBrand{ from{ opacity:0; transform:translateY(7px); } to{ opacity:1; transform:none; } }
 
+
+  /* ===== La fête de la livraison =====
+     Le colis est dans ses mains : c'est le seul instant du parcours où il a
+     envie qu'on lui parle. Même famille que l'ouverture — la pièce, son halo,
+     le reflet — mais avec une gerbe qui part de la pièce. Une seule chose
+     tourne en boucle ici : le halo. */
+  .fete{
+    position:fixed; inset:0; z-index:130; display:none;
+    align-items:center; justify-content:center; overflow:hidden; text-align:center;
+    padding:calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);
+    background:radial-gradient(circle at 50% 36%, var(--accent-soft), transparent 64%), var(--bg);
+  }
+  .fete.show{ display:flex; animation:feteIn .4s var(--ease-out) both; }
+  .fete.out{ animation:feteOut .3s var(--ease-io) both; }
+  @keyframes feteIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes feteOut{ from{ opacity:1; } to{ opacity:0; transform:scale(1.03); } }
+  .fete-in{ position:relative; z-index:2; max-width:340px; }
+  .fete .curtain-mark{ width:92px; height:92px; margin-bottom:22px; }
+  .fete .curtain-glyph{ font-size:42px; }
+  .fete-halo{
+    position:absolute; z-index:1; top:36%; left:50%; width:300px; height:300px;
+    margin:-150px 0 0 -150px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--accent-soft), transparent 66%);
+    animation:feteHalo 4.6s var(--ease-io) infinite;
+  }
+  @keyframes feteHalo{
+    0%,100%{ opacity:.55; transform:scale(.92); }
+    50%{ opacity:.95; transform:scale(1.08); }
+  }
+  /* La gerbe part de la pièce. Elle ne se rejoue pas : une fête qui clignote
+     n'est plus une fête. */
+  .fete-boom{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+  .fete-piece{
+    position:absolute; left:50%; top:34%; height:12px; border-radius:2px;
+    opacity:0; will-change:transform, opacity;
+    animation:feteBoom var(--dur, 1400ms) var(--ease-out) var(--del, 0ms) both;
+  }
+  @keyframes feteBoom{
+    0%{ opacity:0; transform:translate(0,0) rotate(0deg) scale(.4); }
+    10%{ opacity:1; }
+    70%{ opacity:1; }
+    100%{ opacity:0; transform:translate(var(--dx,0), var(--dy,0)) rotate(var(--rot,0deg)) scale(1); }
+  }
+  .fete-title{
+    margin:0; font-family:var(--font-display); font-size:27px; font-weight:800;
+    letter-spacing:-0.03em; color:var(--text);
+    animation:feteUp .6s var(--ease-out) .18s both;
+  }
+  .fete-sub{
+    margin:8px 0 0; font-size:14px; color:var(--text-muted);
+    animation:feteUp .6s var(--ease-out) .26s both;
+  }
+  @keyframes feteUp{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+  .fete-gain{
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    margin:22px 0 0; font-family:var(--font-display); font-size:44px; font-weight:800;
+    letter-spacing:-0.04em; color:var(--accent); font-variant-numeric:tabular-nums;
+    animation:fetePop .66s var(--spring) .34s both;
+  }
+  @keyframes fetePop{
+    from{ opacity:0; transform:scale(.6); }
+    to{ opacity:1; transform:none; }
+  }
+  .fete-gain-label{
+    margin:2px 0 0; font-size:12px; font-weight:600; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--text-faint);
+    animation:feteUp .6s var(--ease-out) .46s both;
+  }
+  .fete-total{
+    margin:14px 0 0; font-size:14px; color:var(--text-muted);
+    animation:feteUp .6s var(--ease-out) .54s both;
+  }
+  .fete-actions{
+    margin:28px 0 0; display:flex; flex-direction:column; gap:10px;
+    animation:feteUp .6s var(--ease-out) .62s both;
+  }
+  .fete-btn{
+    padding:14px 18px; border:none; border-radius:15px; cursor:pointer;
+    background:var(--accent); color:var(--on-accent);
+    font-family:var(--font-display); font-size:15px; font-weight:700;
+    box-shadow:var(--raise-lg);
+  }
+  .fete-close{
+    padding:11px 18px; border:none; border-radius:13px; cursor:pointer;
+    background:transparent; color:var(--text-muted); font-size:14px; font-weight:600;
+  }
+
   /* L'app prend la main pendant que l'ouverture s'efface : jamais de trou noir. */
   #app.app-enter{ animation:appEnter .55s var(--ease-out) both; }
   @keyframes appEnter{
@@ -1556,7 +1643,7 @@
     .shop-item.affordable, .track.animate .track-dot,
     .track.animate .track-label, .hello-aura,
     #aurora i, .skel::after,
-    .cat-lb-img img.chargement,
+    .cat-lb-img img.chargement, .fete-halo,
     .order-card::before{ animation:none !important; }
     /* Une animation infinie ne se raccourcit pas, elle se coupe : accélérée,
        elle clignote. Sans elle la vignette reste simplement pleinement
@@ -1584,6 +1671,11 @@
     <p class="curtain-brand">DOLLAR$ SOURCING</p>
   </div>
 </div>
+
+<!-- La fête de la livraison. Vide au repos : son contenu dépend de la
+     commande, et un calque plein écran laissé dans le flux mangerait les
+     touchers — d'où `display:none` tant qu'il n'a rien à dire. -->
+<div class="fete" id="fete"></div>
 
 <div class="topbar" id="topbar">
   <span class="topbar-name" id="topbarName"></span>
@@ -1943,6 +2035,13 @@ const I18N = {
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
     shopSent:'Échange envoyé ! Ton vendeur va le valider.',
     dollarsRules:"Tu gagnes 1 Dollarz par euro dépensé, crédité à la livraison. Un seul coupon par commande, sans date d'expiration. Les Dollarz ne sont ni transférables ni convertibles en euros.",
+    // La fête de la livraison
+    feteTitle:'Félicitations {name} !', feteTitleNoName:'Félicitations !',
+    feteSub:'Ta commande {ref} est arrivée.',
+    feteGain:'Dollarz gagnés sur cette commande',
+    feteTotal:'Tu as maintenant {n} Dollarz',
+    feteThanks:'Merci pour ta confiance.',
+    feteShopBtn:'Voir mes Dollarz', feteCloseBtn:'Super !',
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photos du produit',
     fieldDetails:'Précisions (référence, remarque...)', yourDetails:'Tes précisions',
     phProduct:'Ou écris-le toi-même : sacoche, montre...', phOptional:'Optionnel',
@@ -2055,6 +2154,12 @@ const I18N = {
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
     shopSent:'Exchange sent! Your seller will confirm it.',
     dollarsRules:'You earn 1 Dollarz per euro spent, credited on delivery. One coupon per order, no expiry date. Dollarz are neither transferable nor convertible into euros.',
+    feteTitle:'Congratulations {name}!', feteTitleNoName:'Congratulations!',
+    feteSub:'Your order {ref} has arrived.',
+    feteGain:'Dollarz earned on this order',
+    feteTotal:'You now have {n} Dollarz',
+    feteThanks:'Thanks for your trust.',
+    feteShopBtn:'See my Dollarz', feteCloseBtn:'Nice!',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photos',
     fieldDetails:'Details (reference, note...)', yourDetails:'Your details',
     phProduct:'Or type it yourself: bag, watch...', phOptional:'Optional',
@@ -2466,6 +2571,7 @@ function dismissWelcome(){
   $('#clientWelcome').style.display = 'none';
   renderDollarsIntro();
   renderInstallCard();
+  verifieFete();
 }
 $('#cwDismiss').addEventListener('click', dismissWelcome);
 
@@ -2493,6 +2599,7 @@ function dismissDollarsIntro(){
   markDollarsIntroSeen();
   $('#dollarsIntro').style.display = 'none';
   renderInstallCard();   // la file avance : la suivante peut s'afficher
+  verifieFete();
 }
 $('#diDismiss').addEventListener('click', dismissDollarsIntro);
 
@@ -2708,6 +2815,7 @@ function enterApp(){
     if(rideau) rideau.style.display = 'none';
     setupTopbar(); refreshTopbar();
     requestAnimationFrame(movePill);
+    feteAutorisee = true; verifieFete();
     return;
   }
   setupTopbar();
@@ -2718,7 +2826,10 @@ function enterApp(){
     rideau.classList.add('lift');
     // Retiré du flux une fois effacé : un calque plein écran laissé là
     // mangerait tous les touchers.
-    setTimeout(()=>{ rideau.style.display = 'none'; }, 520);
+    setTimeout(()=>{
+      rideau.style.display = 'none';
+      feteAutorisee = true; verifieFete();
+    }, 520);
   }, 1150);
 }
 function askCode(){
@@ -2865,6 +2976,7 @@ function listenOrders(){
     updateGreeting();
     if(currentTab === 'dollars') renderDollars();
     applyDefaultTab();
+    verifieFete();   // une livraison qui arrive pendant qu'il regarde se fête tout de suite
   }, (err)=>{ ordersLoaded = true; noteError(err); });
   pendingUnsub = db.collection('pendingOrders').where('clientId','==',clientId).onSnapshot(snap=>{
     pendingLoaded = true;
@@ -2896,17 +3008,180 @@ function myCoupons(){
 }
 // Une commande annulée rend son coupon : rien n'a été payé, rien n'est consommé.
 function couponUsed(id){ return myOrders.some(o => o.couponId === id && o.status !== 'annule'); }
+// Ce qu'UNE commande rapporte. Même règle que côté vendeur : les Dollars se
+// gagnent sur ce qui a été réellement versé, pas sur le prix affiché. Sortie
+// dans sa propre fonction parce que la fête de la livraison annonce ce chiffre
+// — deux formules pour le même nombre finiraient par ne plus dire pareil.
+function dollarsDe(o){
+  if(!o || o.status !== 'livre') return 0;
+  return Math.max(0, Math.floor(Math.min(Number(o.paidAmount)||0, orderNetPrice(o))));
+}
 function myDollars(){
-  // Même règle que côté vendeur : les Dollars se gagnent sur ce qui a été
-  // réellement versé, pas sur le prix affiché.
-  const gagnes = myOrders.reduce((sum,o) =>
-    sum + (o.status === 'livre'
-      ? Math.max(0, Math.floor(Math.min(Number(o.paidAmount)||0, orderNetPrice(o))))
-      : 0), 0);
+  const gagnes = myOrders.reduce((sum,o) => sum + dollarsDe(o), 0);
   const depenses = myCoupons().reduce((sum,c) => sum + (Number(c.dollars)||0), 0);
   return Math.max(0, gagnes - depenses);
 }
 function pendingExchange(){ return myPending.find(p => p.type === 'coupon') || null; }
+
+// ================= La fête de la livraison =================
+// Une commande livrée, c'est le colis dans ses mains : le seul instant du
+// parcours où le client a envie qu'on lui parle. On le félicite, et on lui
+// montre ce que ça lui a rapporté — un chiffre qui monte vaut mieux qu'une
+// ligne dans un onglet qu'il n'ouvrira peut-être jamais.
+//
+// QUATRE RÈGLES, et chacune évite un défaut précis :
+//
+//  - UNE FOIS PAR COMMANDE (`ds_client_fete_<id>`), et marquée vue dès
+//    l'ouverture, pas à la fermeture : une fête interrompue ne revient pas.
+//    Se rejouer à chaque ouverture en ferait une porte à pousser.
+//  - ON N'OUVRE JAMAIS SUR UN ARRIÉRÉ. À la toute première ouverture avec
+//    cette version, les commandes déjà livrées sont rangées SANS rien
+//    montrer : sinon un client à trois livraisons passées recevrait trois
+//    félicitations d'affilée pour des colis reçus il y a des semaines. On ne
+//    fête que ce qui arrive à partir de maintenant.
+//  - UNE SEULE À LA FOIS, même s'il y a plusieurs livraisons à rattraper :
+//    on prend la plus récente et on range les autres en silence. Trois
+//    félicitations à la suite, ce n'est plus une fête, c'est une file.
+//  - APRÈS LA CARTE DE BIENVENUE, et elle seule. Elle explique l'espace à la
+//    première visite, elle passe devant. Mais on n'attend PAS les deux autres :
+//    une fête retenue par une carte que le client n'a jamais fermée serait
+//    perdue pour de bon, alors qu'elle parle de quelque chose qui vient
+//    d'arriver. L'annonce du programme, elle, est même CONSOMMÉE par la fête
+//    quand il y a un gain : voir un solde tomber vaut mieux que lire une carte
+//    qui explique qu'il en existe un. Ce n'est pas le piège de l'annonce
+//    perdue — là on la remplaçait par rien, ici par mieux.
+//
+// Tout ça vit dans le navigateur, comme l'archivage des commandes : c'est un
+// état d'affichage, il ne justifie pas d'ouvrir une écriture publique.
+function feteKey(id){ return 'ds_client_fete_' + id; }
+function feteVue(id){
+  try{ return localStorage.getItem(feteKey(id)) === '1'; }catch(e){ return false; }
+}
+function marqueFete(id){
+  try{ localStorage.setItem(feteKey(id), '1'); }catch(e){}
+}
+function feteAmorcee(){
+  try{ return localStorage.getItem('ds_client_fete_init_' + clientId) === '1'; }catch(e){ return false; }
+}
+function amorceFete(){
+  try{ localStorage.setItem('ds_client_fete_init_' + clientId, '1'); }catch(e){}
+}
+
+let feteEnCours = false;
+// Le rideau d'ouverture est à l'écran pendant que les commandes arrivent : une
+// livraison reçue en son absence ferait donc surgir la fête PAR-DESSUS
+// l'ouverture, avant même qu'il ait vu son espace. Elle attend que la porte
+// soit ouverte.
+let feteAutorisee = false;
+function verifieFete(){
+  if(!clientId || !ordersLoaded || !feteAutorisee) return;
+  const aFeter = myOrders.filter(o => o.status === 'livre' && !feteVue(o.id));
+  // Première ouverture avec cette version : on range ce qui est déjà livré,
+  // sans rien montrer. Le drapeau se pose même quand il n'y a rien à ranger,
+  // sinon la toute première livraison d'un nouveau client serait avalée.
+  if(!feteAmorcee()){
+    aFeter.forEach(o => marqueFete(o.id));
+    amorceFete();
+    return;
+  }
+  if(!aFeter.length) return;
+  // Une livraison qui tombe pendant qu'une fête est à l'écran fait partie du
+  // même moment : on la range, plutôt que d'enchaîner un second plein écran
+  // sur quelqu'un qui vient d'en fermer un.
+  if(feteEnCours){ aFeter.forEach(o => marqueFete(o.id)); return; }
+  if(!welcomeSeen()) return;   // la carte de bienvenue d'abord
+  // `myOrders` est trié du plus récent au plus ancien.
+  aFeter.slice(1).forEach(o => marqueFete(o.id));
+  ouvreFete(aFeter[0]);
+}
+
+// La gerbe part de la pièce. Coupée net si le mouvement est refusé : une
+// animation infinie se coupe, une animation de confettis ne se joue pas.
+function feteGerbe(el){
+  if(!el || reduceMotion()) return;
+  const teintes = ['var(--accent)','var(--accent-bright)','var(--accent-deep)','var(--warn)'];
+  let html = '';
+  for(let i = 0; i < 22; i++){
+    const ang = (Math.PI * 2 * i) / 22 + (Math.random() - .5) * .4;
+    const loin = 130 + Math.random() * 180;
+    const dx = Math.round(Math.cos(ang) * loin);
+    const dy = Math.round(Math.sin(ang) * loin * .8 + 130);   // la gravité tire vers le bas
+    html += '<i class="fete-piece" style="'
+      + '--dx:' + dx + 'px; --dy:' + dy + 'px;'
+      + '--rot:' + Math.round((Math.random() * 2 - 1) * 540) + 'deg;'
+      + '--dur:' + Math.round(1200 + Math.random() * 700) + 'ms;'
+      + '--del:' + Math.round(Math.random() * 200) + 'ms;'
+      + 'width:' + (6 + Math.round(Math.random() * 5)) + 'px;'
+      + 'background:' + teintes[i % teintes.length] + ';"></i>';
+  }
+  el.innerHTML = html;
+}
+
+function ouvreFete(o){
+  const box = $('#fete');
+  if(!box || !o) return;
+  feteEnCours = true;
+  marqueFete(o.id);
+  const gain = dollarsDe(o);
+  const prenom = clientFirstName();
+  const solde = myDollars();
+  const titre = prenom ? t('feteTitle').replace('{name}', prenom) : t('feteTitleNoName');
+
+  box.innerHTML =
+    '<i class="fete-halo" aria-hidden="true"></i>'
+    + '<div class="fete-boom" id="feteBoom" aria-hidden="true"></div>'
+    + '<div class="fete-in">'
+    +   '<div class="curtain-mark">'
+    +     '<span class="curtain-glow"></span>'
+    +     '<span class="curtain-tile"><span class="curtain-glyph">$</span><i class="curtain-sheen"></i></span>'
+    +   '</div>'
+    +   '<h2 class="fete-title">' + escapeHtml(titre) + '</h2>'
+    +   '<p class="fete-sub">' + escapeHtml(t('feteSub').replace('{ref}', '#' + orderRef(o))) + '</p>'
+    // Une commande livrée mais pas encore réglée ne rapporte rien : on le tait
+    // plutôt que d'annoncer « 0 Dollarz gagnés », qui sonnerait comme un
+    // reproche au moment où on remercie.
+    +   (gain
+        ? '<div class="fete-gain"><span class="ds-coin">$</span><span class="fete-n">0</span></div>'
+          + '<p class="fete-gain-label">' + escapeHtml(t('feteGain')) + '</p>'
+          + '<p class="fete-total">' + escapeHtml(t('feteTotal').replace('{n}', solde)) + '</p>'
+        : '<p class="fete-total">' + escapeHtml(t('feteThanks')) + '</p>')
+    +   '<div class="fete-actions">'
+    +     (gain ? '<button type="button" class="fete-btn" id="feteShop">' + escapeHtml(t('feteShopBtn')) + '</button>' : '')
+    +     '<button type="button" class="fete-close" id="feteClose">' + escapeHtml(t('feteCloseBtn')) + '</button>'
+    +   '</div>'
+    + '</div>';
+
+  // Un gain annoncé en grand rend l'annonce du programme inutile : on la
+  // consomme plutôt que de la lui servir juste après.
+  if(gain) markDollarsIntroSeen();
+  box.classList.remove('out');
+  box.classList.add('show');
+  feteGerbe(box.querySelector('#feteBoom'));
+  // Le chiffre monte après la pièce et le titre : il arrive dans un écran déjà
+  // posé, pas dans un écran qui s'installe encore.
+  if(gain) setTimeout(()=> countUp(box.querySelector('.fete-n'), gain, reduceMotion() ? 0 : 900), 420);
+}
+
+function fermeFete(){
+  const box = $('#fete');
+  if(!box || !box.classList.contains('show')) return;
+  const fin = ()=>{
+    box.classList.remove('show','out');
+    box.innerHTML = '';
+    feteEnCours = false;
+    renderDollarsIntro();  // la file avance : l'annonce a pu être consommée
+    renderInstallCard();
+  };
+  if(reduceMotion()){ fin(); return; }
+  box.classList.add('out');
+  setTimeout(fin, 300);
+}
+
+$('#fete').addEventListener('click', (e)=>{
+  if(e.target.closest('#feteShop')){ fermeFete(); switchTab('dollars'); return; }
+  if(e.target.closest('#feteClose')) fermeFete();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') fermeFete(); });
 
 let dollarsCounted = false;
 function renderDollars(){

@@ -404,6 +404,64 @@ l'accueil était à l'écran, pour éviter la superposition. Résultat, un nouve
 client la perdait **définitivement** — alors que la carte de bienvenue ne dit
 qu'une ligne sur le programme. On la masque désormais sans la consommer.
 
+#### La fête de la livraison
+
+Le colis est dans ses mains : c'est **le seul instant du parcours où le client
+a envie qu'on lui parle**. Le portail ouvre donc un plein écran — la pièce, une
+gerbe, « Félicitations », la référence du colis, et **les Dollarz gagnés sur
+cette commande qui montent depuis zéro**. Un chiffre qui monte vaut mieux
+qu'une ligne dans un onglet qu'il n'ouvrira peut-être jamais.
+
+Même famille visuelle que le rideau d'ouverture (la pièce, son halo, le
+reflet) : on ne dessine pas un second style pour le même geste.
+
+**Cinq règles, et chacune évite un défaut précis :**
+
+- **Une fois par commande** (`ds_client_fete_<id>`), marquée vue **à
+  l'ouverture, pas à la fermeture** : une fête interrompue ne revient pas.
+  Se rejouer à chaque visite en ferait une porte à pousser.
+- **On n'ouvre jamais sur un arriéré.** À la toute première ouverture avec
+  cette version, les commandes déjà livrées sont rangées **sans rien
+  montrer** : sinon un client à trois livraisons passées recevrait trois
+  félicitations d'affilée pour des colis reçus il y a des semaines. Le drapeau
+  d'amorçage se pose **même quand il n'y a rien à ranger**, sinon la toute
+  première livraison d'un nouveau client serait avalée avec l'arriéré.
+- **Une seule à la fois.** Plusieurs livraisons non fêtées : on prend la plus
+  récente et on range les autres en silence. Une qui tombe pendant que l'écran
+  est affiché fait partie du même moment, elle est rangée aussi — enchaîner
+  deux pleins écrans sur quelqu'un qui vient d'en fermer un, ce n'est plus une
+  fête, c'est une file.
+- **Elle attend que le rideau d'ouverture soit levé.** Les commandes arrivent
+  pendant que l'ouverture joue : sans ce verrou (`feteAutorisee`), une
+  livraison reçue en son absence lui tomberait dessus **par-dessus
+  l'ouverture**, avant même qu'il ait vu son espace.
+- **Après la carte de bienvenue, et elle seule.** Attendre les trois cartes
+  aurait perdu la fête pour de bon chez un client qui n'en a jamais fermé une,
+  alors qu'elle parle de quelque chose qui vient d'arriver. L'annonce du
+  programme, elle, est **consommée** par la fête quand il y a un gain : voir un
+  solde tomber vaut mieux que lire une carte qui explique qu'il en existe un.
+  Ce n'est pas le piège de l'annonce perdue — là on la remplaçait par rien,
+  ici par mieux.
+
+**Une commande livrée mais pas encore réglée ne rapporte rien** (règle 1 :
+les Dollarz suivent l'argent reçu). On tait alors le montant plutôt que
+d'annoncer « 0 Dollarz gagnés », qui sonnerait comme un reproche au moment
+précis où on remercie. L'écran reste : la livraison, elle, est bien réelle.
+
+`dollarsDe(o)` est sortie de `myDollars()` pour ça — **deux formules pour le
+même nombre finiraient par ne plus dire pareil**, et c'est ce chiffre-là que
+la fête annonce en grand.
+
+**Une seule chose tourne en boucle** : le halo. La gerbe est finie et ne se
+rejoue pas. Sous `prefers-reduced-motion`, le halo est coupé (`animation:none`,
+jamais raccourci) et **les confettis ne sont même pas fabriqués** — une
+animation qu'on n'a pas demandée ne se joue pas plus vite, elle ne se joue pas.
+
+Tout ça vit dans le navigateur, comme l'archivage des commandes : c'est un état
+d'affichage, il ne justifie pas d'ouvrir une écriture publique sur `clients`.
+Contrepartie assumée : depuis un second appareil, la fête d'une livraison
+passée ne rejouera pas — le nouvel appareil s'amorce, et ne fête que la suite.
+
 C'est un espace personnel, pas un formulaire : accueil par son prénom selon
 l'heure, compteurs (en cours / livrées / en attente), et pour chaque commande
 une frise des six étapes (demande reçue → devis → payé → commandé → expédié →
@@ -2505,7 +2563,8 @@ import d'un catalogue préparé en JSON,
 programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
-fidélité dans les statistiques.
+fidélité dans les statistiques, fête de la livraison dans l'espace client
+(félicitations et Dollarz gagnés, une fois par commande).
 
 ## À faire
 
