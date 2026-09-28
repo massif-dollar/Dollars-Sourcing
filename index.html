@@ -873,6 +873,34 @@
   .ord-items li span{ flex:1; min-width:0; }
   .ord-items li i{ font-style:normal; color:var(--accent); font-size:12px; font-weight:600; }
   .ord-items li b{ flex:none; font-variant-numeric:tabular-nums; font-size:13px; }
+  /* « Qui fait ça ? » — une ligne par fournisseur, avec ce qu'on a déjà
+     acheté chez lui. C'est cette ligne verte qui départage deux stands de la
+     même halle ; sans elle, quinze noms sont quinze inconnues. */
+  .qui-h{
+    margin:16px 0 7px; font-size:11.5px; font-weight:600; color:var(--text-faint);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .qui-h:first-child{ margin-top:6px; }
+  .qui-row{
+    display:flex; align-items:center; gap:9px; padding:11px 13px; margin-bottom:7px;
+    border-radius:14px; background:var(--fill); border:0.5px solid var(--hairline);
+  }
+  .qui-row.is-on{ border-color:var(--accent); background:var(--accent-soft); }
+  .qui-t{ flex:1; min-width:0; }
+  .qui-t b{ display:block; font-size:14px; letter-spacing:-0.01em; }
+  .qui-t span{
+    display:block; font-size:12px; color:var(--text-faint); margin-top:1px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .qui-t .qui-histo{ color:var(--accent); font-weight:600; }
+  .qui-pick{
+    flex:none; padding:7px 12px; border-radius:100px; cursor:pointer;
+    border:0.5px solid var(--accent); background:none; color:var(--accent);
+    font-family:inherit; font-size:12.5px; font-weight:600;
+    transition:transform .3s var(--spring);
+  }
+  .qui-pick:active{ transform:scale(.94); }
+  .qui-row.is-on .qui-pick{ background:var(--accent); color:#fff; border-color:var(--accent); }
   .model-head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
   /* Les tailles du modèle : une ligne discrète sous son nom. C'est un réglage
      qu'on pose une fois, pas une action — il ne doit pas peser autant que le
@@ -2231,6 +2259,14 @@
         <button type="button" class="fiche-btn" id="ordFicheFw" data-i18n="reqForwarder">Fiche transitaire</button>
       </div>
 
+      <!-- Chez qui on achète. Le bouton ouvre la liste de ceux qui font cette
+           marque et ce modèle ; une fois choisi, son nom reste ici et sa fiche
+           compte la commande. -->
+      <div class="field" id="ordSupplierField">
+        <label data-i18n="ordSupplier">Fournisseur</label>
+        <button type="button" class="fiche-lien" id="ordQuiBtn" style="text-align:left; text-decoration:none;"></button>
+      </div>
+
       <button type="submit" class="btn-primary" id="saveBtn" data-i18n="save">Enregistrer</button>
       <div class="btn-row" id="editActions" style="display:none;">
         <button type="button" class="btn-secondary" id="cancelOrderBtn">Annuler la commande</button>
@@ -2484,6 +2520,19 @@
      La marque n'est stockée nulle part — elle se déduit des fiches. Une marque
      vide n'existe donc jamais, et il n'y a pas de dossier fantôme à nettoyer
      après une suppression. Même principe que le solde en Dollarz. -->
+<!-- QUI FAIT CETTE MARQUE. On ouvre ça depuis la demande ou la commande, pas
+     depuis l'onglet Fournisseurs : c'est au moment d'acheter qu'on se pose la
+     question, et une donnée qui n'est pas là où la décision se prend ne sert
+     à rien (piège 25). -->
+<div class="overlay" id="quiOverlay">
+  <div class="sheet">
+    <button class="icon-btn close-x" id="quiClose">✕</button>
+    <h2 data-i18n="quiTitle">Qui fait ça ?</h2>
+    <p class="fiche-sub" id="quiSub"></p>
+    <div id="quiList"></div>
+  </div>
+</div>
+
 <div class="overlay" id="brandOverlay">
   <div class="sheet">
     <button class="icon-btn close-x" id="closeBrandSheet">✕</button>
@@ -2824,6 +2873,15 @@ const I18N = {
     fwException:'Exception : ce transitaire ne vaut que pour cette fiche.',
     sizesLabel:'Tailles', sizesPh:'S, M, L, XL, XXL — vide = aucune taille',
     catDragHint:'Maintiens un coloris pour le déplacer dans son modèle.',
+    quiTitle:'Qui fait ça ?', quiBtn:'Qui fait ça ?',
+    quiExact:'Ils font ce modèle', quiBrand:'Ils font la marque',
+    quiSeen1:'1 commande chez lui', quiSeen:'{n} commandes chez lui',
+    quiLast:'dernier prix {p}',
+    quiChoose:'Choisir', quiCurrent:'Choisi',
+    quiPickOne:'Choisir un fournisseur',
+    quiNoModel:'Aucune marque reconnue sur cette commande.',
+    quiNone:'Aucun fournisseur ne porte cette marque.\nAjoute-la sur sa fiche, dans l\u2019onglet Fournisseurs.',
+    ordSupplier:'Fournisseur',
     brandCover:'Image de garde', brandCoverPick:'Choisir une image',
     brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
     brandCoverAuto:'Sans image, le client voit les premiers coloris.',
@@ -3052,6 +3110,15 @@ const I18N = {
     fwException:'Exception: this forwarder applies to this sheet only.',
     sizesLabel:'Sizes', sizesPh:'S, M, L, XL, XXL — empty = no size',
     catDragHint:'Press and hold a colour to move it within its model.',
+    quiTitle:'Who makes this?', quiBtn:'Who makes this?',
+    quiExact:'They make this model', quiBrand:'They carry the brand',
+    quiSeen1:'1 order with them', quiSeen:'{n} orders with them',
+    quiLast:'last price {p}',
+    quiChoose:'Choose', quiCurrent:'Chosen',
+    quiPickOne:'Choose a supplier',
+    quiNoModel:'No brand recognised on this order.',
+    quiNone:'No supplier carries this brand.\nAdd it on their card, in the Suppliers tab.',
+    ordSupplier:'Supplier',
     brandCover:'Cover image', brandCoverPick:'Choose an image',
     brandCoverRemove:'Remove', brandCoverReplace:'Change image',
     brandCoverAuto:'Without an image, customers see the first colours.',
@@ -3172,7 +3239,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-28b';
+const BUILD = '2026-09-28c';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4100,6 +4167,7 @@ function renderRequests(){
         <div class="fiche-row">
           <button type="button" class="fiche-btn" data-action="fiche-supplier">${escapeHtml(t('reqSupplier'))}</button>
           <button type="button" class="fiche-btn" data-action="fiche-forwarder">${escapeHtml(t('reqForwarder'))}</button>
+          <button type="button" class="fiche-btn" data-action="qui">${escapeHtml(t('quiBtn'))}</button>
         </div>
         <div class="request-actions">
           <button type="button" class="req-reject" data-action="reject">${t('rejectRequest')}</button>
@@ -5482,6 +5550,124 @@ function telechargeFiche(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 $('#ficheDl').addEventListener('click', telechargeFiche);
+
+// ---- « QUI FAIT ÇA ? » ----
+// `quiCible` porte la commande OU la demande d'où l'on vient. La différence
+// compte : sur une COMMANDE on peut retenir le fournisseur choisi, sur une
+// DEMANDE il n'y a pas encore de commande à qui l'attacher — la liste y est
+// donc informative, et c'est très bien : à ce moment-là on cherche à qui
+// écrire pour avoir un prix, pas à trancher.
+let quiCible = null;
+
+function marqueModeleDe(o){
+  const it = Array.isArray(o && o.items) ? o.items : [];
+  if(it.length) return { marque: it[0].brand || '', modele: it[0].model || '' };
+  // Sans `items[]`, la chaîne produit porte quand même « Marque · Modèle : … »
+  // — c'est la même lecture que la fiche image, et elle évite de laisser un
+  // écran vide sur une demande tapée à la main.
+  const d = decoupeProduit(o || {});
+  const parts = String(d.titre || '').split('·').map(x=>x.trim());
+  return { marque: parts[0] || '', modele: parts.slice(1).join(' · ') || '' };
+}
+
+// Un pluriel se choisit, il ne s'écrit pas « (s) ».
+function quiFois(n){
+  return n > 1 ? t('quiSeen').replace('{n}', n) : t('quiSeen1');
+}
+function ligneQui(s, marque, modele, choisissable, actuel){
+  const h = histoFournisseur(s.id, marque, modele);
+  const wechat = s.wechat || s.contact || '';
+  return '<div class="qui-row' + (actuel === s.id ? ' is-on' : '') + '">'
+    + '<div class="qui-t">'
+    +   '<b>' + escapeHtml(s.name || '—') + '</b>'
+    +   (h ? '<span class="qui-histo">' + escapeHtml(quiFois(h.memeModele || h.total))
+          + (h.prix ? ' · ' + escapeHtml(t('quiLast').replace('{p}', fmtMoney(h.prix))) : '')
+          + '</span>' : '')
+    +   (wechat ? '<span>WeChat · ' + escapeHtml(wechat) + '</span>' : '')
+    +   (s.address ? '<span>' + escapeHtml(s.address) + '</span>' : '')
+    + '</div>'
+    + (wechat ? '<button type="button" class="wechat-copy" data-wechat="' + escapeHtml(wechat)
+        + '" title="' + escapeHtml(t('copyWechat')) + '" aria-label="' + escapeHtml(t('copyWechat'))
+        + '">' + ICONS.copy + '</button>' : '')
+    + (choisissable
+        ? '<button type="button" class="qui-pick" data-pick="' + escapeHtml(s.id) + '">'
+          + escapeHtml(actuel === s.id ? t('quiCurrent') : t('quiChoose')) + '</button>'
+        : '')
+    + '</div>';
+}
+
+function renderQui(){
+  if(!quiCible) return;
+  const { o, depuis } = quiCible;
+  const { marque, modele } = marqueModeleDe(o);
+  const { exact, marqueSeule } = fournisseursPour(marque, modele);
+  const choisissable = depuis === 'commande';
+  const actuel = o.supplierId || '';
+
+  $('#quiSub').textContent = [marque, modele].filter(Boolean).join(' · ') || t('quiNoModel');
+
+  // Les deux groupes ne valent pas la même chose, donc ils sont séparés et
+  // titrés. Celui qui fait déjà le modèle exact passe devant, toujours.
+  const bloc = (titre, liste)=> liste.length
+    ? '<p class="qui-h">' + escapeHtml(titre) + '</p>'
+      + liste
+          // Ceux chez qui on a DÉJÀ acheté ce modèle en tête : c'est la seule
+          // information qui départage deux stands de la même halle.
+          .slice().sort((a,b)=>{
+            const ha = histoFournisseur(a.id, marque, modele), hb = histoFournisseur(b.id, marque, modele);
+            return (hb ? hb.memeModele || hb.total : 0) - (ha ? ha.memeModele || ha.total : 0);
+          })
+          .map(s => ligneQui(s, marque, modele, choisissable, actuel)).join('')
+    : '';
+
+  const html = bloc(t('quiExact'), exact) + bloc(t('quiBrand'), marqueSeule);
+  $('#quiList').innerHTML = html
+    || '<div class="empty">' + escapeHtml(t('quiNone')).replace(/\n/g, '<br>') + '</div>';
+}
+
+function ouvreQui(o, depuis){
+  quiCible = { o, depuis };
+  renderQui();
+  $('#quiOverlay').classList.add('open');
+}
+$('#quiClose').addEventListener('click', ()=>{ $('#quiOverlay').classList.remove('open'); quiCible = null; });
+$('#quiOverlay').addEventListener('click', (e)=>{
+  if(e.target === $('#quiOverlay')){ $('#quiOverlay').classList.remove('open'); quiCible = null; }
+});
+$('#quiList').addEventListener('click', (e)=>{
+  const pick = e.target.closest('button[data-pick]');
+  if(!pick || !quiCible) return;
+  // On ne touche PAS à la base ici : on pose le choix sur la fiche ouverte, et
+  // c'est l'enregistrement de la commande qui l'écrit. Écrire tout de suite
+  // aurait enregistré un fournisseur sur une fiche que Massif peut encore
+  // annuler — et l'annulation ne l'aurait pas défait.
+  const id = pick.dataset.pick;
+  ficheSupplierId = (ficheSupplierId === id) ? '' : id;
+  majOrdSupplier();
+  if(quiCible.o) quiCible.o.supplierId = ficheSupplierId;
+  renderQui();
+});
+
+// Le nom du fournisseur retenu, sous la fiche commande. Tant qu'il n'y en a
+// pas, le bouton dit ce qu'il fait au lieu d'afficher un vide.
+let ficheSupplierId = '';
+function majOrdSupplier(){
+  const s = suppliers.find(x => x.id === ficheSupplierId);
+  const b = $('#ordQuiBtn');
+  if(!b) return;
+  b.textContent = s ? s.name : t('quiPickOne');
+  b.style.color = s ? 'var(--accent)' : 'var(--text-faint)';
+}
+$('#ordQuiBtn').addEventListener('click', ()=>{
+  if(!ficheCommande && !pendingItems.length && !$('#f_product').value.trim()) return;
+  // Sur une commande pas encore enregistrée, on travaille sur ce que la fiche
+  // a sous la main : la marque et le modèle viennent d'`items`, pas de la base.
+  const o = ficheCommande
+    || { items: pendingItems, product: $('#f_product').value.trim(), qty: 1, supplierId: ficheSupplierId };
+  o.supplierId = ficheSupplierId;
+  ouvreQui(o, 'commande');
+});
+
 $('#ordFicheSup').addEventListener('click', ()=>{ if(ficheCommande) montreFiche('supplier', ficheCommande, 'commande'); });
 $('#ordFicheFw').addEventListener('click', ()=>{ if(ficheCommande) montreFiche('forwarder', ficheCommande, 'commande'); });
 
@@ -6043,6 +6229,10 @@ $('#requestsList').addEventListener('click', async (e)=>{
   // tomberait dans la branche « valider / refuser » juste en dessous.
   if(btn.dataset.action === 'fiche-supplier'){ montreFiche('supplier', req, 'demande'); return; }
   if(btn.dataset.action === 'fiche-forwarder'){ montreFiche('forwarder', req, 'demande'); return; }
+  // Depuis une demande, la liste est informative : il n'y a pas encore de
+  // commande à qui attacher un fournisseur, et à ce moment-là on cherche
+  // justement à qui écrire pour obtenir un prix.
+  if(btn.dataset.action === 'qui'){ ouvreQui(req, 'demande'); return; }
   if(req.type === 'coupon'){
     if(btn.dataset.action === 'grant'){
       const ok = await grantCoupon(req);
@@ -6071,11 +6261,64 @@ $('#requestsList').addEventListener('click', async (e)=>{
   }
 });
 
+// Tout ce sur quoi on peut chercher un fournisseur, en une chaîne. L'adresse
+// en fait partie : « Baima » est une façon naturelle de retrouver un stand.
+function texteFournisseur(s){
+  const b = Array.isArray(s.brands) ? s.brands : [];
+  return sansAccents([
+    s.name, s.wechat, s.contact, s.address, s.note,
+    b.map(x => (x.name || '') + ' ' + (Array.isArray(x.models) ? x.models.join(' ') : '')).join(' ')
+  ].filter(Boolean).join(' '));
+}
+
+// QUI FAIT CETTE MARQUE, ET CE MODÈLE. Deux niveaux, parce qu'ils ne valent
+// pas la même chose : celui qui fait déjà le modèle exact est celui à qui on
+// écrit, celui qui ne fait que la marque est le repli. Les mélanger dans une
+// seule liste ferait choisir au hasard.
+function fournisseursPour(marque, modele){
+  const m = sansAccents(marque), mo = sansAccents(modele);
+  const exact = [], marqueSeule = [];
+  suppliers.forEach(s=>{
+    const b = (Array.isArray(s.brands) ? s.brands : []).find(x => sansAccents(x.name) === m);
+    if(!b) return;
+    const mods = Array.isArray(b.models) ? b.models : [];
+    if(mo && mods.some(x => sansAccents(x) === mo)) exact.push(s);
+    else marqueSeule.push(s);
+  });
+  return { exact, marqueSeule };
+}
+
+// CE QU'ON A DÉJÀ ACHETÉ CHEZ LUI. C'est ça qui transforme une liste de
+// quinze noms en un choix : « la dernière fois c'était lui, à 95 € ». Sans
+// mémoire, quinze fournisseurs sont quinze inconnues à chaque commande.
+// Les commandes sont privées à leur propriétaire, donc ce compte est le sien.
+function histoFournisseur(id, marque, modele){
+  if(!id) return null;
+  const m = sansAccents(marque || ''), mo = sansAccents(modele || '');
+  const siennes = orders.filter(o => o.supplierId === id && !o.deletedAt);
+  if(!siennes.length) return null;
+  // Celles du MÊME modèle d'abord : un dernier prix pris sur une autre pièce
+  // ne veut rien dire, et il vaut mieux ne rien dire que mentir.
+  const memes = (m || mo) ? siennes.filter(o=>{
+    const it = Array.isArray(o.items) && o.items[0] ? o.items[0] : null;
+    const bm = sansAccents(it ? it.brand : ''), md = sansAccents(it ? it.model : '');
+    return (!m || bm === m) && (!mo || md === mo);
+  }) : [];
+  const source = memes.length ? memes : siennes;
+  const dernier = source.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))[0];
+  return { total: siennes.length, memeModele: memes.length,
+           prix: Number(dernier.unitCost) || 0, quand: dernier.createdAt || 0 };
+}
+
 function renderSuppliers(){
   const el = $('#supplierList');
   let list = suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name));
-  const term = ($('#supplierSearchInput').value||'').toLowerCase();
-  if(term) list = list.filter(s=>s.name.toLowerCase().includes(term));
+  // LA RECHERCHE COUVRE LA MARQUE ET LE MODÈLE, pas seulement le nom. Sur le
+  // terrain on ne se demande jamais « où est Chen », on se demande « qui fait
+  // du Stone Island » : chercher par nom obligeait à faire défiler toute la
+  // liste en lisant les pastilles, et à quinze fournisseurs ça ne marche plus.
+  const term = sansAccents(($('#supplierSearchInput').value || '').trim());
+  if(term) list = list.filter(s=> texteFournisseur(s).includes(term));
   if(!list.length){
     el.innerHTML = emptyHtml('suppliers', t('emptySuppliers'));
     return;
@@ -6094,6 +6337,9 @@ function renderSuppliers(){
         ? `WeChat · ${escapeHtml(wechat)} <button type="button" class="wechat-copy" data-wechat="${escapeHtml(wechat)}" title="${escapeHtml(t('copyWechat'))}" aria-label="${escapeHtml(t('copyWechat'))}">${ICONS.copy}</button>`
         : escapeHtml(t('noContact'))}</div>
       ${s.address ? `<div class="card-mid" style="margin-top:3px;">${escapeHtml(s.address)}</div>` : ''}
+      ${(()=>{ const h = histoFournisseur(s.id); return h
+        ? `<div class="card-mid" style="margin-top:3px; color:var(--accent);">${escapeHtml(quiFois(h.total))}${h.prix ? ' · ' + escapeHtml(t('quiLast').replace('{p}', fmtMoney(h.prix))) : ''}</div>`
+        : ''; })()}
       ${brands.length ? `<div style="margin-top:7px;">${brands.map(b=>`<span class="brand-chip">${escapeHtml(b.name)}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
@@ -6447,6 +6693,8 @@ function openSheet(order, presetClientId, prefill){
   $('#f_product').value = order ? order.product : (prefill ? (prefill.product||'') : '');
   $('#f_qty').value = order ? order.qty : (prefill ? (prefill.qty||1) : 1);
   $('#f_unitCost').value = order ? order.unitCost : '';
+  ficheSupplierId = (order && order.supplierId) || '';
+  majOrdSupplier();
   $('#f_unitPrice').value = order ? order.unitPrice : '';
   $('#f_note').value = order ? order.note : (prefill ? (prefill.note||'') : '');
   // Sur une commande existante on montre ses photos ; sur une création depuis
@@ -6746,6 +6994,7 @@ form.addEventListener('submit', async (e)=>{
     clientId = newClientId;
   }
   const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal,
+                 supplierId: ficheSupplierId || '',
                  paidAmount: parseFloat($('#f_paid').value) || 0,
                  note:$('#f_note').value.trim(),
                  carrier:$('#f_carrier').value.trim(),
