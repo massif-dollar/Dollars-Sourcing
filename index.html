@@ -903,7 +903,33 @@
   }
   .cat-add-model:active{ transform:scale(.985); }
   .cat-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:9px; }
-  .cat-item{ position:relative; }
+  .cat-item{
+    position:relative; transition:transform .22s var(--spring), opacity .18s var(--ease-io);
+    /* SANS CECI, LE GESTE N'EXISTE PAS SUR iPHONE : un appui long sur une
+       image ouvre le menu « Enregistrer l'image » de Safari, et sur du texte
+       la loupe de sélection. Les deux volent l'appui long avant nous. */
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
+  .cat-item .cat-name-input{ -webkit-user-select:text; user-select:text; }
+  /* DÉPLACER UN COLORIS. Pendant le geste, la tuile d'origine reste en place
+     en fantôme et c'est une copie qui suit le doigt : déplacer la vraie
+     ferait sauter la grille sous la main. */
+  .cat-item.is-dragging{ opacity:.28; }
+  .cat-ghost{
+    position:fixed; z-index:60; pointer-events:none; width:88px;
+    border-radius:12px; overflow:hidden;
+    box-shadow:0 16px 34px rgba(0,0,0,.34), 0 3px 10px rgba(0,0,0,.2);
+    transform:scale(1.08); transition:none;
+  }
+  .cat-ghost img{ width:100%; display:block; border-radius:12px; }
+  /* Le trait de séparation appartient au coloris qui OUVRE le groupe : le
+     laisser à l'écran pendant qu'on déplace le ferait sauter d'un coloris à
+     l'autre sous le doigt. Il est redessiné au bon endroit à la dépose. */
+  .cat-grid.reordering .cat-sep{ display:none; }
+  .cat-grid.reordering .cat-eye,
+  .cat-grid.reordering .cat-del,
+  .cat-grid.reordering .cat-sep-btn,
+  .cat-grid.reordering .cat-det{ opacity:0; pointer-events:none; }
   .cat-item .cat-img{
     width:100%; aspect-ratio:1; object-fit:cover; display:block;
     border-radius:12px; border:0.5px solid var(--hairline); background:var(--fill);
@@ -2489,6 +2515,9 @@
     </div>
     <input type="file" id="brandCoverInput" accept="image/*" style="display:none;">
     <p class="section-title" data-i18n="brandModels">Modèles</p>
+    <!-- Un geste qui ne s'annonce pas n'existe pas : rien sur une vignette ne
+         dit qu'elle se déplace. -->
+    <p class="field-hint" data-i18n="catDragHint">Maintiens un coloris pour le déplacer dans son modèle.</p>
     <!-- Un bloc par modèle : son nom, puis SES photos. Ajouter un modèle ajoute
          un bloc, pas une photo de plus dans un tas. -->
     <div id="brandModels"></div>
@@ -2794,6 +2823,7 @@ const I18N = {
     fwOnceDone:'Transitaire changé pour cette fiche seulement.',
     fwException:'Exception : ce transitaire ne vaut que pour cette fiche.',
     sizesLabel:'Tailles', sizesPh:'S, M, L, XL, XXL — vide = aucune taille',
+    catDragHint:'Maintiens un coloris pour le déplacer dans son modèle.',
     brandCover:'Image de garde', brandCoverPick:'Choisir une image',
     brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
     brandCoverAuto:'Sans image, le client voit les premiers coloris.',
@@ -3021,6 +3051,7 @@ const I18N = {
     fwOnceDone:'Forwarder changed for this sheet only.',
     fwException:'Exception: this forwarder applies to this sheet only.',
     sizesLabel:'Sizes', sizesPh:'S, M, L, XL, XXL — empty = no size',
+    catDragHint:'Press and hold a colour to move it within its model.',
     brandCover:'Cover image', brandCoverPick:'Choose an image',
     brandCoverRemove:'Remove', brandCoverReplace:'Change image',
     brandCoverAuto:'Without an image, customers see the first colours.',
@@ -3141,7 +3172,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27n';
+const BUILD = '2026-09-28a';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4544,7 +4575,7 @@ function renderBrandModels(){
     const cases = g.items.map((it, i)=>{
       const cache = it.active === false;
       return (it.sep && i > 0 ? '<i class="cat-sep" aria-hidden="true"></i>' : '')
-        + '<div class="cat-item' + (cache ? ' hidden-item' : '') + '">'
+        + '<div class="cat-item' + (cache ? ' hidden-item' : '') + '" data-item="' + gi + ':' + i + '">'
         + '<img class="cat-img" src="data:' + (it.thumbType||'image/jpeg') + ';base64,' + it.thumb + '" alt="">'
         + '<button type="button" class="cat-eye" data-eye="' + gi + ':' + i + '" title="' + (cache?masq:vues) + '" aria-label="' + (cache?masq:vues) + '">'
         +   (cache ? OEIL_BARRE : OEIL_OUVERT) + '</button>'
@@ -4584,7 +4615,7 @@ function renderBrandModels(){
       +   '<input type="text" value="' + escapeHtml(taillesDe({ sizes:g.sizes, model:g.model }).join(', ')) + '"'
       +     ' data-sizes="' + gi + '" placeholder="' + escapeHtml(t('sizesPh')) + '">'
       + '</div>'
-      + '<div class="cat-grid">' + cases
+      + '<div class="cat-grid" data-grid="' + gi + '">' + cases
       +   '<button type="button" class="cat-add" data-add="' + gi + '">'
       +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
       +   escapeHtml(t('catAdd')) + '</button>'
@@ -4592,6 +4623,149 @@ function renderBrandModels(){
       + '</div>';
   }).join('');
 }
+
+
+// ---- DÉPLACER UN COLORIS DANS SON MODÈLE ----
+// On maintient une vignette, elle se soulève, on la fait glisser, on lâche.
+// L'ordre est ce que voit le client dans sa vitrine : le régler autrement
+// qu'en le montrant demanderait des flèches sur chaque tuile, et vingt
+// coloris feraient vingt allers-retours.
+//
+// TROIS POINTS QUI NE S'INVENTENT PAS :
+//
+// 1. L'APPUI LONG D'ABORD, LE GLISSEMENT ENSUITE. Sans délai, le geste
+//    volerait le défilement de la feuille — on ne pourrait plus faire défiler
+//    la grille au doigt. Un mouvement de plus de 9 px avant la fin du délai
+//    annule : c'est un défilement, pas un déplacement.
+// 2. ON NE PEUT PAS REPRENDRE UN DÉFILEMENT DÉJÀ PARTI sur iOS. D'où le
+//    `preventDefault()` dans un écouteur `touchmove` NON PASSIF, posé une
+//    seule fois et qui ne fait quelque chose que pendant le glissement. Une
+//    fois le doigt immobile 380 ms, aucun défilement n'a démarré, donc le
+//    refuser fonctionne.
+// 3. C'EST UNE COPIE QUI SUIT LE DOIGT, pas la vraie tuile. Déplacer la vraie
+//    ferait se réagencer la grille sous la main à chaque pixel.
+//
+// À la dépose, on relit l'ordre DU DOM et on permute le tableau : le `sep`
+// voyage avec son coloris puisque c'est une propriété de la fiche, et le
+// rendu redessine les traits au bon endroit. L'ordre part dans `rang` à
+// l'enregistrement, il n'y a donc rien de plus à écrire.
+const DRAG_DELAI = 380, DRAG_TOLERANCE = 9;
+let drag = null;
+
+function dragFin(commit){
+  if(!drag) return;
+  const d = drag; drag = null;
+  clearTimeout(d.timer);
+  if(d.ghost) d.ghost.remove();
+  if(d.el) d.el.classList.remove('is-dragging');
+  if(d.grille) d.grille.classList.remove('reordering');
+  if(!d.parti) return;
+  if(commit && d.grille){
+    const gi = Number(d.grille.dataset.grid);
+    const g = brandDraft[gi];
+    if(g){
+      const ordre = [...d.grille.querySelectorAll('.cat-item[data-item]')]
+        .map(n => Number(String(n.dataset.item).split(':')[1]));
+      // On ne permute que si on a bien retrouvé tous les coloris : une liste
+      // incomplète réordonnerait en perdant une fiche, et une fiche perdue
+      // ici, c'est une photo perdue en base.
+      if(ordre.length === g.items.length && new Set(ordre).size === ordre.length)
+        g.items = ordre.map(i => g.items[i]);
+    }
+  }
+  renderBrandModels();
+}
+
+function dragBouge(x, y){
+  if(!drag || !drag.parti) return;
+  drag.ghost.style.left = (x - drag.dx) + 'px';
+  drag.ghost.style.top  = (y - drag.dy) + 'px';
+
+  // Le bord de la feuille fait défiler : sans ça, on ne peut pas remonter un
+  // coloris au-dessus de ce qui est à l'écran — exactement ce que Massif
+  // demande (« le monter »).
+  // C'est `.sheet` qui défile, pas l'overlay : viser l'overlay aurait donné
+  // un défilement qui ne bouge jamais, sans rien dire.
+  const sh = $('#brandOverlay') && $('#brandOverlay').querySelector('.sheet');
+  if(sh){
+    const r = sh.getBoundingClientRect(), M = 64;
+    if(y < r.top + M) sh.scrollTop -= Math.ceil((r.top + M - y) / 5);
+    else if(y > r.bottom - M) sh.scrollTop += Math.ceil((y - (r.bottom - M)) / 5);
+  }
+
+  drag.ghost.style.display = 'none';
+  const sous = document.elementFromPoint(x, y);
+  drag.ghost.style.display = '';
+  const cible = sous && sous.closest ? sous.closest('.cat-item[data-item]') : null;
+  if(!cible || cible === drag.el) return;
+  if(cible.parentElement !== drag.grille) return;   // jamais d'un modèle à l'autre
+
+  const r = cible.getBoundingClientRect();
+  // AVANT OU APRÈS, dans l'ordre de lecture. Sous la tuile, c'est après, quelle
+  // que soit l'horizontale ; sur sa ligne, c'est la moitié gauche ou droite qui
+  // décide. Le premier jet basculait dès qu'on passait sous la mi-hauteur, même
+  // très à gauche — donc on ne pouvait pas déposer avant une tuile en visant
+  // son bas-gauche, exactement le geste pour « le monter tout en haut ».
+  const apres = (y > r.bottom) || (y >= r.top && x > r.left + r.width / 2);
+  drag.grille.insertBefore(drag.el, apres ? cible.nextSibling : cible);
+}
+
+function dragDemarre(){
+  if(!drag || drag.parti) return;
+  drag.parti = true;
+  drag.grille.classList.add('reordering');
+  const r = drag.el.getBoundingClientRect();
+  const img = drag.el.querySelector('.cat-img');
+  const g = document.createElement('div');
+  g.className = 'cat-ghost';
+  g.style.width = r.width + 'px';
+  g.innerHTML = '<img src="' + (img ? img.getAttribute('src') : '') + '" alt="">';
+  g.style.left = r.left + 'px';
+  g.style.top = r.top + 'px';
+  document.body.appendChild(g);
+  drag.ghost = g;
+  drag.dx = drag.x0 - r.left;
+  drag.dy = drag.y0 - r.top;
+  drag.el.classList.add('is-dragging');
+  if(navigator.vibrate) { try{ navigator.vibrate(12); }catch(e){} }
+}
+
+$('#brandModels').addEventListener('pointerdown', (e)=>{
+  // Jamais depuis un bouton ni un champ : l'œil, la corbeille, le trait, les
+  // détails et le nom gardent leur geste à eux.
+  if(e.target.closest('button, input, textarea, select')) return;
+  const el = e.target.closest('.cat-item[data-item]');
+  if(!el) return;
+  const grille = el.parentElement;
+  if(!grille || !grille.classList.contains('cat-grid')) return;
+  dragFin(false);
+  drag = { el, grille, x0:e.clientX, y0:e.clientY, parti:false, ghost:null, id:e.pointerId };
+  drag.timer = setTimeout(dragDemarre, DRAG_DELAI);
+});
+// Sur la FENÊTRE, pas sur `#brandModels` : pendant le glissement le doigt
+// passe au-dessus de l'en-tête de la feuille, et un écouteur posé sur la
+// liste s'arrêterait net à son bord — juste au moment où on remonte un
+// coloris tout en haut.
+window.addEventListener('pointermove', (e)=>{
+  if(!drag) return;
+  if(!drag.parti){
+    if(Math.abs(e.clientX - drag.x0) > DRAG_TOLERANCE || Math.abs(e.clientY - drag.y0) > DRAG_TOLERANCE)
+      dragFin(false);   // c'est un défilement
+    return;
+  }
+  dragBouge(e.clientX, e.clientY);
+});
+window.addEventListener('pointerup', ()=> dragFin(true));
+window.addEventListener('pointercancel', ()=> dragFin(false));
+// Non passif, et posé une seule fois : c'est lui qui empêche la page de
+// défiler pendant le glissement. Il ne fait rien tant qu'on ne glisse pas.
+document.addEventListener('touchmove', (e)=>{
+  if(drag && drag.parti){
+    e.preventDefault();
+    const t = e.touches[0];
+    if(t) dragBouge(t.clientX, t.clientY);
+  }
+}, { passive:false });
 
 $('#addModelBtn').addEventListener('click', ()=>{
   brandDraft.push({ model:'', items:[] });
