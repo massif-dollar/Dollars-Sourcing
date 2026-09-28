@@ -3633,6 +3633,7 @@ function startListeners(){
     // manquent. On redessine donc l'écran courant quand elles arrivent.
     if(viewState === 'catalogue') renderCatalogue(); else renderCurrentView();
     sortLesPhotos(catalogItems);
+    sortLesDetails(catalogItems);
   }, ()=>showToast(t('toastSaveError')));
   // Les images de garde des marques. Un document par marque, et rien d'autre
   // dedans qu'une vignette : le portail les lit TOUTES à l'ouverture, elles
@@ -3871,10 +3872,22 @@ async function exportData(){
   if(isOwner){
     try{
       for(let d = 0; d < catalogItems.length; d += 10){
+        // Les détails vivent dans un second document : sans cette lecture-là,
+        // l'export ne contiendrait plus que les couvertures — et une sauvegarde
+        // qui ne contient pas le travail n'en est pas une.
         const lot = await Promise.all(catalogItems.slice(d, d + 10).map(i =>
-          db.collection('catalogPhotos').doc(i.id).get()
-            .then(doc => doc.exists ? Object.assign({ id:i.id }, doc.data()) : null)
-            .catch(()=>null)));
+          Promise.all([
+            db.collection('catalogPhotos').doc(i.id).get().catch(()=>null),
+            db.collection('catalogPhotos').doc(idDetails(i.id)).get().catch(()=>null)
+          ]).then(([doc, det])=>{
+            if(!doc || !doc.exists) return null;
+            const sortie = Object.assign({ id:i.id }, doc.data());
+            // On relit les deux formes : une fiche pas encore découpée porte
+            // encore ses détails dans le document de couverture.
+            const suite = det && det.exists ? det.data() : null;
+            if(suite && Array.isArray(suite.details)) sortie.details = suite.details;
+            return sortie;
+          }).catch(()=>null)));
         catalogPhotos = catalogPhotos.concat(lot.filter(Boolean));
       }
       catalogBrands = Object.keys(brandCovers).map(k => brandCovers[k]);
@@ -4550,6 +4563,14 @@ const OEIL_BARRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 // `catalogPhotos`, donc ils ne coûtent rien tant que personne n'ouvre le
 // coloris. C'est ce qui permet d'en avoir plusieurs sans alourdir la vitrine.
 const MAX_DETAILS = 5;
+// Les détails vivent dans un SECOND document de la même collection, pas dans
+// celui de la couverture : lire une photo de 97 Ko ne doit pas en télécharger
+// 605. Même collection, donc la règle joker `catalogPhotos/{itemId}` les
+// couvre déjà — rien à republier.
+// CETTE FONCTION EXISTE À L'IDENTIQUE DANS LES DEUX FICHIERS, comme
+// `photosDe()` et `freshRef()` : si l'une change, le vendeur écrirait les
+// détails là où le client ne les lit pas.
+function idDetails(id){ return id + '__d'; }
 const DETAIL_PX = 900;
 // Le poids de TOUT le document, couverture comprise. Firestore plafonne à
 // 1 Mo (piège 23) : on s'arrête bien avant, pour que la marge reste vraie.
@@ -4589,10 +4610,16 @@ function chargeDetails(it){
     it.details = it.details || []; it.detailsCharges = true;
     return Promise.resolve();
   }
-  it.detailsPromesse = db.collection('catalogPhotos').doc(it.id).get().then(doc=>{
-    const d = doc.exists ? doc.data() : null;
-    it.details = (d && Array.isArray(d.details)) ? d.details.filter(x=>x && x.data) : [];
-    it.detailsCharges = true;
+  const col = db.collection('catalogPhotos');
+  const prend = d => (d && Array.isArray(d.details)) ? d.details.filter(x=>x && x.data) : [];
+  it.detailsPromesse = col.doc(idDetails(it.id)).get().then(doc=>{
+    if(doc.exists){ it.details = prend(doc.data()); it.detailsCharges = true; return; }
+    // Fiche d'avant le découpage : ses détails sont encore dans le document de
+    // couverture. On les lit là, et l'enregistrement les écrira au bon endroit.
+    return col.doc(it.id).get().then(vieux=>{
+      it.details = prend(vieux.exists ? vieux.data() : null);
+      it.detailsCharges = true;
+    });
   }).catch(err=>{
     // on NE marque pas comme chargé : mieux vaut réessayer qu'effacer
     showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
@@ -5028,11 +5055,20 @@ $('#importInput').addEventListener('change', async (e)=>{
         lot.set(ref, {
           ownerId: currentUid, brand: marque, model: l.model, name: l.name,
           thumb: l.thumb, thumbType: 'image/jpeg', sizes: l.sizes || [],
-          active: true, sep: l.sep, rang: rang++, createdAt: Date.now() + rang
+          active: true, sep: l.sep, rang: rang++, createdAt: Date.now() + rang,
+          dsplit: true
         });
         lot.set(db.collection('catalogPhotos').doc(ref.id), {
-          ownerId: currentUid, photo: l.photo, photoType: 'image/jpeg', details: l.details
+          ownerId: currentUid, photo: l.photo, photoType: 'image/jpeg'
         });
+        // Les détails dans leur propre document : un import qui les collerait
+        // à la couverture referait le défaut qu'on vient de corriger, et sur
+        // vingt coloris d'un coup.
+        if(l.details && l.details.length){
+          lot.set(db.collection('catalogPhotos').doc(idDetails(ref.id)), {
+            ownerId: currentUid, details: l.details
+          });
+        }
       });
       await lot.commit();
     }
@@ -5735,6 +5771,53 @@ async function sortLesPhotos(items){
   migrationPhotos = false;
 }
 
+// ===== ET LE MÊME DÉPLACEMENT, UN CRAN PLUS BAS =====
+// Les fiches d'avant portent leurs détails DANS le document de couverture.
+// Mesuré sur une vraie fiche : 97 Ko de couverture, 508 Ko de détails, donc
+// 605 Ko téléchargés par le client pour voir une photo de 97. On déplace les
+// détails vers `catalogPhotos/{id}__d`, et le client n'attend plus que ce
+// qu'il regarde.
+//
+// TROIS PRÉCAUTIONS, et chacune évite un vrai coût :
+//
+//  - **Par paquets de trois, une fois par ouverture de l'app.** Découper une
+//    fiche oblige à LIRE ses 605 Ko avant de les réécrire : tout faire d'un
+//    coup, ce sont 34 Mo sur la connexion de Massif, en Chine. Étalé sur
+//    quelques ouvertures, ça ne se sent pas.
+//  - **Un marqueur sur la fiche** (`dsplit`), pas sur le document de photo :
+//    sinon il faudrait relire les 605 Ko juste pour savoir si c'est déjà fait.
+//    Un booléen dans `catalog` coûte quinze octets au client, une relecture en
+//    coûterait six cent mille.
+//  - **Une fiche sans détail est marquée aussi.** Elle ne coûte qu'une lecture
+//    de couverture, et sans marqueur on la relirait à chaque ouverture.
+let migrationDetails = false;
+async function sortLesDetails(items){
+  if(migrationDetails) return;
+  const aDecouper = items.filter(i => i.id && !i.dsplit).slice(0, 3);
+  if(!aDecouper.length) return;
+  migrationDetails = true;
+  try{
+    const col = db.collection('catalogPhotos');
+    for(const i of aDecouper){
+      const doc = await col.doc(i.id).get();
+      const d = doc.exists ? doc.data() : null;
+      const det = (d && Array.isArray(d.details)) ? d.details.filter(x=>x && x.data) : [];
+      const lot = db.batch();
+      if(det.length){
+        lot.set(col.doc(idDetails(i.id)), { ownerId: currentUid, details: det }, { merge: true });
+        lot.update(col.doc(i.id), { details: firebase.firestore.FieldValue.delete() });
+      }
+      lot.update(db.collection('catalog').doc(i.id), { dsplit: true });
+      await lot.commit();
+    }
+  }catch(err){
+    // Elle prévient quand elle échoue (piège 9) : sans ça le catalogue
+    // resterait lent pour toujours et personne ne saurait pourquoi.
+    showToast(t('toastSaveError') + ' [' + (err && err.code ? err.code : 'erreur') + ']');
+  }
+  migrationDetails = false;
+}
+
 $('#saveBrandBtn').addEventListener('click', async ()=>{
   let nom = $('#b_name').value.trim();
   // LE VRAI GARDE-FOU N'EST PAS LA SUGGESTION, C'EST ICI. Les marques sont
@@ -5768,6 +5851,7 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
     avant.filter(i=>!gardes.has(i.id)).forEach(i=>{
       lot.delete(db.collection('catalog').doc(i.id));
       lot.delete(db.collection('catalogPhotos').doc(i.id));
+      lot.delete(db.collection('catalogPhotos').doc(idDetails(i.id)));
     });
     let rang = 0;
     modeles.forEach(g=>{
@@ -5789,7 +5873,10 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
           active: it.active !== false,
           sep: !!it.sep,
           rang: rang++,
-          createdAt: it.createdAt || Date.now()
+          createdAt: it.createdAt || Date.now(),
+          // Née découpée : la migration n'a pas à relire ses 605 Ko pour
+          // découvrir qu'il n'y a rien à faire.
+          dsplit: true
         };
         const ref = it.id ? db.collection('catalog').doc(it.id) : db.collection('catalog').doc();
         lot.set(ref, donnees);
@@ -5800,15 +5887,24 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
         // main. Un coloris dont on n'a ouvert ni la photo ni les détails ne
         // doit pas les perdre parce qu'on a renommé la marque.
         if(it.photo){
-          const doc = { ownerId: currentUid, photo: it.photo, photoType: it.photoType || 'image/jpeg' };
-          if(it.detailsCharges) doc.details = it.details || [];
-          lot.set(db.collection('catalogPhotos').doc(ref.id), doc);
-        }else if(it.detailsCharges && it.id){
-          // `merge` plutôt qu'`update` : un document de photo qui manquerait
-          // ferait échouer tout le lot, et on perdrait l'enregistrement entier
-          // de la marque pour un détail.
-          lot.set(db.collection('catalogPhotos').doc(it.id),
-                  { details: it.details || [] }, { merge: true });
+          // La couverture SEULE. Les détails partent dans leur propre document :
+          // les garder ici obligerait le client à télécharger 605 Ko pour voir
+          // une photo de 97.
+          lot.set(db.collection('catalogPhotos').doc(ref.id), {
+            ownerId: currentUid, photo: it.photo,
+            photoType: it.photoType || 'image/jpeg',
+            // L'ancienne forme est effacée explicitement : sans ça, une fiche
+            // déjà enregistrée garderait ses détails aux DEUX endroits, et le
+            // client continuerait de les télécharger avec la couverture.
+            details: firebase.firestore.FieldValue.delete()
+          }, { merge: true });
+        }
+        // `merge` plutôt qu'`update` : un document qui manquerait ferait échouer
+        // tout le lot, et on perdrait l'enregistrement entier de la marque pour
+        // un détail.
+        if(it.detailsCharges && (ref.id || it.id)){
+          lot.set(db.collection('catalogPhotos').doc(idDetails(ref.id || it.id)),
+                  { ownerId: currentUid, details: it.details || [] }, { merge: true });
         }
       });
     });
@@ -5866,6 +5962,7 @@ $('#deleteBrandBtn').addEventListener('click', async ()=>{
                 .forEach(i => {
                   lot.delete(db.collection('catalog').doc(i.id));
                   lot.delete(db.collection('catalogPhotos').doc(i.id));
+                  lot.delete(db.collection('catalogPhotos').doc(idDetails(i.id)));
                 });
     // L'image de garde part avec la marque : sinon elle resterait seule dans
     // la base, invisible et payante — la même règle que pour la photo pleine.
