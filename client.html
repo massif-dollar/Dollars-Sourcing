@@ -872,6 +872,46 @@
     min-width:20px; text-align:center; font-size:13.5px; font-weight:600;
     font-variant-numeric:tabular-nums;
   }
+  /* LES TAILLES D'UN COLORIS. Celles qui sont prises portent leur propre pas,
+     celles qui restent sont des puces à toucher. Cinq pas de suite par coloris
+     rempliraient l'écran, et cinq champs numériques feraient sortir le
+     clavier cinq fois. */
+  .sz-row{
+    display:flex; flex-wrap:wrap; gap:6px;
+    margin:-3px 0 9px; padding:0 2px 0 52px;
+  }
+  .sz-chip{
+    padding:5px 12px; border-radius:100px; cursor:pointer;
+    border:0.5px solid var(--hairline); background:var(--bg); color:var(--text-faint);
+    font-family:inherit; font-size:12.5px; font-weight:600;
+    transition:transform .3s var(--spring), border-color .2s var(--ease-io), color .2s var(--ease-io);
+  }
+  .sz-chip:active{ transform:scale(.9); border-color:var(--accent); color:var(--accent); }
+  .sz-pill{
+    display:inline-flex; align-items:center; gap:1px; padding:1px 3px 1px 9px;
+    border-radius:100px; border:0.5px solid var(--accent); background:var(--accent-soft);
+  }
+  .sz-pill i{
+    font-style:normal; font-size:12px; font-weight:700; color:var(--accent);
+    margin-right:2px; letter-spacing:.02em;
+  }
+  .sz-pill button{
+    width:24px; height:24px; border:0; border-radius:50%; background:none; cursor:pointer;
+    color:var(--accent); font-size:16px; line-height:1; font-weight:600; font-family:inherit;
+    display:grid; place-items:center; transition:transform .3s var(--spring);
+  }
+  .sz-pill button:active{ transform:scale(.85); }
+  .sz-pill b{
+    min-width:16px; text-align:center; font-size:12.5px; font-weight:700;
+    font-variant-numeric:tabular-nums; color:var(--accent);
+  }
+  /* Le total d'une ligne à tailles : en lecture seule, c'est la somme des
+     puces. Tant qu'il est à zéro, il dit quoi faire au lieu d'afficher « 0 ». */
+  .sz-tot{
+    flex:none; font-size:12px; font-weight:600; color:var(--text-faint);
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .sz-tot.vide{ color:var(--accent); }
   .picked-x{
     width:26px; height:26px; flex:none; border:0; border-radius:50%; background:none; cursor:pointer;
     color:var(--text-ghost); display:grid; place-items:center; transition:transform .3s var(--spring);
@@ -1665,7 +1705,7 @@
           <div class="photo-count" id="photoCount" style="display:none;"></div>
         </div>
         <div class="field">
-          <label data-i18n="fieldDetails">Précisions (taille, couleur, référence...)</label>
+          <label data-i18n="fieldDetails">Précisions (référence, remarque...)</label>
           <textarea id="f_note" rows="3" data-i18n-placeholder="phOptional" placeholder="Optionnel"></textarea>
         </div>
         <button type="submit" class="btn-primary" id="submitBtn" data-i18n="submitOrder">Envoyer ma demande</button>
@@ -1871,6 +1911,7 @@ const I18N = {
     pickValidate:'Valider', pickNone:'Rien de choisi',
     pickOne:'{n} article choisi', pickMany:'{n} articles choisis',
     pickRemove:'Retirer de ma demande',
+    szPick:'Choisis une taille', szNeeded:'Choisis au moins une taille pour {n}.',
     pickMax:'{n} coloris au maximum sur une même demande.',
     pickOneModel:"Un autre modèle, c'est une seconde demande. Envoie d'abord celle-ci — ça prend dix secondes.",
     pickLocked:'Tu commandes {model}. <b>Prends autant de coloris que tu veux ici.</b> Pour un autre modèle, ce sera une seconde demande.',
@@ -1882,7 +1923,7 @@ const I18N = {
     shopSent:'Échange envoyé ! Ton vendeur va le valider.',
     dollarsRules:"Tu gagnes 1 Dollarz par euro dépensé, crédité à la livraison. Un seul coupon par commande, sans date d'expiration. Les Dollarz ne sont ni transférables ni convertibles en euros.",
     fieldProduct:'Produit', fieldQty:'Quantité', fieldPhoto:'Photos du produit',
-    fieldDetails:'Précisions (taille, couleur, référence...)', yourDetails:'Tes précisions',
+    fieldDetails:'Précisions (référence, remarque...)', yourDetails:'Tes précisions',
     phProduct:'Ou écris-le toi-même : sacoche, montre...', phOptional:'Optionnel',
     photoAdd:'Ajouter des photos', photoAddMore:'Ajouter une autre photo',
     photoRemove:'Retirer cette photo',
@@ -1979,6 +2020,7 @@ const I18N = {
     pickValidate:'Confirm', pickNone:'Nothing selected',
     pickOne:'{n} item selected', pickMany:'{n} items selected',
     pickRemove:'Remove from my request',
+    szPick:'Pick a size', szNeeded:'Pick at least one size for {n}.',
     pickMax:'{n} colours maximum on one request.',
     pickOneModel:'Another model means a second request. Send this one first — it takes ten seconds.',
     pickLocked:'You are ordering {model}. <b>Take as many colours as you want here.</b> For another model, that will be a second request.',
@@ -1990,7 +2032,7 @@ const I18N = {
     shopSent:'Exchange sent! Your seller will confirm it.',
     dollarsRules:'You earn 1 Dollarz per euro spent, credited on delivery. One coupon per order, no expiry date. Dollarz are neither transferable nor convertible into euros.',
     fieldProduct:'Product', fieldQty:'Quantity', fieldPhoto:'Product photos',
-    fieldDetails:'Details (size, colour, reference...)', yourDetails:'Your details',
+    fieldDetails:'Details (reference, note...)', yourDetails:'Your details',
     phProduct:'Or type it yourself: bag, watch...', phOptional:'Optional',
     photoAdd:'Add photos', photoAddMore:'Add another photo',
     photoRemove:'Remove this photo',
@@ -2466,6 +2508,63 @@ const ICON_MENU = '<svg class="ins-ico" viewBox="0 0 24 24" fill="currentColor" 
 // Les coloris commandés au catalogue n'ont pas de photo DANS la commande :
 // ils pointent la fiche. On les résout ici, une seule fois, pour que tous les
 // affichages en profitent — carte, repli, compteur — sans un chemin de plus.
+// ---- LES TAILLES D'UN MODÈLE ----
+// Elles vivent sur la fiche du coloris (`sizes`), mais se règlent au niveau du
+// MODÈLE : tous ses coloris portent la même liste. C'est l'unité qui a du sens
+// — une doudoune existe en S-XXL, pas « la grise en S-XXL et la noire en 40-45 ».
+//
+// TANT QU'UNE FICHE N'EN PORTE PAS, ON LES DEVINE d'après le nom du modèle :
+// des pointures pour une chaussure, aucune taille pour un accessoire, S-XXL
+// pour le reste. Un catalogue déjà rempli n'a donc RIEN à migrer, et la
+// devinette se corrige à la main dès qu'elle se trompe — c'est ce que Massif a
+// demandé : « quand tu vois accessoires ou chaussures, là tu ajustes ».
+//
+// `[]` veut dire « aucune taille » et c'est explicite ; `undefined` veut dire
+// « personne n'a encore tranché », donc on devine. La même distinction que
+// `coverDraft` et `detailsCharges`.
+//
+// CETTE FONCTION EXISTE À L'IDENTIQUE DANS LES DEUX FICHIERS, comme
+// `photosDe()`, `photosItems()` et `freshRef()` : si l'une des deux change, le
+// vendeur et le client ne parleraient plus des mêmes tailles.
+const TAILLES_VET = ['S','M','L','XL','XXL'];
+const TAILLES_CH  = ['39','40','41','42','43','44','45'];
+// Mots cherchés sur le nom du modèle, sans accent et entre deux frontières :
+// sans la frontière, « air » attraperait « airness » et « cap » « capuche ».
+const MOTS_CHAUSSURE = ['chaussure','chaussures','sneaker','sneakers','basket','baskets','running','shoe','shoes','pointure','gel','air','dunk','jordan','samba','campus','yeezy','tn','af1','mule','mules','claquette','claquettes'];
+const MOTS_ACCESSOIRE = ['sac','sacoche','pochette','banane','casquette','bonnet','echarpe','ceinture','bracelet','montre','montres','lunette','lunettes','portefeuille','porte-cles','bijou','bijoux','gant','gants','cap','bag','accessoire','accessoires'];
+function sansAccents(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function contientMot(txt, mots){
+  return mots.some(k=>{
+    const e = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('(^|[^a-z0-9])' + e + '([^a-z0-9]|$)').test(txt);
+  });
+}
+function taillesAuto(modele){
+  const m = sansAccents(modele);
+  if(!m) return TAILLES_VET.slice();
+  if(contientMot(m, MOTS_ACCESSOIRE)) return [];
+  if(contientMot(m, MOTS_CHAUSSURE))  return TAILLES_CH.slice();
+  return TAILLES_VET.slice();
+}
+function taillesDe(f){
+  if(!f) return [];
+  if(Array.isArray(f.sizes)) return f.sizes.map(x=>String(x||'').trim()).filter(Boolean);
+  return taillesAuto(f.model);
+}
+// « S×5, M×5 » — la répartition d'une ligne, dans l'ordre de la liste du
+// modèle et pas dans celui où le client a tapé : deux commandes du même
+// modèle doivent se lire pareil.
+function detailTailles(ligne, ordre){
+  const s = ligne && ligne.sizes;
+  if(!s || typeof s !== 'object') return '';
+  const cles = (Array.isArray(ordre) && ordre.length ? ordre : Object.keys(s))
+    .filter(k => Number(s[k]) > 0);
+  Object.keys(s).forEach(k=>{ if(Number(s[k]) > 0 && cles.indexOf(k) < 0) cles.push(k); });
+  return cles.map(k => k + '×' + Number(s[k])).join(', ');
+}
+
 function photosItems(o){
   return (Array.isArray(o.items) ? o.items : []).map(it=>{
     const f = catParId(it.catalogId);
@@ -3786,11 +3885,20 @@ $('#catalogPanel').addEventListener('click', (e)=>{
 // elle simplifie tout le reste : une commande, une référence #A7F3, un colis,
 // un suivi. Un client qui veut deux modèles envoie deux demandes — et c'est
 // justement ce qu'on veut, deux colis suivis séparément.
-let picked = [];      // [{id, brand, model, name, qty}] — pas de photo, on pointe
+let picked = [];      // [{id, brand, model, name, qty, tailles[], sizes{}}] — pas de photo, on pointe
 let pickBrand = null;
 const MAX_LIGNES = 20;   // un modèle n'a jamais vingt coloris, c'est une borne
 
 function estChoisi(id){ return picked.some(x => x.id === id); }
+// Le total d'une ligne : la SOMME de ses tailles quand le modèle en a, sinon
+// sa quantité. Une seule fonction, parce que ce nombre est lu à cinq endroits
+// — l'affichage, le libellé, le `qty` envoyé, le contrôle, le résumé.
+function totalLigne(x){
+  if(!x) return 0;
+  if(x.tailles && x.tailles.length)
+    return Object.keys(x.sizes || {}).reduce((n,k)=>n + (Number(x.sizes[k]) || 0), 0);
+  return Number(x.qty) || 0;
+}
 // Les coloris ne sont plus recopiés en photos : ils pointent la fiche du
 // catalogue. Le plafond du mégaoctet ne concerne donc plus que les photos que
 // le client prend lui-même.
@@ -3853,7 +3961,11 @@ $('#pickBody').addEventListener('click', (e)=>{
     if(picked.length >= MAX_LIGNES){ showToast(t('pickMax').replace('{n}', MAX_LIGNES)); return; }
     // On ne recopie PAS la photo : on pointe la fiche. C'est ce qui lève la
     // limite de cinq — le poids ne dépend plus du nombre de coloris.
-    picked.push({ id:f.id, brand:f.brand, model:f.model, name:f.name, qty:1 });
+    // Un modèle à tailles part à ZÉRO : on ne choisit pas une taille à la
+    // place du client, et une taille devinée serait un mauvais colis.
+    const tl = taillesDe(f);
+    picked.push({ id:f.id, brand:f.brand, model:f.model, name:f.name,
+                  qty: tl.length ? 0 : 1, tailles: tl, sizes: {} });
     coloris.classList.add('is-picked');
     // Premier coloris : le verrou se pose, les autres modèles se grisent.
     if(picked.length === 1){ renderPick(); return; }
@@ -3872,19 +3984,48 @@ function renderPicked(){
   if(!el) return;
   el.innerHTML = picked.map((x,k)=>{
     const f = catParId(x.id);
+    const aTailles = x.tailles && x.tailles.length;
+    const tot = totalLigne(x);
+    // Avec des tailles, le compteur global devient un TOTAL en lecture seule :
+    // deux endroits pour le même nombre, c'est une erreur de saisie qui attend
+    // son heure — la même raison qui a fait disparaître le champ « Quantité ».
+    const compteur = aTailles
+      ? '<span class="sz-tot' + (tot ? '' : ' vide') + '">'
+        + (tot ? escapeHtml(catCount(tot, 'pieceOne', 'pieceMany')) : escapeHtml(t('szPick')))
+        + '</span>'
+      : '<div class="qty-step">'
+        + '<button type="button" data-moins="' + k + '" aria-label="-">−</button>'
+        + '<b>' + x.qty + '</b>'
+        + '<button type="button" data-plus="' + k + '" aria-label="+">+</button>'
+        + '</div>';
+    // Les tailles déjà prises portent leur propre pas ; celles qui restent sont
+    // des puces à toucher. Cinq pas de suite par coloris tiendraient toute la
+    // hauteur de l'écran, et cinq champs numériques se rempliraient au clavier.
+    let bloc = '';
+    if(aTailles){
+      const prises = x.tailles.filter(tt => Number(x.sizes[tt]) > 0);
+      const libres = x.tailles.filter(tt => !(Number(x.sizes[tt]) > 0));
+      bloc = '<div class="sz-row">'
+        + prises.map(tt =>
+            '<span class="sz-pill"><i>' + escapeHtml(tt) + '</i>'
+            + '<button type="button" data-szm="' + k + ':' + escapeHtml(tt) + '" aria-label="-">−</button>'
+            + '<b>' + Number(x.sizes[tt]) + '</b>'
+            + '<button type="button" data-szp="' + k + ':' + escapeHtml(tt) + '" aria-label="+">+</button>'
+            + '</span>').join('')
+        + libres.map(tt =>
+            '<button type="button" class="sz-chip" data-szp="' + k + ':' + escapeHtml(tt) + '">'
+            + escapeHtml(tt) + '</button>').join('')
+        + '</div>';
+    }
     return '<div class="picked-row">'
     + (f ? '<img src="' + catImg(f) + '" alt="">' : '<span class="picked-vide"></span>')
     + '<div class="picked-t"><b>' + escapeHtml(x.name || x.model || '') + '</b>'
     + '<span>' + escapeHtml([x.brand, x.model].filter(Boolean).join(' · ')) + '</span></div>'
-    + '<div class="qty-step">'
-    + '<button type="button" data-moins="' + k + '" aria-label="-">−</button>'
-    + '<b>' + x.qty + '</b>'
-    + '<button type="button" data-plus="' + k + '" aria-label="+">+</button>'
-    + '</div>'
+    + compteur
     + '<button type="button" class="picked-x" data-ote="' + k + '" title="' + escapeHtml(t('pickRemove'))
     + '" aria-label="' + escapeHtml(t('pickRemove')) + '">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
-    + '</button></div>';
+    + '</button></div>' + bloc;
   }).join('');
   el.style.display = picked.length ? 'block' : 'none';
   // Le champ « Quantité » unique n'a plus de sens dès qu'il y a une quantité
@@ -3896,9 +4037,19 @@ function renderPicked(){
   rendPhotos();
 }
 $('#pickedList').addEventListener('click', (e)=>{
-  const b = e.target.closest('button[data-moins], button[data-plus], button[data-ote]');
+  const b = e.target.closest('button[data-moins], button[data-plus], button[data-ote], button[data-szp], button[data-szm]');
   if(!b) return;
+  const parTaille = (v, pas)=>{
+    const [k, tt] = String(v).split(':');
+    const x = picked[Number(k)];
+    if(!x) return;
+    const n = (Number(x.sizes[tt]) || 0) + pas;
+    if(n > 0 && n <= 99) x.sizes[tt] = n; else delete x.sizes[tt];
+    x.qty = totalLigne(x);
+  };
   if(b.dataset.ote !== undefined) picked.splice(Number(b.dataset.ote), 1);
+  else if(b.dataset.szp !== undefined) parTaille(b.dataset.szp, 1);
+  else if(b.dataset.szm !== undefined) parTaille(b.dataset.szm, -1);
   else if(b.dataset.plus !== undefined){
     const x = picked[Number(b.dataset.plus)];
     if(x && x.qty < 99) x.qty++;
@@ -3918,13 +4069,22 @@ function libellePicked(){
   if(!picked.length) return '';
   const v = verrouModele();
   const tete = [v.brand, v.model].filter(Boolean).join(' · ');
-  const noms = picked.map(x => (x.name||'').trim() + (x.qty > 1 ? ' ×' + x.qty : ''));
+  // « Gris (S×5, M×5) » quand le modèle a des tailles, « Gris ×3 » sinon.
+  // C'est cette chaîne qui voyage partout, donc elle doit porter la
+  // répartition : un fournisseur qui lit « Gris ×10 » achète dix fois la même.
+  const noms = picked.map(x=>{
+    const n = (x.name || '').trim();
+    const d = detailTailles(x, x.tailles);
+    if(d) return n + ' (' + d + ')';
+    const q = totalLigne(x);
+    return n + (q > 1 ? ' ×' + q : '');
+  });
   const complet = (tete ? tete + ' : ' : '') + noms.join(', ');
   // Les règles bornent `product` à 200 caractères. Plutôt que de couper un nom
   // de coloris en plein milieu, on résume : le détail est dans `items`, et le
   // vendeur le voit ligne par ligne sur sa fiche.
   if(complet.length <= 180) return complet;
-  const pieces = picked.reduce((n,x)=>n + x.qty, 0);
+  const pieces = picked.reduce((n,x)=>n + totalLigne(x), 0);
   return (tete ? tete + ' : ' : '')
     + catCount(picked.length, 'catColor', 'catColors')
     + ' (' + catCount(pieces, 'pieceOne', 'pieceMany') + ')';
@@ -4081,8 +4241,17 @@ $('#orderForm').addEventListener('submit', async (e)=>{
 
   // Une quantité par coloris : le total est la somme. Sans catalogue, c'est le
   // champ unique qui parle.
-  const qtyVal = picked.length ? picked.reduce((n,x)=>n + x.qty, 0) : parseInt($('#f_qty').value);
+  const qtyVal = picked.length ? picked.reduce((n,x)=>n + totalLigne(x), 0) : parseInt($('#f_qty').value);
   if(!picked.length && (!qtyVal || qtyVal<1)){ setFieldError($('#f_qty'), t('errQty')); valid = false; }
+  // UN COLORIS À TAILLES SANS AUCUNE TAILLE NE PART PAS. Laisser filer, c'est
+  // une commande à zéro pièce sur cette ligne, que ni le vendeur ni le
+  // fournisseur ne verraient venir. Le message NOMME le coloris : « choisis
+  // une taille » sur cinq lignes ne dit pas laquelle.
+  const sansTaille = picked.find(x => x.tailles && x.tailles.length && !totalLigne(x));
+  if(sansTaille){
+    showToast(t('szNeeded').replace('{n}', sansTaille.name || sansTaille.model || ''));
+    valid = false;
+  }
 
   if(!valid) return;
 
@@ -4101,7 +4270,16 @@ $('#orderForm').addEventListener('submit', async (e)=>{
       // l'instant — `product` porte déjà le texte lisible — mais c'est elle qui
       // permettra un jour de découper une demande en plusieurs commandes sans
       // avoir à relire une phrase.
-      items: picked.map(x=>({ catalogId:x.id, brand:x.brand||'', model:x.model||'', name:x.name||'', qty:x.qty })),
+      // `qty` reste le TOTAL de la ligne : tout ce qui compte des pièces en
+      // aval — le vendeur, la copie publique, la fiche image — continue de le
+      // lire sans rien savoir des tailles. `sizes` n'est écrit que s'il y en a,
+      // donc une commande sans taille a exactement la forme d'avant.
+      items: picked.map(x=>{
+        const l = { catalogId:x.id, brand:x.brand||'', model:x.model||'',
+                    name:x.name||'', qty: totalLigne(x) };
+        if(x.tailles && x.tailles.length) l.sizes = Object.assign({}, x.sizes);
+        return l;
+      }),
       note: $('#f_note').value.trim(),
       createdAt: Date.now()
     };

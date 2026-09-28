@@ -784,6 +784,87 @@ modèles, les mêmes coloris. Seul le geste change — regarder d'un côté, coc
 de l'autre. Deux rendus séparés finiraient par se contredire, c'est la règle de
 `decodeAt`.
 
+#### Les tailles, une par pièce
+
+« 10 grises ardoise, mais 5 S et 5 M. » C'est la commande réelle, et jusque-là
+l'app ne savait dire que « 10 ».
+
+**Les tailles se règlent PAR MODÈLE, jamais par coloris.** Une doudoune existe
+en S-XXL, pas « la grise en S-XXL et la noire en 40-45 ». Le réglage par
+coloris a été écarté pour une seconde raison : c'est ce qui se rapproche le
+plus d'un **stock**, que le projet a explicitement écarté. La liste dit dans
+quelles tailles le modèle **existe**, jamais combien il en reste.
+
+**Elles vivent quand même sur la fiche du coloris** (`catalog/{id}.sizes`),
+parce qu'un modèle n'est stocké nulle part — il se déduit des fiches. Tous les
+coloris d'un modèle portent donc la même liste, écrite d'un coup à
+l'enregistrement.
+
+**TANT QU'UNE FICHE N'EN PORTE PAS, ON LES DEVINE** d'après le nom du modèle :
+pointures pour une chaussure, aucune taille pour un accessoire, S-XXL pour le
+reste. C'est ce qui fait qu'**un catalogue déjà rempli n'a rien à migrer** — et
+c'est exactement ce que Massif a demandé : « ton truc recommandé, et quand tu
+vois accessoires ou chaussures, là tu ajustes ». La devinette se corrige dans
+un champ sous le nom du modèle ; le vider veut dire « aucune taille ».
+
+`[]` veut dire « aucune taille », explicitement ; `undefined` veut dire
+« personne n'a tranché », donc on devine. La même distinction que `coverDraft`
+et `detailsCharges`.
+
+**Les mots se cherchent entre deux frontières**, pas en sous-chaîne : sans ça
+« air » attraperait « airness » et « cap » attraperait « capuche ». Vérifié —
+« Sweat à capuche » reste un vêtement, « Sacoche » reste un accessoire.
+
+`taillesAuto()` et `taillesDe()` **existent à l'identique dans les deux
+fichiers**, comme `photosDe()`, `photosItems()` et `freshRef()` : si l'une des
+deux change, le vendeur et le client ne parleraient plus des mêmes tailles.
+
+**Ce que le client voit.** Sous chaque coloris coché, les tailles déjà prises
+portent leur propre pas (`S − 5 +`) et celles qui restent sont des puces à
+toucher. Ni cinq pas de suite par coloris — à cinq coloris ça remplit l'écran —
+ni cinq champs numériques, qui feraient sortir le clavier cinq fois.
+
+Trois règles qui en découlent :
+
+- **Un coloris à tailles part à ZÉRO.** On ne choisit pas une taille à la place
+  du client : une taille devinée, c'est un mauvais colis.
+- **Le compteur global devient un TOTAL en lecture seule.** Deux endroits pour
+  le même nombre, c'est une erreur de saisie qui attend son heure — la même
+  raison qui avait fait disparaître le champ « Quantité ».
+- **Une ligne à zéro ne part pas**, et le message **nomme le coloris** :
+  « choisis une taille » sur cinq lignes ne dit pas laquelle.
+
+**Ce que ça écrit.** `items[].sizes` (`{S:5, M:5}`), et `qty` reste **le total
+de la ligne** : tout ce qui compte des pièces en aval — montants, copie
+publique, fiche image — continue de le lire sans rien savoir des tailles. Une
+commande sans taille a donc exactement la forme d'avant, et les anciennes
+s'affichent sans une ligne de migration.
+
+**La chaîne produit porte la répartition** : `Gris (S×5, M×5), Noire (L×3)`.
+D'où un piège qui a failli passer : **la fiche image relit cette chaîne quand
+il n'y a pas d'`items[]`, et elle la découpait sur les virgules** — donc
+`Gris (S×5, M×5)` serait devenu deux coloris. `coupeVirgules()` ne coupe qu'au
+niveau du dessus. Vérifié dans les deux sens : la même commande lue par
+`items[]` et relue par sa chaîne donne exactement les mêmes lignes.
+
+**Et le vendeur voit les lignes, pas seulement la chaîne.** Elle se résume
+au-delà de 180 caractères, et les tailles l'y poussent vite. Or c'est sur ces
+lignes qu'on achète au stand : `lignesItemsHtml()` les affiche sur la demande
+et sur la fiche commande, avec leur répartition. C'est le piège 25 — une donnée
+qui n'est pas là où la décision se prend ne sert à rien.
+
+Sur la fiche image, la répartition est sur **sa propre ligne** sous le nom du
+coloris, pas au bout du nom : c'est le dernier chiffre que le fournisseur lit
+avant de compter ses pièces.
+
+L'import JSON accepte `sizes` **au niveau du modèle** (`models[].sizes`), et
+s'en passe : un fichier préparé avant les tailles s'importe sans rien changer,
+la devinette s'applique.
+
+Le champ libre « Précisions » ne propose plus d'écrire la taille : elle a son
+endroit maintenant, et deux endroits pour la même chose, c'est une erreur qui
+attend son heure.
+
 #### Les consignes, et pourquoi elles sont en couleur
 
 **Une consigne grise et en petit se saute.** Le premier jet les écrivait en
