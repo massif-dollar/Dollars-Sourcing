@@ -863,7 +863,31 @@
     border:0.5px solid var(--hairline); border-radius:14px;
     padding:11px; margin-bottom:11px; background:var(--fill);
   }
+  /* Les lignes d'articles d'une demande ou d'une commande. Compactes : c'est
+     une liste qu'on parcourt du regard au stand, pas un tableau. */
+  .ord-items{ list-style:none; margin:7px 0 0; padding:0; }
+  .ord-items li{
+    display:flex; align-items:baseline; gap:10px; padding:3px 0;
+    font-size:13px; color:var(--text);
+  }
+  .ord-items li span{ flex:1; min-width:0; }
+  .ord-items li i{ font-style:normal; color:var(--accent); font-size:12px; font-weight:600; }
+  .ord-items li b{ flex:none; font-variant-numeric:tabular-nums; font-size:13px; }
   .model-head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  /* Les tailles du modèle : une ligne discrète sous son nom. C'est un réglage
+     qu'on pose une fois, pas une action — il ne doit pas peser autant que le
+     nom du modèle. */
+  .model-sizes{ display:flex; align-items:center; gap:8px; margin:-3px 0 9px; }
+  .model-sizes label{
+    flex:none; font-size:11.5px; color:var(--text-faint);
+    text-transform:uppercase; letter-spacing:.03em;
+  }
+  .model-sizes input{
+    flex:1; min-width:0; padding:7px 11px; border-radius:10px; font-size:13px;
+    border:0.5px solid var(--hairline); background:var(--fill); color:var(--text);
+    font-family:var(--font-body);
+  }
+  .model-sizes input:focus{ border-color:var(--accent); outline:none; }
   .model-head input{
     flex:1; min-width:0; padding:9px 11px; border-radius:10px;
     border:0.5px solid var(--hairline); background:var(--card); color:var(--text);
@@ -2137,6 +2161,11 @@
            perdait la vue sur les modèles au moment précis où il va les
            acheter. Sur une demande à trois modèles, c'est le bon article ou le
            mauvais. -->
+      <!-- Ce qu'on achète, ligne par ligne, avec sa répartition par taille.
+           La chaîne produit se résume au-delà de 180 caractères et les
+           tailles l'y poussent vite : ces lignes-là ne se coupent jamais. -->
+      <div id="sheetItems" style="display:none;"></div>
+
       <div class="field" id="sheetPhotosZone" style="display:none;">
         <label data-i18n="fieldClientPhotos">Photos du client</label>
         <div id="sheetPhotos"></div>
@@ -2764,6 +2793,7 @@ const I18N = {
     fwSaveDefault:'Enregistrer par défaut', fwOnceBtn:'Utiliser pour cette fiche seulement',
     fwOnceDone:'Transitaire changé pour cette fiche seulement.',
     fwException:'Exception : ce transitaire ne vaut que pour cette fiche.',
+    sizesLabel:'Tailles', sizesPh:'S, M, L, XL, XXL — vide = aucune taille',
     brandCover:'Image de garde', brandCoverPick:'Choisir une image',
     brandCoverRemove:'Retirer', brandCoverReplace:'Changer l\u2019image',
     brandCoverAuto:'Sans image, le client voit les premiers coloris.',
@@ -2990,6 +3020,7 @@ const I18N = {
     fwSaveDefault:'Save as default', fwOnceBtn:'Use for this sheet only',
     fwOnceDone:'Forwarder changed for this sheet only.',
     fwException:'Exception: this forwarder applies to this sheet only.',
+    sizesLabel:'Sizes', sizesPh:'S, M, L, XL, XXL — empty = no size',
     brandCover:'Cover image', brandCoverPick:'Choose an image',
     brandCoverRemove:'Remove', brandCoverReplace:'Change image',
     brandCoverAuto:'Without an image, customers see the first colours.',
@@ -3110,7 +3141,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-27m';
+const BUILD = '2026-09-27n';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4032,6 +4063,7 @@ function renderRequests(){
           <div class="date">${fmtDate(r.createdAt||Date.now())}</div>
         </div>
         <div class="card-mid">${escapeHtml(r.product||'')} × ${r.qty||1}</div>
+        ${lignesItemsHtml(r)}
         ${r.note ? `<div class="card-mid" style="margin-top:4px; font-style:italic;">"${escapeHtml(r.note)}"</div>` : ''}
         ${blocReqPhotos(r)}
         <div class="fiche-row">
@@ -4109,6 +4141,63 @@ async function grantCoupon(req){
 // résout ici, une seule fois, pour que tous les affichages en profitent.
 // Même fonction, au mot près, dans `client.html` : si l'une change, le vendeur
 // et le client ne verraient plus les mêmes photos.
+// ---- LES TAILLES D'UN MODÈLE ----
+// Elles vivent sur la fiche du coloris (`sizes`), mais se règlent au niveau du
+// MODÈLE : tous ses coloris portent la même liste. C'est l'unité qui a du sens
+// — une doudoune existe en S-XXL, pas « la grise en S-XXL et la noire en 40-45 ».
+//
+// TANT QU'UNE FICHE N'EN PORTE PAS, ON LES DEVINE d'après le nom du modèle :
+// des pointures pour une chaussure, aucune taille pour un accessoire, S-XXL
+// pour le reste. Un catalogue déjà rempli n'a donc RIEN à migrer, et la
+// devinette se corrige à la main dès qu'elle se trompe — c'est ce que Massif a
+// demandé : « quand tu vois accessoires ou chaussures, là tu ajustes ».
+//
+// `[]` veut dire « aucune taille » et c'est explicite ; `undefined` veut dire
+// « personne n'a encore tranché », donc on devine. La même distinction que
+// `coverDraft` et `detailsCharges`.
+//
+// CETTE FONCTION EXISTE À L'IDENTIQUE DANS LES DEUX FICHIERS, comme
+// `photosDe()`, `photosItems()` et `freshRef()` : si l'une des deux change, le
+// vendeur et le client ne parleraient plus des mêmes tailles.
+const TAILLES_VET = ['S','M','L','XL','XXL'];
+const TAILLES_CH  = ['39','40','41','42','43','44','45'];
+// Mots cherchés sur le nom du modèle, sans accent et entre deux frontières :
+// sans la frontière, « air » attraperait « airness » et « cap » « capuche ».
+const MOTS_CHAUSSURE = ['chaussure','chaussures','sneaker','sneakers','basket','baskets','running','shoe','shoes','pointure','gel','air','dunk','jordan','samba','campus','yeezy','tn','af1','mule','mules','claquette','claquettes'];
+const MOTS_ACCESSOIRE = ['sac','sacoche','pochette','banane','casquette','bonnet','echarpe','ceinture','bracelet','montre','montres','lunette','lunettes','portefeuille','porte-cles','bijou','bijoux','gant','gants','cap','bag','accessoire','accessoires'];
+function sansAccents(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function contientMot(txt, mots){
+  return mots.some(k=>{
+    const e = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('(^|[^a-z0-9])' + e + '([^a-z0-9]|$)').test(txt);
+  });
+}
+function taillesAuto(modele){
+  const m = sansAccents(modele);
+  if(!m) return TAILLES_VET.slice();
+  if(contientMot(m, MOTS_ACCESSOIRE)) return [];
+  if(contientMot(m, MOTS_CHAUSSURE))  return TAILLES_CH.slice();
+  return TAILLES_VET.slice();
+}
+function taillesDe(f){
+  if(!f) return [];
+  if(Array.isArray(f.sizes)) return f.sizes.map(x=>String(x||'').trim()).filter(Boolean);
+  return taillesAuto(f.model);
+}
+// « S×5, M×5 » — la répartition d'une ligne, dans l'ordre de la liste du
+// modèle et pas dans celui où le client a tapé : deux commandes du même
+// modèle doivent se lire pareil.
+function detailTailles(ligne, ordre){
+  const s = ligne && ligne.sizes;
+  if(!s || typeof s !== 'object') return '';
+  const cles = (Array.isArray(ordre) && ordre.length ? ordre : Object.keys(s))
+    .filter(k => Number(s[k]) > 0);
+  Object.keys(s).forEach(k=>{ if(Number(s[k]) > 0 && cles.indexOf(k) < 0) cles.push(k); });
+  return cles.map(k => k + '×' + Number(s[k])).join(', ');
+}
+
 function photosItems(o){
   return (Array.isArray(o.items) ? o.items : []).map(it=>{
     const f = catalogItems.find(x => x.id === it.catalogId);
@@ -4260,7 +4349,13 @@ function openBrandSheet(nom){
   brandOrigine = nom || null;
   const trouvee = nom ? marquesDuCatalogue().find(m=>m.nom === nom) : null;
   brandDraft = trouvee
-    ? trouvee.modeles.map(g=>({ model:g.model, items:g.items.map(i=>Object.assign({}, i)) }))
+    // Les tailles vivent sur chaque coloris mais se règlent par modèle : on
+    // reprend celles du premier coloris qui en porte. `undefined` si aucun
+    // n'en porte, pour que le champ montre la devinette au lieu d'un vide.
+    ? trouvee.modeles.map(g=>({
+        model:g.model,
+        sizes:(g.items.find(i=>Array.isArray(i.sizes)) || {}).sizes,
+        items:g.items.map(i=>Object.assign({}, i)) }))
     : [{ model:'', items:[] }];   // une marque neuve s'ouvre sur un modèle vide
   $('#brandSheetTitle').textContent = nom || t('newBrand');
   $('#b_name').value = nom || '';
@@ -4480,6 +4575,15 @@ function renderBrandModels(){
       +     ' placeholder="' + escapeHtml(t('modelNamePh')) + '">'
       +   '<button type="button" class="mini-btn danger" data-del-model="' + gi + '" aria-label="' + escapeHtml(t('deleteModel')) + '">' + ICON_TRASH + '</button>'
       + '</div>'
+      // Les tailles du modèle. Le champ montre la DEVINETTE tant que personne
+      // n'a tranché — c'est ce qui évite une migration et ce qui fait que le
+      // catalogue déjà rempli marche sans y toucher. Le vider veut dire
+      // « aucune taille » : un sac ou une casquette n'en ont pas.
+      + '<div class="model-sizes">'
+      +   '<label>' + escapeHtml(t('sizesLabel')) + '</label>'
+      +   '<input type="text" value="' + escapeHtml(taillesDe({ sizes:g.sizes, model:g.model }).join(', ')) + '"'
+      +     ' data-sizes="' + gi + '" placeholder="' + escapeHtml(t('sizesPh')) + '">'
+      + '</div>'
       + '<div class="cat-grid">' + cases
       +   '<button type="button" class="cat-add" data-add="' + gi + '">'
       +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
@@ -4497,6 +4601,16 @@ $('#addModelBtn').addEventListener('click', ()=>{
   const champs = $('#brandModels').querySelectorAll('input[data-model]');
   const dernier = champs[champs.length - 1];
   if(dernier){ dernier.focus(); dernier.scrollIntoView({ block:'center', behavior:'smooth' }); }
+});
+
+// La liste des tailles se tape à la virgule : c'est un champ, pas une
+// interface à construire, et ça laisse passer « 39, 40, 41 » comme « S, M, L »
+// sans rien prévoir. Vide = aucune taille.
+$('#brandModels').addEventListener('input', (e)=>{
+  const ch = e.target.closest('input[data-sizes]');
+  if(!ch) return;
+  const g = brandDraft[Number(ch.dataset.sizes)];
+  if(g) g.sizes = ch.value.split(',').map(x=>x.trim()).filter(Boolean);
 });
 
 $('#brandModels').addEventListener('click', async (e)=>{
@@ -4622,8 +4736,15 @@ function litCatalogueImporte(txt){
           poids += d.length;
           details.push({ type:'image/jpeg', data:d });
         });
+      // `sizes` est FACULTATIF et se donne AU MODÈLE (`m.sizes`), comme il se
+      // règle au modèle dans l'app. Absent, la devinette s'applique — un
+      // fichier préparé avant les tailles s'importe donc sans rien changer.
+      const tailles = Array.isArray(m && m.sizes)
+        ? m.sizes.map(x=>String(x||'').trim()).filter(Boolean)
+        : taillesAuto(nomModele);
       lignes.push({ model: nomModele, name: String(c.name || '').trim(),
-                    thumb: String(c.thumb), photo, details, sep: !!c.sep });
+                    thumb: String(c.thumb), photo, details, sep: !!c.sep,
+                    sizes: tailles });
     });
   });
   return lignes.length ? { marque, lignes, coupes } : null;
@@ -4664,7 +4785,7 @@ $('#importInput').addEventListener('change', async (e)=>{
         const ref = db.collection('catalog').doc();
         lot.set(ref, {
           ownerId: currentUid, brand: marque, model: l.model, name: l.name,
-          thumb: l.thumb, thumbType: 'image/jpeg',
+          thumb: l.thumb, thumbType: 'image/jpeg', sizes: l.sizes || [],
           active: true, sep: l.sep, rang: rang++, createdAt: Date.now() + rang
         });
         lot.set(db.collection('catalogPhotos').doc(ref.id), {
@@ -4757,11 +4878,48 @@ function coupeTexte(ctx, texte, large){
 // dont la somme ne tombe pas sur `qty` est abandonné — mieux vaut une ligne
 // unique honnête que cinq lignes qui ne font pas le compte.
 const RE_QTE = /\s*[×x]\s*(\d+)\s*$/;
+// Les virgules DU DESSUS seulement : « Gris (S×5, M×5), Noire » fait deux
+// coloris, pas trois. Une chaîne qu'on relit doit se relire comme elle a été
+// écrite, sinon la fiche invente un coloris qui n'existe pas.
+function coupeVirgules(txt){
+  const out = []; let cur = '', prof = 0;
+  for(const ch of String(txt || '')){
+    if(ch === '(') prof++;
+    else if(ch === ')') prof = Math.max(0, prof - 1);
+    if(ch === ',' && !prof){ out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out.map(v=>v.trim()).filter(Boolean);
+}
+// L'ordre d'affichage des tailles d'une ligne : celui du modèle au catalogue
+// quand on le retrouve, sinon celui où elles ont été saisies.
+function taillesLigne(v){
+  const f = catalogItems.find(x => x.id === v.catalogId);
+  return f ? taillesDe(f) : null;
+}
+// LES LIGNES D'UNE DEMANDE OU D'UNE COMMANDE, côté vendeur. La chaîne
+// `product` les porte déjà — mais elle se RÉSUME au-delà de 180 caractères,
+// et avec les tailles elle les dépasse vite. Or c'est sur ces lignes qu'on
+// achète au stand : c'est le piège 25, une donnée qui n'est pas là où la
+// décision se prend ne sert à rien.
+function lignesItemsHtml(o){
+  const it = Array.isArray(o.items) ? o.items : [];
+  if(!it.length) return '';
+  return '<ul class="ord-items">' + it.map(v=>{
+    const d = detailTailles(v, taillesLigne(v));
+    return '<li><span>' + escapeHtml(v.name || v.model || '—')
+      + (d ? ' <i>' + escapeHtml(d) + '</i>' : '') + '</span>'
+      + '<b>\u00d7 ' + (Number(v.qty) || 1) + '</b></li>';
+  }).join('') + '</ul>';
+}
 function decoupeProduit(o){
   const it = Array.isArray(o.items) ? o.items : [];
   if(it.length) return {
     titre: [it[0].brand, it[0].model].filter(Boolean).join(' · '),
-    articles: it.map(v=>({ nom: String(v.name || '').trim() || '—', qte: Number(v.qty) || 1 }))
+    articles: it.map(v=>({ nom: String(v.name || '').trim() || '—',
+                           qte: Number(v.qty) || 1,
+                           tailles: detailTailles(v, taillesLigne(v)) }))
   };
   const p = String(o.product || '').trim();
   const qte = Number(o.qty) || 1;
@@ -4771,7 +4929,17 @@ function decoupeProduit(o){
   const reste = p.slice(i + 3).trim();
   const brut = { titre, articles: [{ nom: reste || '—', qte }] };
   if(/^\d/.test(reste)) return brut;            // le résumé, pas une liste
-  const lots = reste.split(',').map(v=>v.trim()).filter(Boolean).map(v=>{
+  const lots = coupeVirgules(reste).map(v=>{
+    // « Gris (S×5, M×5) » : la répartition par taille est entre parenthèses,
+    // et ses virgules ne sont PAS des séparateurs de coloris — d'où
+    // `coupeVirgules`, qui ne coupe qu'au niveau du dessus.
+    const par = v.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    if(par){
+      const det = par[2].trim();
+      const q = (det.match(/[×x]\s*(\d+)/g) || [])
+        .reduce((n,g)=>n + (parseInt(g.replace(/[^0-9]/g, ''), 10) || 0), 0);
+      return { nom: par[1].trim() || '—', qte: q || 1, tailles: det };
+    }
     const m = v.match(RE_QTE);
     return m ? { nom: v.replace(RE_QTE, '').trim() || '—', qte: Number(m[1]) || 1 }
              : { nom: v, qte: 1 };
@@ -4842,6 +5010,14 @@ async function fabriqueFiche(type, o, client, depuis){
   const artLignes = articles.map((a, i)=>
     coupeTexte(mes, a.nom, L - 4 - retrait - largQte[i] - 24));
   const nbArtLignes = artLignes.reduce((n, l)=>n + l.length, 0);
+  // La répartition par taille, sous le nom du coloris. Sur sa propre ligne et
+  // pas au bout du nom : c'est ce que le fournisseur lit en dernier avant de
+  // compter ses pièces, et un « Gris ×10 » sans répartition lui fait emballer
+  // dix fois la même taille.
+  mes.font = '400 26px ' + BODY_F;
+  const artTailles = articles.map(a =>
+    a.tailles ? coupeTexte(mes, a.tailles, L - 4 - retrait - 24) : []);
+  const nbTailles = artTailles.reduce((n, l)=>n + l.length, 0);
 
   // Deux colonnes jusqu'à quatre photos, trois au-delà : à cinq coloris et
   // deux colonnes la fiche devenait une tour qu'on fait défiler au lieu de la
@@ -4854,7 +5030,7 @@ async function fabriqueFiche(type, o, client, depuis){
   h += 28 + ETIQ_H + 20;                          // marque + pastille de la réf
   h += 52 + 26;                                   // le grand titre
   h += lignesTitre.length * 44 + 16;              // marque · modèle
-  h += nbArtLignes * 42 + 22;                     // les lignes d'articles
+  h += nbArtLignes * 42 + nbTailles * 32 + 22;    // les lignes d'articles
   h += 44;                                        // le total
   if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16 + (coupees > 0 ? 34 : 0);
   h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
@@ -4918,6 +5094,11 @@ async function fabriqueFiche(type, o, client, depuis){
         x.textAlign = 'left';
       }
       y += 42;
+    });
+    artTailles[i].forEach(ligne=>{
+      x.fillStyle = '#6b7075'; x.font = '400 26px ' + BODY_F;
+      x.fillText(ligne, FICHE_PAD + 4 + retrait, y - 4);
+      y += 32;
     });
   });
   y += 22;
@@ -5236,9 +5417,14 @@ $('#saveBrandBtn').addEventListener('click', async ()=>{
         // propre document, au même identifiant : Firestore renvoie des
         // documents entiers, donc tout ce qui reste ici est téléchargé par
         // chaque client à chaque ouverture de sa vitrine.
+        // On écrit la liste RÉSOLUE, devinette comprise : une fois
+        // enregistrée elle est explicite, donc renommer le modèle plus tard ne
+        // la fera pas changer dans le dos de personne.
+        const tailles = taillesDe({ sizes: g.sizes, model: nomModele });
         const donnees = {
           ownerId: currentUid, brand: nom, model: nomModele,
           name: (it.name || '').trim(),
+          sizes: tailles,
           thumb: it.thumb, thumbType: it.thumbType,
           active: it.active !== false,
           sep: !!it.sep,
@@ -6091,6 +6277,11 @@ function openSheet(order, presetClientId, prefill){
   $('#f_note').value = order ? order.note : (prefill ? (prefill.note||'') : '');
   // Sur une commande existante on montre ses photos ; sur une création depuis
   // une demande, celles que la demande transporte et qui vont être écrites.
+  // Les lignes avant les photos : on lit ce qu'on achète, puis on regarde à
+  // quoi ça ressemble.
+  const sesItems = order ? order : { items: pendingItems };
+  $('#sheetItems').innerHTML = lignesItemsHtml(sesItems);
+  $('#sheetItems').style.display = $('#sheetItems').innerHTML ? 'block' : 'none';
   const sesPhotos = order ? photosDe(order) : pendingPhotos;
   $('#sheetPhotosZone').style.display = sesPhotos.length ? 'block' : 'none';
   $('#sheetPhotos').innerHTML = sesPhotos.length
