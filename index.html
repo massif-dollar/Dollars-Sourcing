@@ -156,9 +156,12 @@
   body{
     background:var(--bg); color:var(--text); font-family:var(--font-body);
     font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
-    min-height:100vh; position:relative; overflow-x:hidden;
+    min-height:100vh; position:relative;
     transition:background .45s var(--ease-io), color .45s var(--ease-io);
   }
+  /* PAS d'`overflow-x` sur le body (piège 34) : il en fait un conteneur de
+     défilement, et la barre du haut, collante, défilait avec la page au lieu
+     de rester. C'est `html{overflow-x:clip}` qui rogne, et il suffit. */
   #bgfill{
     position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:var(--bg); transition:background .45s var(--ease-io);
@@ -204,14 +207,64 @@
 
   /* ===== Application pro ===== */
   #app{
+    --gutter:18px;
     position:relative; z-index:1; max-width:560px; margin:0 auto;
-    padding:calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 110px);
+    padding:0 var(--gutter) calc(env(safe-area-inset-bottom) + 170px);
   }
 
-  header{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:24px; }
-  header h1{ font-family:var(--font-display); font-size:26px; font-weight:700; margin:0; letter-spacing:-0.03em; line-height:1.1; }
-  header p{ margin:4px 0 0; font-size:12.5px; color:var(--text-faint); letter-spacing:-0.01em; }
+  /* ===== LA BARRE DU HAUT =====
+     Transparente tant que le grand titre est là ; elle prend sa matière de
+     verre et le titre de la vue quand il passe dessous — le geste des apps
+     d'Apple. Collante, donc aucun écouteur de défilement : c'est une
+     sentinelle observée qui lui dit quand changer d'aspect. */
+  .navbar{
+    position:sticky; top:0; z-index:26;
+    display:flex; align-items:center; gap:10px;
+    margin:0 calc(-1 * var(--gutter));
+    padding:calc(env(safe-area-inset-top) + 10px) var(--gutter) 8px;
+    border-bottom:0.5px solid transparent;
+    transition:background .3s var(--ease-io), border-color .3s var(--ease-io), backdrop-filter .3s var(--ease-io);
+  }
+  .navbar.stuck{
+    background:var(--mat-thick); border-bottom-color:var(--hairline);
+    backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
+  }
+  .navbar-mark{
+    flex:none; width:30px; height:30px; border-radius:10px; display:grid; place-items:center;
+    font-family:var(--font-display); font-weight:800; font-size:15px; color:var(--on-accent);
+    background:linear-gradient(155deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    box-shadow:0 4px 12px var(--accent-soft);
+  }
+  .navbar-title{
+    flex:1; min-width:0; text-align:center; font-family:var(--font-display); font-weight:700;
+    font-size:16px; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    opacity:0; transform:translateY(6px);
+    transition:opacity .25s var(--ease-io), transform .3s var(--ease-out);
+  }
+  .navbar.stuck .navbar-title{ opacity:1; transform:none; }
   .header-actions{ display:flex; gap:8px; flex-shrink:0; }
+  /* Le rond à ton initiale : c'est la porte des Réglages, comme le profil en
+     haut à droite des apps d'Apple. */
+  .avatar-btn{
+    width:36px; height:36px; border-radius:50%; flex:none; cursor:pointer; padding:0;
+    display:grid; place-items:center; border:0.5px solid var(--hairline-strong);
+    background:linear-gradient(160deg, var(--fill-2), var(--fill)); color:var(--text);
+    font-family:var(--font-display); font-weight:700; font-size:14px; letter-spacing:-0.02em;
+    box-shadow:var(--raise); -webkit-user-select:none; user-select:none;
+    transition:transform .4s var(--spring);
+  }
+  .avatar-btn:active{ transform:scale(.92); }
+  .avatar-btn.big{ width:48px; height:48px; font-size:19px; }
+
+  /* Le grand titre de la vue, et la ligne qui dit où on en est. */
+  .bigtitle{ margin:6px 0 16px; }
+  .bigtitle h1{
+    font-family:var(--font-display); font-size:32px; font-weight:700; margin:0;
+    letter-spacing:-0.035em; line-height:1.08;
+  }
+  .bigtitle p{ margin:4px 0 0; font-size:13.5px; color:var(--text-faint); letter-spacing:-0.01em; min-height:1.2em; }
+  .bigtitle p b{ color:var(--accent); font-weight:600; }
+  #titleSentinel{ height:1px; margin-top:-1px; }
 
   .icon-btn{
     background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-muted);
@@ -240,52 +293,107 @@
   .lang-wrap{ position:relative; }
   .lang-btn{ font-family:var(--font-display); font-weight:700; font-size:11.5px; }
   .lang-btn span{ position:relative; z-index:1; }
-  .lang-menu{
-    position:absolute; top:44px; right:0; background:var(--mat-thick);
-    border:0.5px solid var(--hairline); border-radius:14px; box-shadow:var(--raise-lg);
-    overflow:hidden; z-index:40; min-width:150px; display:none;
-    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
-    animation:popIn .2s var(--ease-out);
-  }
-  .lang-menu.open{ display:block; }
-  .lang-menu button{
-    display:block; width:100%; text-align:left; padding:11px 15px; background:none; border:none;
-    font-family:var(--font-body); font-size:14px; color:var(--text); cursor:pointer; letter-spacing:-0.01em;
-  }
-  .lang-menu button:hover{ background:var(--fill); }
-  .lang-menu button.active{ font-weight:700; color:var(--accent); }
   @keyframes popIn{ from{ opacity:0; transform:scale(.96) translateY(-4px); } to{ opacity:1; transform:none; } }
 
-  /* --- Navigation --- */
-  .view-switch{ display:flex; gap:8px; margin-bottom:22px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
-  .view-switch::-webkit-scrollbar{ display:none; }
-  .view-switch button{
-    flex-shrink:0; padding:10px 15px 10px 13px; border-radius:13px;
-    border:0.5px solid var(--hairline); background:var(--fill); color:var(--text-faint);
-    font-family:var(--font-body); font-weight:600; font-size:13.5px; cursor:pointer; white-space:nowrap;
-    display:flex; align-items:center; gap:7px; letter-spacing:-0.015em;
-    position:relative; overflow:hidden; -webkit-user-select:none; user-select:none;
-    box-shadow:var(--raise);
-    backdrop-filter:blur(18px) saturate(150%); -webkit-backdrop-filter:blur(18px) saturate(150%);
-    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), color .25s ease,
-               background .45s var(--ease-io), border-color .45s var(--ease-io);
+  /* ===== LES VUES, SOUS LE POUCE =====
+     Six vues dans une capsule de verre. L'active s'élargit et montre son nom,
+     les autres gardent leur icône : les six tiennent sur l'iPhone le plus
+     étroit, et on sait toujours où on est. L'élargissement suit un ressort :
+     c'est la barre qui se réorganise, pas un saut. */
+  .tabbar{
+    position:fixed; z-index:25; left:50%; bottom:calc(env(safe-area-inset-bottom) + 10px);
+    width:min(calc(100% - 24px), 520px); transform:translateX(-50%);
+    display:none; gap:2px; padding:5px; border-radius:26px;
+    background:var(--mat-thick); border:0.5px solid var(--hairline-strong); box-shadow:var(--raise-lg);
+    backdrop-filter:blur(26px) saturate(190%); -webkit-backdrop-filter:blur(26px) saturate(190%);
+    transition:transform .5s var(--spring), background .45s var(--ease-io), border-color .45s var(--ease-io);
   }
-  .view-switch button.is-pressed{ transform:scale(.96); box-shadow:var(--press); }
-  .view-switch button.active{ background:var(--mat-thick); color:var(--text); border-color:var(--accent); }
-  .view-switch button .ripple{
+  body.in-app .tabbar{ display:flex; }
+  /* Clavier ouvert : la barre et les boutons flottants s'effacent, sinon ils
+     finiraient posés sur le champ qu'on remplit. */
+  body.clavier .tabbar{ transform:translate(-50%, calc(100% + 30px)); }
+  body.clavier .fab{ transform:translateY(calc(100% + 120px)); }
+  .tabbar button{
+    flex:1 1 0; min-width:0; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; gap:0;
+    height:48px; padding:0 6px; border:0; border-radius:21px; cursor:pointer;
+    background:transparent; color:var(--text-faint);
+    font-family:var(--font-body); font-size:11.5px; font-weight:600; letter-spacing:-0.015em;
+    -webkit-user-select:none; user-select:none;
+    transition:flex-grow .5s var(--spring), background .3s var(--ease-io), color .3s var(--ease-io), transform .4s var(--spring);
+  }
+  /* 3,2 et pas moins : la part se calcule APRÈS les marges intérieures, et
+     à 2,6 il manquait 7 px à « Commandes » sur un iPhone de 390 px. */
+  .tabbar button.active{ flex-grow:3.2; background:var(--accent-soft); color:var(--accent); gap:6px; }
+  /* Sur la vue Demandes, le compte est déjà dans le sous-titre : la pastille
+     posée sur l'icône viendrait mordre le libellé. */
+  .tabbar button.active .nav-badge{ display:none !important; }
+  .tabbar button.is-pressed{ transform:scale(.92); }
+  .tabbar .nav-icon{ width:23px; height:23px; flex:none; position:relative; display:inline-flex; }
+  .tabbar .nav-icon svg{ width:100%; height:100%; display:block; }
+  .tabbar .nav-l{
+    max-width:0; opacity:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    transition:max-width .45s var(--spring), opacity .25s var(--ease-io);
+  }
+  .tabbar button.active .nav-l{ max-width:110px; opacity:1; }
+  .tabbar button .ripple{
     position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
     background:radial-gradient(circle, var(--ripple) 0%, transparent 66%);
     transform:translate(-50%,-50%) scale(0);
     animation:rippleOut .6s var(--ease-out) forwards;
   }
-  .nav-icon{ width:15px; height:15px; display:inline-flex; flex-shrink:0; position:relative; z-index:1; }
-  .nav-icon svg{ width:100%; height:100%; display:block; }
-  .view-switch button > span:not(.nav-icon):not(.ripple){ position:relative; z-index:1; }
   .nav-badge{
-    background:var(--accent); color:var(--on-accent); font-size:10.5px; font-weight:700;
-    min-width:18px; height:18px; padding:0 5px; border-radius:100px;
-    display:inline-flex; align-items:center; justify-content:center; position:relative; z-index:1;
+    position:absolute; top:-5px; right:-9px;
+    background:var(--accent); color:var(--on-accent); font-size:10px; font-weight:700;
+    min-width:17px; height:17px; padding:0 4.5px; border-radius:100px;
+    display:inline-flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 2px var(--bg-elevated); font-variant-numeric:tabular-nums;
   }
+
+  /* ===== LES RÉGLAGES =====
+     Des listes groupées, comme dans Réglages d'iOS : on lit une phrase par
+     ligne au lieu de deviner huit icônes. Le rouge reste au danger. */
+  .set-sheet{ padding-top:22px; }
+  .set-who{ display:flex; align-items:center; gap:13px; margin:2px 44px 20px 2px; }
+  .set-who b{ display:block; font-family:var(--font-display); font-size:17px; letter-spacing:-0.02em; }
+  .set-who span:not(.avatar-btn):not([id^="menuInitial"]){ display:block; font-size:12.5px; color:var(--text-faint); margin-top:1px; word-break:break-all; }
+  .set-group{
+    margin:18px 4px 7px; font-size:11.5px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--text-faint);
+  }
+  .set-list{
+    border-radius:16px; overflow:hidden; background:var(--fill);
+    border:0.5px solid var(--hairline);
+  }
+  .set-row{
+    width:100%; display:flex; align-items:center; gap:12px; min-height:50px;
+    padding:9px 14px; border:0; background:transparent; color:var(--text); cursor:pointer;
+    font-family:var(--font-body); font-size:15px; letter-spacing:-0.015em; text-align:left;
+    position:relative; transition:background .2s var(--ease-io);
+  }
+  .set-row + .set-row{ box-shadow:inset 0 0.5px 0 var(--hairline); }
+  .set-row:not(.static):active{ background:var(--fill-2); }
+  .set-row:disabled{ opacity:.5; }
+  .set-ic{
+    flex:none; width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+    background:var(--accent-soft); color:var(--accent);
+  }
+  .set-ic svg{ width:17px; height:17px; }
+  .set-row.danger{ color:var(--danger); }
+  .set-row.danger .set-ic{ background:rgba(224,41,60,.12); color:var(--danger); }
+  .set-l{ flex:1; min-width:0; }
+  .set-v{ font-size:14px; color:var(--text-faint); }
+  .set-chev{ width:15px; height:15px; flex:none; color:var(--text-ghost); }
+  .set-foot{ text-align:center; margin:18px 0 4px; font-size:11px; color:var(--text-ghost); font-variant-numeric:tabular-nums; }
+  /* Un sélecteur à deux cases, pas un menu : la langue se voit et se change
+     d'un seul geste. */
+  .seg{ display:flex; padding:2px; border-radius:10px; background:var(--fill-2); }
+  .seg button{
+    border:0; background:transparent; color:var(--text-muted); cursor:pointer;
+    padding:6px 13px; border-radius:8px; font-family:var(--font-display); font-weight:700; font-size:12.5px;
+    transition:background .25s var(--ease-io), color .25s var(--ease-io);
+  }
+  .seg button.active{ background:var(--bg-elevated); color:var(--text); box-shadow:var(--raise); }
 
   /* --- Chiffres clés --- */
   .kpis{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
@@ -304,6 +412,113 @@
   .kpi.money .value{ color:var(--accent); }
   .kpi.pending.active .value{ animation:pulseAccent 2.4s var(--ease-io) infinite; }
   @keyframes pulseAccent{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+
+  /* ===== LES CHIFFRES CLÉS, EN UNE BARRE =====
+     Quatre boîtes du poids d'une commande, c'étaient quatre choses de plus à
+     lire avant la première carte. Une barre coupée en quatre dit la même
+     chose en une ligne ; en mode discret, les deux cases d'argent
+     disparaissent et les deux autres prennent la place. */
+  #kpisMain{
+    display:flex; gap:0; padding:3px; margin-bottom:14px; border-radius:18px;
+    background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  #kpisMain .kpi{
+    flex:1 1 0; min-width:0; position:relative; display:flex; flex-direction:column-reverse;
+    align-items:center; text-align:center; padding:9px 4px 8px; border-radius:14px;
+    background:none; border:0; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+  #kpisMain .kpi + .kpi::before{
+    content:''; position:absolute; left:0; top:24%; bottom:24%; width:0.5px; background:var(--hairline-strong);
+  }
+  #kpisMain .kpi .value{ font-size:18px; margin-top:0; white-space:nowrap; line-height:1.2; }
+  #kpisMain .kpi .label{
+    font-size:10.5px; margin-top:1px; max-width:100%;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* ===== À FAIRE ===== */
+  .todo{ margin-bottom:14px; }
+  .todo-card{
+    border-radius:18px; overflow:hidden;
+    background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+  }
+  .todo-head{ display:flex; align-items:center; gap:8px; padding:12px 14px 4px; }
+  .todo-head b{ font-family:var(--font-display); font-size:15.5px; font-weight:700; letter-spacing:-0.02em; }
+  .todo-n{
+    min-width:20px; height:20px; padding:0 6px; border-radius:100px; display:inline-grid; place-items:center;
+    background:var(--accent); color:var(--on-accent); font-size:11px; font-weight:700; font-variant-numeric:tabular-nums;
+  }
+  .todo-item{
+    display:flex; align-items:center; gap:11px; padding:10px 12px 10px 14px; cursor:pointer;
+    position:relative; -webkit-user-select:none; user-select:none; transition:background .2s var(--ease-io);
+  }
+  .todo-item:active{ background:var(--fill); }
+  /* Le trait entre deux lignes part du texte, pas du bord : c'est ce qui fait
+     lire une liste d'iOS plutôt qu'un tableau. */
+  .todo-item + .todo-item::before{
+    content:''; position:absolute; top:0; right:0; left:57px; height:0.5px; background:var(--hairline);
+  }
+  .todo-ic{
+    flex:none; width:32px; height:32px; border-radius:10px; display:grid; place-items:center;
+    background:var(--accent-soft); color:var(--accent);
+  }
+  .todo-ic svg{ width:17px; height:17px; }
+  .todo-item.warn .todo-ic{ background:var(--warn-soft); color:var(--warn); }
+  .todo-t{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .todo-t b{
+    font-size:14px; font-weight:600; letter-spacing:-0.015em; line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .todo-t small{
+    font-size:12px; color:var(--text-faint); margin-top:1px; letter-spacing:-0.005em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .todo-item.warn .todo-t b{ color:var(--warn); }
+  .todo-wa{
+    flex:none; display:inline-flex; align-items:center; gap:5px; padding:7px 11px; border-radius:100px;
+    background:var(--accent); color:var(--on-accent); text-decoration:none;
+    font-size:12.5px; font-weight:700; letter-spacing:-0.01em; box-shadow:0 4px 12px var(--accent-soft);
+    transition:transform .35s var(--spring);
+  }
+  .todo-wa:active{ transform:scale(.93); }
+  .todo-wa svg{ width:14px; height:14px; }
+  .todo-go{ flex:none; color:var(--text-ghost); display:grid; }
+  .todo-go svg{ width:15px; height:15px; }
+  .todo-more{
+    width:100%; padding:11px; border:0; border-top:0.5px solid var(--hairline); background:transparent;
+    color:var(--accent); font-family:var(--font-body); font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .todo-ok{
+    display:flex; align-items:center; gap:9px; padding:11px 14px; border-radius:16px;
+    background:var(--fill); border:0.5px solid var(--hairline);
+    color:var(--text-muted); font-size:13.5px; font-weight:500; letter-spacing:-0.01em;
+  }
+  .todo-ok svg{ width:18px; height:18px; color:var(--accent); flex:none; }
+
+  /* La recherche et le rangement par client, sur une seule ligne. */
+  .search-row{ display:flex; gap:8px; align-items:stretch; margin-bottom:10px; }
+  .search-row .search{ flex:1; min-width:0; margin:0; }
+  .search-row .group-btn{ width:auto; flex:none; margin:0; padding:0 13px; border-radius:14px; }
+  /* Une loupe dans chaque champ de recherche : c'est elle qui dit « ceci
+     cherche » avant qu'on lise le texte gris. Masque CSS, donc elle prend la
+     couleur du thème. */
+  .search::before{
+    content:''; position:absolute; left:13px; top:50%; width:16px; height:16px; margin-top:-8px;
+    background:var(--text-faint); pointer-events:none;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m15.5 15.5 5 5'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m15.5 15.5 5 5'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  .search input{ padding-left:37px !important; }
+  /* Le compte d'une puce de statut ; une puce vide s'efface un peu. */
+  .tab-n{
+    display:inline-block; margin-left:6px; min-width:17px; padding:0 5px; border-radius:100px;
+    background:var(--fill-2); font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; text-align:center;
+  }
+  .tab.active .tab-n{ background:rgba(255,255,255,.26); }
+  html[data-theme="dark"] .tab.active .tab-n{ background:rgba(0,0,0,.16); }
+  .tab.vide:not(.active){ opacity:.55; }
 
   /* --- Mode discret : montrer l'app sans montrer ce qu'on gagne --- */
   /* Tout ce qui parle d'argent passe par ces sélecteurs : les montants ajoutés
@@ -489,6 +704,45 @@
     white-space:nowrap; flex-shrink:0; letter-spacing:-0.005em;
   }
   .card-mid{ font-size:13px; color:var(--text-faint); margin-top:4px; letter-spacing:-0.005em; }
+  /* La carte de commande : la vignette à gauche, l'identité à droite. */
+  .order-card .card-top{ align-items:flex-start; justify-content:flex-start; gap:11px; }
+  .card-id{ flex:1; min-width:0; }
+  .card-line{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .card-line .client{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-id .card-mid{
+    margin-top:2px; font-size:13.5px; font-weight:500; color:var(--text-muted);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .card-sub{
+    margin-top:1px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cv{
+    flex:none; width:46px; height:46px; border-radius:13px; overflow:hidden; position:relative;
+    background:var(--fill-2); border:0.5px solid var(--hairline);
+  }
+  .cv img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cv i{
+    position:absolute; right:3px; bottom:3px; font-style:normal; font-size:9.5px; font-weight:700;
+    padding:1px 4px; border-radius:6px; background:rgba(0,0,0,.62); color:#fff; font-variant-numeric:tabular-nums;
+  }
+  /* Sans photo, les initiales du client : une pile de cartes grises ne se
+     distingue pas, une pile d'initiales se lit d'un coup d'œil. */
+  .cv.mono{
+    display:grid; place-items:center; border-color:transparent;
+    font-family:var(--font-display); font-weight:700; font-size:15px; letter-spacing:-0.02em;
+    color:var(--accent); background:var(--accent-soft);
+  }
+  .cv.sm{ width:30px; height:30px; border-radius:50%; font-size:11.5px; }
+  .cv.sup{ border-radius:9px; color:var(--text-muted); background:var(--fill-2); }
+  .who{ display:flex; align-items:center; gap:9px; min-width:0; }
+  .who .client{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-bottom .date{ display:flex; align-items:center; flex-wrap:wrap; row-gap:4px; }
+  .hint{
+    margin-left:8px; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:100px;
+    background:var(--fill-2); color:var(--text-muted); letter-spacing:-0.005em; white-space:nowrap;
+  }
+  .hint.acc{ background:var(--accent-soft); color:var(--accent); }
   .card-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:9px; }
   .card-bottom .date{ font-size:12px; color:var(--text-ghost); }
   .margin{ font-family:var(--font-display); font-weight:700; font-size:15px; letter-spacing:-0.025em; font-variant-numeric:tabular-nums; }
@@ -592,7 +846,9 @@
      le retire et c'est le PRODUIT qui prend la première ligne. La carte reste
      la même, seule sa hiérarchie change. */
   .cf-body .order-card .client{ display:none; }
-  .cf-body .order-card .card-top{ justify-content:flex-end; }
+  .cf-body .card-id{ position:relative; }
+  .cf-body .card-line{ position:absolute; top:0; right:0; }
+  .cf-body .card-id .card-mid{ padding-right:100px; }
   .cf-body .order-card .card-mid{
     margin-top:0; font-style:normal; font-size:14px; font-weight:600;
     color:var(--text); letter-spacing:-0.012em;
@@ -1143,8 +1399,10 @@
 
   /* --- Boutons flottants --- */
   .fab{
-    position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom) + 24px);
-    width:58px; height:58px; border-radius:19px; border:none; color:var(--on-accent);
+    /* Au-dessus de la barre d'onglets : posés dessus, ils cacheraient la
+       vue qu'on veut ouvrir. */
+    position:fixed; right:18px; bottom:calc(env(safe-area-inset-bottom) + 80px);
+    width:56px; height:56px; border-radius:19px; border:none; color:var(--on-accent);
     font-size:27px; font-weight:600; cursor:pointer; z-index:20;
     background:linear-gradient(162deg, var(--accent-bright), var(--accent) 72%);
     box-shadow:var(--raise-lg), 0 10px 28px var(--accent-soft);
@@ -1163,12 +1421,6 @@
     background:radial-gradient(circle, rgba(255,255,255,.4) 0%, transparent 66%);
     transform:translate(-50%,-50%) scale(0);
     animation:rippleOut .6s var(--ease-out) forwards;
-  }
-  .fab-assistant{
-    right:90px;
-    background:linear-gradient(162deg, var(--fill-2), var(--fill));
-    border:0.5px solid var(--hairline-strong); color:var(--text);
-    box-shadow:var(--raise-lg);
   }
 
   /* --- Feuilles modales --- */
@@ -1335,7 +1587,23 @@
     letter-spacing:-0.01em; font-variant-numeric:tabular-nums;
   }
 
-  .status-stepper{ display:flex; align-items:center; justify-content:center; gap:15px; margin:18px 0; }
+  .status-stepper{ display:flex; align-items:center; justify-content:center; gap:15px; margin:6px 0 16px; }
+  /* La frise des six étapes, en tête de fiche. Chaque point se touche. */
+  #stepperZone{ margin:2px 0 6px; padding:14px 14px 2px; border-radius:16px; background:var(--fill); border:0.5px solid var(--hairline); }
+  .step-track{ position:relative; display:flex; justify-content:space-between; align-items:center; height:24px; margin:0 4px; }
+  .st-rail{ position:absolute; left:6px; right:6px; top:50%; height:3px; margin-top:-1.5px; border-radius:3px; background:var(--fill-2); }
+  .st-fill{ position:absolute; left:0; top:0; bottom:0; border-radius:3px; background:linear-gradient(90deg, var(--accent-deep), var(--accent-bright)); transition:width .5s var(--ease-out); }
+  .st-dot{
+    position:relative; z-index:1; width:14px; height:14px; padding:0; border-radius:50%; cursor:pointer;
+    border:1.5px solid var(--hairline-strong); background:var(--bg-elevated);
+    transition:transform .35s var(--spring), background .25s var(--ease-io), border-color .25s var(--ease-io);
+  }
+  /* Une zone de toucher plus grande que le point : 14 px ne se visent pas au pouce. */
+  .st-dot::after{ content:''; position:absolute; inset:-11px; }
+  .st-dot.done{ background:var(--accent); border-color:var(--accent); }
+  .st-dot.cur{ background:var(--accent); border-color:var(--accent); transform:scale(1.35); box-shadow:0 0 0 4px var(--accent-soft); }
+  .st-dot:active{ transform:scale(1.2); }
+  .step-track.annule{ opacity:.35; pointer-events:none; }
   .stepper-btn{
     width:38px; height:38px; border-radius:12px; border:0.5px solid var(--hairline);
     background:var(--fill); color:var(--text); font-size:16px; cursor:pointer;
@@ -1847,28 +2115,10 @@
      espacements et les tailles — elle ne masque aucune fonction, tout reste
      atteignable au même endroit. */
   @media (max-width:640px){
-    #app{
-      padding-left:15px; padding-right:15px;
-      padding-top:calc(env(safe-area-inset-top) + 16px);
-    }
-    header{
-      flex-direction:column; align-items:stretch; gap:10px; margin-bottom:14px;
-    }
-    header h1{ font-size:21px; }
-    /* La baseline coûte une ligne entière et ne dit rien qu'on ne sache déjà. */
-    header p{ display:none; }
-    /* Les sept actions gardent leur place, en rangée souple plutôt qu'en grille
-       étirée : elles passent de 42 px de haut à 34, sans rien perdre. */
-    .header-actions{ display:flex; gap:7px; width:100%; }
-    .header-actions .icon-btn{ flex:1; width:auto; height:34px; border-radius:11px; }
-    .header-actions .icon-btn svg{ width:17px; height:17px; }
-    .lang-wrap{ flex:1; display:flex; }
-    .lang-wrap .icon-btn{ width:100%; }
-    .lang-menu{ right:auto; left:0; }
-
-    .view-switch{ gap:7px; margin-bottom:13px; }
-    .view-switch button{ padding:8px 12px 8px 10px; font-size:12.5px; border-radius:11px; }
-    .nav-icon{ width:14px; height:14px; }
+    #app{ --gutter:15px; }
+    .bigtitle{ margin:2px 0 13px; }
+    .bigtitle h1{ font-size:29px; }
+    .header-actions .icon-btn{ width:36px; height:36px; border-radius:50%; }
 
     /* Les quatre chiffres du haut passent en ligne — libellé à gauche, montant à
        droite — au lieu de quatre demi-cartes empilées : deux rangées basses au
@@ -1877,9 +2127,12 @@
     .kpis{ gap:8px; margin-bottom:13px; }
     .kpi{ padding:9px 12px; border-radius:13px; }
     .kpi .value{ font-size:18px; white-space:nowrap; }
-    #kpisMain .kpi{ display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
-    #kpisMain .kpi .label{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    #kpisMain .kpi .value{ margin-top:0; }
+    #kpisMain .kpi{ padding:8px 3px 7px; }
+    #kpisMain .kpi .value{ font-size:17px; }
+    /* Sur téléphone, « Ranger par client » n'est plus qu'une icône : son nom
+       reste en infobulle et pour les lecteurs d'écran. */
+    .search-row .group-btn{ width:46px; padding:0; }
+    .search-row .group-btn span{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
     .search{ margin-bottom:9px; }
     .search input{ padding:10px 14px; border-radius:13px; }
@@ -1898,14 +2151,12 @@
     .sheet h2{ font-size:18px; margin-bottom:14px; }
     .field{ margin-bottom:11px; }
     .field label{ margin-bottom:5px; }
-    .fab{ width:56px; height:56px; }
-    .fab-assistant{ right:86px; }
+    .fab{ width:54px; height:54px; right:15px; }
   }
-  /* Écrans très étroits : les actions passent sur deux rangées */
   @media (max-width:380px){
-    .header-actions{ flex-wrap:wrap; }
-    .header-actions .icon-btn{ flex:1 1 calc(25% - 6px); }
     .row2{ grid-template-columns:1fr; }
+    .tabbar button{ font-size:10.5px; letter-spacing:-0.025em; padding:0 4px; }
+    .tabbar button.active{ flex-grow:4; gap:4px; }
   }
 
   @media (min-width:700px){
@@ -1978,51 +2229,33 @@
   </div>
 </div>
 <div id="app">
-  <header>
-    <div>
-      <h1>DOLLAR$ SOURCING</h1>
-      <p data-i18n="tagline">Sourcing &amp; revente</p>
-    </div>
+  <!-- LA BARRE DU HAUT. Elle portait huit boutons de même poids — export,
+       corbeille, réinitialiser et déconnexion au rang du thème — alors qu'on
+       ne se sert presque que du mode discret. Il reste lui, et un rond à ton
+       initiale qui ouvre les Réglages : tout le reste y est rangé, rien n'a
+       disparu. Elle colle en haut et prend le titre de la vue quand le grand
+       titre passe dessous, comme dans les apps d'Apple. -->
+  <div class="navbar" id="navbar">
+    <span class="navbar-mark" aria-hidden="true">$</span>
+    <span class="navbar-title" id="navbarTitle"></span>
     <div class="header-actions">
-      <div class="lang-wrap">
-        <button class="icon-btn lang-btn" id="langBtn" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
-        <div class="lang-menu" id="langMenu">
-          <button type="button" data-lang="fr">Français</button>
-          <button type="button" data-lang="en">English</button>
-        </div>
-      </div>
-      <button class="icon-btn" id="exportBtn" data-i18n-title="exportTitle" title="Exporter mes données">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 19h16"/></svg>
-      </button>
-      <button class="icon-btn" id="trashBtn" data-i18n-title="trashTitle" title="Corbeille">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg>
-      </button>
-      <button class="icon-btn" id="accessBtn" data-i18n-title="accessTitle" title="Accès" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M18 8v6M15 11h6"/></svg>
+      <!-- L'assistant vivait en bouton flottant, à côté du « + » : deux
+           boutons posés sur le bas de chaque carte. Il monte ici ; il ne reste
+           en bas que le geste le plus fréquent, ajouter. -->
+      <button class="icon-btn" id="assistantFab" data-i18n-title="assistantFabTitle" title="Assistant IA" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
       </button>
       <button class="icon-btn" id="discreetBtn" data-i18n-title="discreetTitle" title="Masquer les montants">
         <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>
-      <button class="icon-btn" id="themeToggle" data-i18n-title="themeTitle" title="Thème">
-        <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
-      </button>
-      <button class="icon-btn" id="resetBtn" data-i18n-title="resetTitle" title="Réinitialiser">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v5h-5"/></svg>
-      </button>
-      <button class="icon-btn" id="logoutBtn" data-i18n-title="logoutTitle" title="Se déconnecter">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5"/><path d="M20 12H9"/><path d="M12 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h6"/></svg>
-      </button>
+      <button class="avatar-btn" id="menuBtn" data-i18n-title="menuTitle" title="Réglages"><span id="menuInitial">$</span></button>
     </div>
-  </header>
-
-  <div class="view-switch">
-    <button id="viewBtnCommandes" class="active"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6"/></svg></span><span data-i18n="navOrders">Commandes</span></button>
-    <button id="viewBtnClients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><span data-i18n="navClients">Clients</span></button>
-    <button id="viewBtnSuppliers"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9l5 3V9l5 3V9l4 2.5V21"/><path d="M3 21h18"/></svg></span><span data-i18n="navSuppliers">Fournisseurs</span></button>
-    <button id="viewBtnCatalogue"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg></span><span data-i18n="navCatalogue">Catalogue</span></button>
-    <button id="viewBtnStats"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span data-i18n="navStats">Stats</span></button>
-    <button id="viewBtnRequests"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-2 9H6L4 4Z"/><path d="M4 4 3 2M20 4l1-2"/><path d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg></span><span data-i18n="navRequests">Demandes</span><span class="nav-badge" id="requestsBadge" style="display:none;">0</span></button>
   </div>
+  <header class="bigtitle">
+    <h1 id="viewTitle">Commandes</h1>
+    <p id="viewSub"></p>
+  </header>
+  <div id="titleSentinel" aria-hidden="true"></div>
 
   <div id="commandesView">
     <div class="welcome" id="guestWelcome" style="display:none;">
@@ -2048,20 +2281,27 @@
         </div>
       </div>
     </div>
+    <!-- CE QU'IL Y A À FAIRE. Calculé depuis les commandes et les demandes,
+         jamais stocké : un devis sans réponse, une commande payée à passer, un
+         solde à encaisser. Chaque ligne mène au bon endroit, et la relance
+         WhatsApp part déjà écrite. -->
+    <section class="todo" id="todo" style="display:none;"></section>
     <div class="kpis" id="kpisMain">
       <div class="kpi reveal"><div class="label" data-i18n="kpiActive">En cours</div><div class="value" id="kpiActive">0</div></div>
       <div class="kpi money reveal private"><div class="label" data-i18n="kpiMargin">Marge totale</div><div class="value" id="kpiMargin">0€</div></div>
       <div class="kpi money pending reveal private" id="kpiPendingCard"><div class="label" data-i18n="kpiPending">À encaisser</div><div class="value" id="kpiPending">0€</div></div>
       <div class="kpi reveal"><div class="label" data-i18n="kpiDelivered">Livrées</div><div class="value" id="kpiDelivered">0</div></div>
     </div>
-    <div class="search" id="ordersSearch">
-      <input type="text" id="searchInput" data-i18n-placeholder="searchOrders" placeholder="Rechercher un client ou un produit...">
+    <div class="search-row">
+      <div class="search" id="ordersSearch">
+        <input type="text" id="searchInput" data-i18n-placeholder="searchOrders" placeholder="Rechercher un client ou un produit...">
+      </div>
+      <button type="button" class="group-btn" id="groupBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.6"/><path d="M3.5 17c0-2.5 2-4.2 4.5-4.2s4.5 1.7 4.5 4.2"/><path d="M15 7h6M15 11.5h6M15 16h4"/></svg>
+        <span id="groupBtnLabel" data-i18n="groupByClient">Ranger par client</span>
+      </button>
     </div>
     <div class="tabs" id="tabs"></div>
-    <button type="button" class="group-btn" id="groupBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h4M3 12h4M3 17.5h4"/><path d="M10.5 6.5H21M10.5 12H21M10.5 17.5H21"/></svg>
-      <span id="groupBtnLabel" data-i18n="groupByClient">Ranger par client</span>
-    </button>
     <div class="list" id="list"></div>
   </div>
 
@@ -2130,10 +2370,86 @@
   <div class="build-stamp" id="buildStamp"></div>
 </div>
 
-<button class="fab fab-assistant" id="assistantFab" data-i18n-title="assistantFabTitle" title="Assistant IA">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
-</button>
+<!-- LES SIX VUES, SOUS LE POUCE. Elles étaient dans une rangée en haut qui
+     débordait de l'écran : sur un iPhone, « Demandes » — la seule vue qui
+     attend un geste de toi, avec sa pastille — était HORS de l'écran. Ici les
+     six tiennent, l'active montre son nom, les autres leur icône.
+     Hors de #app : un transform sur un ancêtre ferait décrocher un fixed. -->
+<nav class="tabbar" id="tabBar">
+  <button id="viewBtnCommandes" data-view="commandes" class="active"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6"/></svg></span><span class="nav-l" data-i18n="navOrders">Commandes</span></button>
+  <button id="viewBtnRequests" data-view="requests"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-2 9H6L4 4Z"/><path d="M4 4 3 2M20 4l1-2"/><path d="M9 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg><span class="nav-badge" id="requestsBadge" style="display:none;">0</span></span><span class="nav-l" data-i18n="navRequests">Demandes</span></button>
+  <button id="viewBtnClients" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><span class="nav-l" data-i18n="navClients">Clients</span></button>
+  <button id="viewBtnSuppliers" data-view="suppliers"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9l5 3V9l5 3V9l4 2.5V21"/><path d="M3 21h18"/></svg></span><span class="nav-l" data-i18n="navSuppliers">Fournisseurs</span></button>
+  <button id="viewBtnCatalogue" data-view="catalogue"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg></span><span class="nav-l" data-i18n="navCatalogue">Catalogue</span></button>
+  <button id="viewBtnStats" data-view="stats"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span class="nav-l" data-i18n="navStats">Stats</span></button>
+</nav>
+
 <button class="fab" id="fabAdd" data-i18n-title="addTitle" title="Ajouter">+</button>
+
+<!-- LES RÉGLAGES. Tout ce qui vivait dans l'en-tête et dont on ne se sert
+     qu'une fois de temps en temps. Les boutons gardent leurs identifiants :
+     chacun fait exactement ce qu'il faisait, il a seulement changé de place. -->
+<div class="overlay" id="menuOverlay">
+  <div class="sheet set-sheet">
+    <button class="icon-btn close-x" id="closeMenu" aria-label="Fermer">✕</button>
+    <div class="set-who">
+      <span class="avatar-btn big" aria-hidden="true"><span id="menuInitialBig">$</span></span>
+      <div>
+        <b id="menuName">DOLLAR$ SOURCING</b>
+        <span id="menuEmail"></span>
+      </div>
+    </div>
+
+    <p class="set-group" data-i18n="setDisplay">Affichage</p>
+    <div class="set-list">
+      <div class="set-row static">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.5 3.6 5.3 3.6 8.5s-1.2 6-3.6 8.5c-2.4-2.5-3.6-5.3-3.6-8.5S9.6 6 12 3.5z"/></svg></span>
+        <span class="set-l" data-i18n="setLang">Langue</span>
+        <!-- `#langMenu` garde ses boutons et leur écouteur : il est seulement
+             devenu un sélecteur visible au lieu d'un menu déroulant. -->
+        <div class="seg" id="langMenu">
+          <button type="button" data-lang="fr">FR</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn lang-btn" id="langBtn" style="display:none;" aria-hidden="true" tabindex="-1"><span id="langCode">FR</span></button>
+      </div>
+      <button type="button" class="set-row" id="themeToggle">
+        <span class="set-ic"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></span>
+        <span class="set-l" data-i18n="setTheme">Apparence</span>
+        <span class="set-v" id="themeVal"></span>
+      </button>
+    </div>
+
+    <p class="set-group" data-i18n="setData">Données</p>
+    <div class="set-list">
+      <button type="button" class="set-row" id="exportBtn">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 19h16"/></svg></span>
+        <span class="set-l" data-i18n="exportTitle">Exporter mes données</span><svg class="set-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button type="button" class="set-row" id="trashBtn">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/></svg></span>
+        <span class="set-l" data-i18n="trashTitle">Corbeille</span><svg class="set-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button type="button" class="set-row" id="accessBtn" style="display:none;">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M18 8v6M15 11h6"/></svg></span>
+        <span class="set-l" data-i18n="accessTitle">Accès</span><svg class="set-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <p class="set-group" data-i18n="setAccount">Compte</p>
+    <div class="set-list">
+      <button type="button" class="set-row danger" id="resetBtn">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v5h-5"/></svg></span>
+        <span class="set-l" data-i18n="resetTitle">Réinitialiser</span>
+      </button>
+      <button type="button" class="set-row danger" id="logoutBtn">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5"/><path d="M20 12H9"/><path d="M12 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h6"/></svg></span>
+        <span class="set-l" data-i18n="logoutTitle">Se déconnecter</span>
+      </button>
+    </div>
+    <p class="set-foot" id="menuBuild"></p>
+  </div>
+</div>
 
 <div class="overlay" id="overlay">
   <div class="sheet">
@@ -2141,6 +2457,18 @@
     <h2 id="sheetTitle">Nouvelle commande</h2>
     <div class="sheet-ref" id="sheetRef" style="display:none;" data-i18n-title="refCopyTitle" title="Copier"></div>
     <form id="orderForm" novalidate>
+      <!-- LE STATUT EN TÊTE. C'est le geste qu'on fait le plus sur une
+           commande existante — la faire avancer — et il était sous les prix,
+           la note et l'expédition, au fond de la fiche. La frise dit où elle
+           en est ; on touche une étape pour y aller, ou on avance d'un cran. -->
+      <div id="stepperZone" style="display:none;">
+        <div class="step-track" id="stepTrack"></div>
+        <div class="status-stepper">
+          <button type="button" class="stepper-btn" id="stepPrev">←</button>
+          <div class="status-label" id="stepLabel"></div>
+          <button type="button" class="stepper-btn" id="stepNext">→</button>
+        </div>
+      </div>
       <div class="field">
         <label data-i18n="fieldClient">Client</label>
         <select id="f_clientSelect"></select>
@@ -2241,14 +2569,6 @@
             <label data-i18n="fieldEta">Livraison estimée</label>
             <input type="date" id="f_eta">
           </div>
-        </div>
-      </div>
-
-      <div id="stepperZone" style="display:none;">
-        <div class="status-stepper">
-          <button type="button" class="stepper-btn" id="stepPrev">←</button>
-          <div class="status-label" id="stepLabel"></div>
-          <button type="button" class="stepper-btn" id="stepNext">→</button>
         </div>
       </div>
 
@@ -2851,6 +3171,23 @@ const I18N = {
     fieldWechat:'WeChat', fieldPhone:'Téléphone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Adresse / marché',
     placeholderWechatId:'Identifiant WeChat', placeholderMarket:'Ex: Marché Baima, étage 3, stand 217',
     navCatalogue:'Catalogue', searchCatalogue:'Rechercher une marque, un modèle...',
+    titleStats:'Statistiques', subActive:'{n} en cours', subTodoOne:'1 chose à faire', subTodoMany:'{n} choses à faire',
+    subWaitingOne:'1 en attente', subWaitingMany:'{n} en attente', subNothingWaiting:'Rien en attente',
+    subClientsOne:'1 client', subClientsMany:'{n} clients', subSuppliersOne:'1 fournisseur', subSuppliersMany:'{n} fournisseurs',
+    subCatalogue:'{n} marques · {m} coloris', subStats:'Ton activité en chiffres',
+    menuTitle:'Réglages', roleOwner:'propriétaire', roleGuest:'invité', themeLight:'Clair', themeDark:'Sombre',
+    setDisplay:'Affichage', setLang:'Langue', setTheme:'Apparence', setData:'Données', setAccount:'Compte',
+    todoTitle:'À faire', todoAllGood:'Tout est à jour. Rien ne t\'attend.', todoMore:'Tout voir ({n})', todoLess:'Voir moins',
+    todoRemind:'Relancer', todoTheClient:'le client',
+    todoReqOne:'1 demande à chiffrer', todoReqMany:'{n} demandes à chiffrer',
+    todoCouponOne:'1 échange de Dollarz à accorder', todoCouponMany:'{n} échanges de Dollarz à accorder',
+    todoPrice:'Chiffrer pour {client}', todoFollow:'Relancer {client}', todoFollowSub:'Devis #{ref} sans réponse depuis {n} j',
+    todoOrderOne:'Commander pour {client}', todoOrderMany:'{n} commandes payées à passer',
+    todoCollect:'Encaisser {amount} · {client}', todoLate:'Livraison estimée dépassée · #{ref}',
+    todoSupplier:'Relancer le fournisseur · #{ref}', todoSupplierSub:'Commandée il y a {n} j, toujours pas expédiée',
+    todoWaQuote:'Salut {name}, je reviens vers toi pour ton devis #{ref} ({product}) : {price}, livraison incluse. On lance la commande ?',
+    todoWaPay:'Salut {name}, il reste {amount} à régler sur ta commande #{ref} ({product}). Tu me dis quand c\'est bon pour toi ?',
+    hintPrice:'À chiffrer', hintWaiting:'Sans réponse · {n} j', hintOrder:'À commander', hintLate:'Livraison dépassée',
     emptyCatalogue:'Aucune marque dans le catalogue.\nAppuie sur + pour en créer une.',
     previewClient:'Voir comme le client',
     cancel:'Annuler',
@@ -3088,6 +3425,23 @@ const I18N = {
     fieldWechat:'WeChat', fieldPhone:'Phone', fieldWhatsapp:'WhatsApp', fieldSupplierAddress:'Address / market',
     placeholderWechatId:'WeChat ID', placeholderMarket:'E.g. Baima Market, floor 3, stall 217',
     navCatalogue:'Catalogue', searchCatalogue:'Search a brand, a model...',
+    titleStats:'Statistics', subActive:'{n} in progress', subTodoOne:'1 thing to do', subTodoMany:'{n} things to do',
+    subWaitingOne:'1 waiting', subWaitingMany:'{n} waiting', subNothingWaiting:'Nothing waiting',
+    subClientsOne:'1 client', subClientsMany:'{n} clients', subSuppliersOne:'1 supplier', subSuppliersMany:'{n} suppliers',
+    subCatalogue:'{n} brands · {m} colourways', subStats:'Your business in numbers',
+    menuTitle:'Settings', roleOwner:'owner', roleGuest:'guest', themeLight:'Light', themeDark:'Dark',
+    setDisplay:'Display', setLang:'Language', setTheme:'Appearance', setData:'Data', setAccount:'Account',
+    todoTitle:'To do', todoAllGood:'All caught up. Nothing is waiting for you.', todoMore:'See all ({n})', todoLess:'See less',
+    todoRemind:'Follow up', todoTheClient:'the client',
+    todoReqOne:'1 request to price', todoReqMany:'{n} requests to price',
+    todoCouponOne:'1 Dollarz exchange to grant', todoCouponMany:'{n} Dollarz exchanges to grant',
+    todoPrice:'Price it for {client}', todoFollow:'Follow up with {client}', todoFollowSub:'Quote #{ref} unanswered for {n} d',
+    todoOrderOne:'Place the order for {client}', todoOrderMany:'{n} paid orders to place',
+    todoCollect:'Collect {amount} · {client}', todoLate:'Estimated delivery passed · #{ref}',
+    todoSupplier:'Chase the supplier · #{ref}', todoSupplierSub:'Ordered {n} d ago, still not shipped',
+    todoWaQuote:'Hi {name}, getting back to you about your quote #{ref} ({product}): {price}, delivery included. Shall we go ahead?',
+    todoWaPay:'Hi {name}, there is {amount} left to pay on your order #{ref} ({product}). Let me know when it works for you!',
+    hintPrice:'To price', hintWaiting:'No reply · {n} d', hintOrder:'To order', hintLate:'Delivery overdue',
     emptyCatalogue:'No brand in the catalogue yet.\nTap + to create one.',
     previewClient:'View as the client',
     cancel:'Cancel',
@@ -3239,7 +3593,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-29a';
+const BUILD = '2026-09-29b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3657,6 +4011,8 @@ function startListeners(){
     pendingRequests = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     renderRequestsBadge();
     if(viewState==='requests') renderRequests();
+    renderTodo();
+    majTitre();
   }, ()=>showToast(t('toastSaveError')));
   // Fournisseurs : partagés par toute l'équipe
   db.collection('suppliers').onSnapshot(snap=>{
@@ -3935,9 +4291,13 @@ function applyTranslations(){
 
 function buildTabs(){
   const tabList = [['tous', t('tabAll')], ...Object.entries(STATUS_META).map(([k,v])=>[k, t(v.key)])];
-  tabsEl.innerHTML = tabList.map(([key,label]) =>
-    `<button class="tab ${key===currentTab?'active':''}" data-tab="${key}">${label}</button>`
-  ).join('');
+  // Chaque puce dit combien elle contient : on sait avant de toucher s'il y a
+  // quelque chose derrière, et une puce vide ne coûte plus un aller-retour.
+  const compte = k => k === 'tous' ? orders.length : orders.filter(o => o.status === k).length;
+  tabsEl.innerHTML = tabList.map(([key,label]) => {
+    const n = compte(key);
+    return `<button class="tab ${key===currentTab?'active':''}${n ? '' : ' vide'}" data-tab="${key}">${label}${n ? `<span class="tab-n">${n}</span>` : ''}</button>`;
+  }).join('');
   tabsEl.querySelectorAll('.tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{ currentTab = btn.dataset.tab; render(); });
   });
@@ -4033,22 +4393,79 @@ function renderList(){
   listEl.innerHTML = groupeParClient ? listeRangee(filtered) : filtered.map(carteCommande).join('');
 }
 
+// ===== La carte de commande =====
+// Elle se lit comme une ligne de boîte de réception : QUI (et sa photo, ou ses
+// initiales), QUOI (la marque et le modèle, puis les coloris avec leurs
+// tailles — plus la chaîne brute avec « × 1 » au bout), et ce qu'il reste à
+// faire dessus, en une pastille. La marge reste à droite, là où l'œil la
+// cherche, et reste privée.
+function initialesNom(n){
+  const p = String(n || '').trim().split(/\s+/).filter(Boolean);
+  if(!p.length) return '?';
+  return ((p[0][0] || '') + (p.length > 1 ? (p[p.length - 1][0] || '') : '')).toUpperCase();
+}
+function vignettePro(o){
+  const ps = photosDe(o);
+  if(ps.length){
+    return '<span class="cv"><img src="data:' + ps[0].type + ';base64,' + ps[0].data + '" alt="" loading="lazy">'
+         + (ps.length > 1 ? '<i>+' + (ps.length - 1) + '</i>' : '') + '</span>';
+  }
+  return '<span class="cv mono" aria-hidden="true">' + escapeHtml(initialesNom(clientName(o))) + '</span>';
+}
+function libellePro(o){
+  const items = Array.isArray(o.items) ? o.items.filter(Boolean) : [];
+  if(items.length){
+    const tailles = sz => {
+      const e = Object.keys(sz || {}).filter(k => Number(sz[k]) > 0);
+      return e.length ? ' (' + e.map(k => Number(sz[k]) > 1 ? k + '×' + sz[k] : k).join(', ') + ')' : '';
+    };
+    return {
+      titre: [items[0].brand, items[0].model].filter(Boolean).join(' · ') || String(o.product || ''),
+      sous: items.map(it => ((it.name || '').trim() || '—') + ((Number(it.qty) || 1) > 1 ? ' ×' + it.qty : '') + tailles(it.sizes)).join(' · ')
+    };
+  }
+  const q = Number(o.qty) || 1;
+  return { titre: String(o.product || ''), sous: q > 1 ? '× ' + q : '' };
+}
+// La prochaine étape, en une pastille — la même logique que « À faire », vue
+// depuis la carte : on sait ce qu'une commande attend sans l'ouvrir.
+function indiceCarte(o){
+  const pastille = (txt, acc) => '<span class="hint' + (acc ? ' acc' : '') + '">' + escapeHtml(txt) + '</span>';
+  if(!o.status || o.status === 'nouveau') return pastille(t('hintPrice'), true);
+  if(o.status === 'devis'){
+    const j = joursDepuis(depuisEtape(o, 'devis'));
+    return j >= 2 ? pastille(t('hintWaiting').replace('{n}', j)) : '';
+  }
+  if(o.status === 'paye') return pastille(t('hintOrder'), true);
+  if(o.status === 'expedie'){
+    const eta = isoDate(o.eta || o.estimatedDelivery);
+    if(eta && new Date(eta + 'T23:59:59').getTime() < Date.now()) return pastille(t('hintLate'));
+  }
+  return '';
+}
 function carteCommande(o){
-  const meta = STATUS_META[o.status];
+  const meta = STATUS_META[o.status] || STATUS_META.nouveau;
   const margin = orderMargin(o);
   const mult = orderMultiplier(o);
+  const lib = libellePro(o);
   return `
       <div class="order-card" data-id="${o.id}">
         <div class="card-top">
-          <div class="client">${escapeHtml(clientName(o))}</div>
-          <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
+          ${vignettePro(o)}
+          <div class="card-id">
+            <div class="card-line">
+              <div class="client">${escapeHtml(clientName(o))}</div>
+              <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${t(meta.key)}</div>
+            </div>
+            <div class="card-mid">${escapeHtml(lib.titre)}</div>
+            ${lib.sous ? `<div class="card-sub">${escapeHtml(lib.sous)}</div>` : ''}
+          </div>
         </div>
-        <div class="card-mid">${escapeHtml(o.product)} × ${o.qty}</div>
         ${blocReqPhotos(o)}
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
           ? `<div class="due-line private">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
-          <div class="date"><span class="order-ref">#${escapeHtml(orderRef(o))}</span>${fmtDate(o.createdAt)}</div>
+          <div class="date"><span class="order-ref">#${escapeHtml(orderRef(o))}</span>${fmtDate(o.createdAt)}${indiceCarte(o)}</div>
           <div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
         </div>
       </div>`;
@@ -4093,12 +4510,174 @@ function majGroupBtn(){
   if(!b) return;
   b.classList.toggle('on', groupeParClient);
   $('#groupBtnLabel').textContent = groupeParClient ? t('groupFlat') : t('groupByClient');
+  b.title = $('#groupBtnLabel').textContent;
+  b.setAttribute('aria-label', b.title);
 }
 $('#groupBtn').addEventListener('click', ()=>{
   groupeParClient = !groupeParClient;
   try{ localStorage.setItem('ds_group_client', groupeParClient ? '1' : '0'); }catch(e){}
   majGroupBtn();
   renderList();
+});
+
+// ================= À faire =================
+// L'app connaissait tout — un devis envoyé il y a trois jours sans réponse,
+// une commande payée qu'il reste à passer chez le fournisseur, un solde à
+// encaisser — mais il fallait aller le chercher dans la liste. Ici elle le
+// DIT, dans l'ordre où ça presse : ce que le client attend de toi d'abord,
+// l'argent ensuite, ce qui traîne enfin. Rien n'est stocké : tout se déduit
+// des commandes et des demandes, donc rien ne peut être en retard sur elles.
+const JOUR = 86400000;
+const TODO_IC = {
+  inbox:'<path d="M4 13.5 6.3 5.8A2 2 0 0 1 8.2 4.4h7.6a2 2 0 0 1 1.9 1.4L20 13.5"/><path d="M4 13.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4.5h-4.5l-1.3 2.3h-4.4L8.5 13.5z"/>',
+  coin:'<circle cx="12" cy="12" r="8.5"/><path d="M14.6 9.2c-.5-.8-1.4-1.2-2.6-1.2-1.6 0-2.6.8-2.6 1.9 0 2.6 5.3 1.4 5.3 4.1 0 1.1-1.1 2-2.7 2-1.2 0-2.2-.5-2.7-1.3M12 6.4v1.6M12 16v1.6"/>',
+  tag:'<path d="M3.5 12.2V4.8a1.3 1.3 0 0 1 1.3-1.3h7.4l8.3 8.3a1.3 1.3 0 0 1 0 1.8l-7.4 7.4a1.3 1.3 0 0 1-1.8 0z"/><circle cx="8" cy="8" r="1.4"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/>',
+  cart:'<path d="M3.5 4h2.2l2.2 11h10.4l2-7.5H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>',
+  euro:'<path d="M17.5 6.5A6.5 6.5 0 1 0 17.5 17.5"/><path d="M4.5 10.5h8M4.5 13.5h8"/>',
+  truck:'<path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>',
+  box:'<path d="M20.5 7.6 12 3 3.5 7.6 12 12.2z"/><path d="M3.5 7.6v8.8L12 21l8.5-4.6V7.6"/><path d="M12 12.2V21"/>',
+  check:'<circle cx="12" cy="12" r="8.5"/><path d="m8.3 12.3 2.5 2.5 5-5.3"/>',
+  chat:'<path d="M20 11.5a8 8 0 0 1-11.7 7.1L4 20l1.4-4.1A8 8 0 1 1 20 11.5z"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>'
+};
+function svgTodo(k){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + TODO_IC[k] + '</svg>'; }
+// Depuis quand une commande est à cette étape. Les commandes d'avant les dates
+// de parcours n'ont que leur création : on s'en contente plutôt que d'inventer.
+function depuisEtape(o, st){ return (o.statusAt && o.statusAt[st]) || o.updatedAt || o.createdAt || Date.now(); }
+function joursDepuis(ts){ return Math.max(0, Math.floor((Date.now() - ts) / JOUR)); }
+function prenomClient(o){
+  const c = clientById(o.clientId);
+  const nom = ((c && c.name) || '').trim();
+  return nom ? nom.split(/\s+/)[0] : t('todoTheClient');
+}
+// Ce qu'on lit d'une commande en une ligne : la marque et le modèle quand le
+// catalogue les donne, sinon le produit tel qu'il a été tapé.
+function produitCourt(o){
+  const it = Array.isArray(o.items) && o.items[0];
+  const txt = it ? [it.brand, it.model].filter(Boolean).join(' · ') : String(o.product || '');
+  return txt.length > 46 ? txt.slice(0, 44) + '…' : txt;
+}
+// La relance part déjà écrite : ouvrir WhatsApp sur une page blanche, c'est
+// retaper à chaque fois ce que l'app sait déjà.
+function lienWa(o, cle, extra){
+  const c = clientById(o.clientId);
+  let msg = t(cle).replace('{name}', prenomClient(o)).replace('{ref}', orderRef(o))
+                  .replace('{product}', produitCourt(o));
+  Object.keys(extra || {}).forEach(k => { msg = msg.replace('{' + k + '}', extra[k]); });
+  const num = waDigits(c);
+  return num ? 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg)
+             : 'https://wa.me/?text=' + encodeURIComponent(msg);
+}
+function aFaire(){
+  const out = [];
+  const now = Date.now();
+  const vivantes = orders.filter(o => o.status !== 'annule');
+  const noms = list => list.slice(0, 2).map(r => { const c = clientById(r.clientId); return (c ? c.name : (r.clientName || '?')).split(/\s+/)[0]; }).join(', ')
+                     + (list.length > 2 ? ' +' + (list.length - 2) : '');
+
+  // 1. Ce que les clients attendent de toi : leurs demandes, leurs échanges.
+  const dem = pendingRequests.filter(r => r.type !== 'coupon');
+  if(dem.length) out.push({ cle:'req', ic:'inbox',
+    titre: dem.length > 1 ? t('todoReqMany').replace('{n}', dem.length) : t('todoReqOne'),
+    sous: noms(dem), act:'view:requests' });
+  const ech = pendingRequests.filter(r => r.type === 'coupon');
+  if(ech.length) out.push({ cle:'coupon', ic:'coin',
+    titre: ech.length > 1 ? t('todoCouponMany').replace('{n}', ech.length) : t('todoCouponOne'),
+    sous: noms(ech), act:'view:requests' });
+  vivantes.filter(o => !o.status || o.status === 'nouveau').forEach(o => out.push({
+    cle:'n:' + o.id, ic:'tag', titre: t('todoPrice').replace('{client}', clientName(o)),
+    sous: '#' + orderRef(o) + ' · ' + produitCourt(o), act:'open:' + o.id }));
+
+  // 2. Les devis qui attendent une réponse depuis deux jours ou plus.
+  vivantes.filter(o => o.status === 'devis' && now - depuisEtape(o, 'devis') >= 2 * JOUR)
+    .sort((a, b) => depuisEtape(a, 'devis') - depuisEtape(b, 'devis'))
+    .forEach(o => out.push({ cle:'d:' + o.id, ic:'clock',
+      titre: t('todoFollow').replace('{client}', clientName(o)),
+      sous: t('todoFollowSub').replace('{ref}', orderRef(o)).replace('{n}', joursDepuis(depuisEtape(o, 'devis'))),
+      act:'open:' + o.id, wa: lienWa(o, 'todoWaQuote', { price: fmtMoney(orderNetPrice(o)) }) }));
+
+  // 3. Payées : il reste à les passer chez le fournisseur.
+  const payees = vivantes.filter(o => o.status === 'paye');
+  if(payees.length === 1){
+    const o = payees[0];
+    out.push({ cle:'p:' + o.id, ic:'cart', titre: t('todoOrderOne').replace('{client}', clientName(o)),
+      sous: '#' + orderRef(o) + ' · ' + produitCourt(o), act:'open:' + o.id });
+  } else if(payees.length > 1){
+    out.push({ cle:'p', ic:'cart', titre: t('todoOrderMany').replace('{n}', payees.length),
+      sous: payees.slice(0, 4).map(o => '#' + orderRef(o)).join(' · '), act:'tab:paye' });
+  }
+
+  // 4. L'argent qui reste dû. Ambre, parce que c'est un solde impayé — et
+  //    privé : en mode discret, ces lignes n'existent pas.
+  vivantes.filter(o => paidStatusReached(o.status) && orderRemaining(o) > 0)
+    .sort((a, b) => orderRemaining(b) - orderRemaining(a))
+    .forEach(o => out.push({ cle:'e:' + o.id, ic:'euro', ton:'warn', prive:true,
+      titre: t('todoCollect').replace('{amount}', fmtMoney(orderRemaining(o))).replace('{client}', clientName(o)),
+      sous: '#' + orderRef(o) + ' · ' + t(STATUS_META[o.status].key),
+      act:'open:' + o.id, wa: lienWa(o, 'todoWaPay', { amount: fmtMoney(orderRemaining(o)) }) }));
+
+  // 5. Ce qui traîne : une livraison estimée dépassée, un fournisseur lent.
+  vivantes.filter(o => {
+    const eta = isoDate(o.eta || o.estimatedDelivery);
+    return o.status === 'expedie' && eta && new Date(eta + 'T23:59:59').getTime() < now;
+  }).forEach(o => out.push({ cle:'l:' + o.id, ic:'truck',
+    titre: t('todoLate').replace('{ref}', orderRef(o)),
+    sous: clientName(o) + ((o.carrier || o.forwarder) ? ' · ' + (o.carrier || o.forwarder) : ''), act:'open:' + o.id }));
+  vivantes.filter(o => o.status === 'commande' && now - depuisEtape(o, 'commande') >= 10 * JOUR)
+    .forEach(o => out.push({ cle:'c:' + o.id, ic:'box',
+      titre: t('todoSupplier').replace('{ref}', orderRef(o)),
+      sous: t('todoSupplierSub').replace('{n}', joursDepuis(depuisEtape(o, 'commande'))), act:'open:' + o.id }));
+  return out;
+}
+let todoTout = false;          // « Tout voir » ouvert : un geste en cours, pas une préférence
+const TODO_MAX = 4;
+function renderTodo(){
+  const box = $('#todo');
+  if(!box) return;
+  // En mode discret, les lignes d'argent n'existent pas : elles ne comptent pas non plus.
+  const liste = aFaire().filter(x => !(discreetMode && x.prive));
+  if(!liste.length){
+    // Une app vide n'a rien à féliciter ; une app à jour, si.
+    box.style.display = orders.length ? 'block' : 'none';
+    box.innerHTML = '<div class="todo-ok">' + svgTodo('check') + '<span>' + escapeHtml(t('todoAllGood')) + '</span></div>';
+    return;
+  }
+  const montres = todoTout ? liste : liste.slice(0, TODO_MAX);
+  box.style.display = 'block';
+  box.innerHTML = '<div class="todo-card">'
+    + '<div class="todo-head"><b>' + escapeHtml(t('todoTitle')) + '</b><span class="todo-n">' + liste.length + '</span></div>'
+    + montres.map(x =>
+        '<div class="todo-item' + (x.ton ? ' ' + x.ton : '') + (x.prive ? ' private' : '') + '" role="button" tabindex="0" data-act="' + escapeHtml(x.act) + '">'
+      + '<span class="todo-ic">' + svgTodo(x.ic) + '</span>'
+      + '<span class="todo-t"><b>' + escapeHtml(x.titre) + '</b><small>' + escapeHtml(x.sous) + '</small></span>'
+      + (x.wa ? '<a class="todo-wa" href="' + escapeHtml(x.wa) + '" target="_blank" rel="noopener">' + svgTodo('chat') + '<span>' + escapeHtml(t('todoRemind')) + '</span></a>'
+              : '<span class="todo-go">' + svgTodo('chev') + '</span>')
+      + '</div>').join('')
+    + (liste.length > TODO_MAX
+        ? '<button type="button" class="todo-more">' + escapeHtml(todoTout ? t('todoLess') : t('todoMore').replace('{n}', liste.length)) + '</button>' : '')
+    + '</div>';
+}
+function agitTodo(el){
+  const act = el.dataset.act || '';
+  const i = act.indexOf(':');
+  const type = act.slice(0, i), val = act.slice(i + 1);
+  if(type === 'view') switchView(val);
+  else if(type === 'tab'){
+    currentTab = val; render();
+    const l = $('#tabs'); if(l) l.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block:'start' });
+  }
+  else if(type === 'open'){ const o = orders.find(x => x.id === val); if(o) openSheet(o); }
+}
+$('#todo').addEventListener('click', (e)=>{
+  // La relance est un vrai lien (piège 17) : on le laisse partir tel quel.
+  if(e.target.closest('.todo-wa')) return;
+  if(e.target.closest('.todo-more')){ todoTout = !todoTout; renderTodo(); return; }
+  const it = e.target.closest('.todo-item');
+  if(it) agitTodo(it);
+});
+$('#todo').addEventListener('keydown', (e)=>{
+  if((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('todo-item')){ e.preventDefault(); agitTodo(e.target); }
 });
 
 function renderClientsTop3(){
@@ -4135,7 +4714,7 @@ function renderClients(){
     return `
       <div class="order-card" data-client-id="${c.id}">
         <div class="card-top">
-          <div class="client">${escapeHtml(c.name)}</div>
+          <div class="who"><span class="cv mono sm" aria-hidden="true">${escapeHtml(initialesNom(c.name))}</span><div class="client">${escapeHtml(c.name)}</div></div>
           ${due > 0
             ? `<div class="badge-due private">${t('owesLabel')} ${fmtMoney(due)}</div>
                <div class="badge only-discreet" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`
@@ -6427,7 +7006,7 @@ function renderSuppliers(){
     return `
     <div class="order-card" data-supplier-id="${s.id}">
       <div class="card-top">
-        <div class="client">${escapeHtml(s.name)}</div>
+        <div class="who"><span class="cv mono sm sup" aria-hidden="true">${escapeHtml(initialesNom(s.name))}</span><div class="client">${escapeHtml(s.name)}</div></div>
         ${brands.length ? `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${modelCount} ${modelCount>1?t('modelsPlural'):t('modelSingular')}</div>` : ''}
       </div>
       <div class="card-mid">${wechat
@@ -6445,9 +7024,11 @@ function renderSuppliers(){
 function render(){
   buildTabs();
   renderKPIs();
+  renderTodo();
   renderList();
   renderGuestWelcome();
   if(viewState==='clients') renderClients();
+  majTitre();
 }
 
 // ================= Accueil des comptes invités =================
@@ -6477,15 +7058,26 @@ function renderGuestWelcome(){
   observeReveals();
 }
 
-const VIEW_ORDER = ['commandes','clients','suppliers','catalogue','stats','requests'];
+// L'ordre de la barre d'onglets : c'est lui qui donne le sens du glissement.
+const VIEW_ORDER = ['commandes','requests','clients','suppliers','catalogue','stats'];
+// CHAQUE VUE GARDE SA PLACE, comme dans toutes les apps. Les vues étaient en
+// haut de la page, on en changeait donc forcément depuis le haut ; sous le
+// pouce, on change de n'importe où — et arriver sur Clients au milieu d'un
+// défilement de commandes, c'est arriver nulle part. Saut instantané : c'est
+// un changement de pièce, pas un trajet.
+const defilementVue = {};
 function switchView(view){
   const from = VIEW_ORDER.indexOf(viewState);
   const to = VIEW_ORDER.indexOf(view);
+  const change = view !== viewState;
+  if(change) defilementVue[viewState] = window.scrollY;
   viewState = view;
   Object.entries(VIEW_IDS).forEach(([key,id])=>{
     $('#'+id).style.display = (key===view) ? 'block' : 'none';
   });
-  $('#fabAdd').style.display = view==='stats' ? 'none' : 'flex';
+  // Sur Stats et Demandes, « + » n'ajoute rien : un bouton qui ne fait rien
+  // est pire qu'un bouton absent.
+  $('#fabAdd').style.display = (view==='stats' || view==='requests') ? 'none' : 'flex';
   Object.values(VIEW_BTN_IDS).forEach(id=>$('#'+id).classList.remove('active'));
   $('#'+VIEW_BTN_IDS[view]).classList.add('active');
   const activeEl = $('#'+VIEW_IDS[view]);
@@ -6500,7 +7092,93 @@ function switchView(view){
   if(view==='suppliers') renderSuppliers();
   if(view==='catalogue') renderCatalogue();
   if(view==='requests') renderRequests();
+  majTitre();
+  if(change) window.scrollTo(0, defilementVue[view] || 0);
 }
+
+// ---- Le grand titre, et la ligne qui dit où on en est ----
+// Pas un slogan : un état. « 10 en cours · 4 à traiter », « 3 en attente ».
+const TITRES = { commandes:'navOrders', requests:'navRequests', clients:'navClients',
+                 suppliers:'navSuppliers', catalogue:'navCatalogue', stats:'titleStats' };
+function majTitre(){
+  const titre = t(TITRES[viewState] || 'navOrders');
+  const h = $('#viewTitle'); if(h) h.textContent = titre;
+  const nb = $('#navbarTitle'); if(nb) nb.textContent = titre;
+  const sub = $('#viewSub'); if(!sub) return;
+  const n = (k, v) => t(k).replace('{n}', v);
+  let txt = '';
+  if(viewState === 'commandes'){
+    const enCours = orders.filter(o=>o.status!=='livre' && o.status!=='annule').length;
+    const jour = new Date().toLocaleDateString(currentLang==='fr' ? 'fr-FR' : 'en-GB', { weekday:'long', day:'numeric', month:'long' });
+    const aFaireN = aFaire().length;
+    txt = escapeHtml(jour.charAt(0).toUpperCase() + jour.slice(1)) + ' · ' + escapeHtml(n('subActive', enCours))
+        + (aFaireN ? ' · <b>' + escapeHtml(n(aFaireN > 1 ? 'subTodoMany' : 'subTodoOne', aFaireN)) + '</b>' : '');
+  } else if(viewState === 'requests'){
+    const k = pendingRequests.length;
+    txt = escapeHtml(k ? n(k > 1 ? 'subWaitingMany' : 'subWaitingOne', k) : t('subNothingWaiting'));
+  } else if(viewState === 'clients'){
+    txt = escapeHtml(n(clients.length > 1 ? 'subClientsMany' : 'subClientsOne', clients.length));
+  } else if(viewState === 'suppliers'){
+    txt = escapeHtml(n(suppliers.length > 1 ? 'subSuppliersMany' : 'subSuppliersOne', suppliers.length));
+  } else if(viewState === 'catalogue'){
+    const marques = new Set(catalogItems.map(i => i.brand)).size;
+    txt = escapeHtml(n('subCatalogue', marques).replace('{m}', catalogItems.length));
+  } else if(viewState === 'stats'){
+    txt = escapeHtml(t('subStats'));
+  }
+  sub.innerHTML = txt;
+}
+
+// La barre du haut prend sa matière quand le grand titre passe dessous. Une
+// sentinelle observée, jamais un écouteur de défilement.
+(function(){
+  const s = $('#titleSentinel'), bar = $('#navbar');
+  if(!s || !bar || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(([en])=>{
+    bar.classList.toggle('stuck', !en.isIntersecting && en.boundingClientRect.top < 80);
+  }, { rootMargin:'-60px 0px 0px 0px', threshold:0 }).observe(s);
+})();
+
+// ---- Les Réglages ----
+function initiale(){
+  const src = (currentName || '').trim() || (currentEmail || '').trim();
+  const c = src.replace(/[^A-Za-zÀ-ÿ0-9]/g, '').charAt(0);
+  return c ? c.toUpperCase() : '$';
+}
+function majIdentite(){
+  const i = initiale();
+  ['#menuInitial', '#menuInitialBig'].forEach(sel => { const el = $(sel); if(el) el.textContent = i; });
+  const nom = $('#menuName'); if(nom) nom.textContent = (currentName || '').trim() || 'DOLLAR$ SOURCING';
+  const mail = $('#menuEmail');
+  if(mail) mail.textContent = (currentEmail || '') + (currentEmail ? ' · ' : '') + t(isOwner ? 'roleOwner' : 'roleGuest');
+  const b = $('#menuBuild'); if(b) b.textContent = 'DOLLAR$ SOURCING · v' + BUILD;
+  const tv = $('#themeVal'); if(tv) tv.textContent = t(document.documentElement.getAttribute('data-theme') === 'light' ? 'themeLight' : 'themeDark');
+}
+function ouvreReglages(){ majIdentite(); $('#menuOverlay').classList.add('open'); }
+function fermeReglages(){ $('#menuOverlay').classList.remove('open'); }
+$('#menuBtn').addEventListener('click', ouvreReglages);
+$('#closeMenu').addEventListener('click', fermeReglages);
+$('#menuOverlay').addEventListener('click', (e)=>{
+  if(e.target === e.currentTarget){ fermeReglages(); return; }
+  // Une ligne qui ouvre autre chose (export, corbeille, accès, déconnexion)
+  // referme les Réglages derrière elle : on ne superpose pas deux feuilles.
+  // Le thème et la langue, eux, se règlent sur place.
+  const row = e.target.closest('.set-row');
+  if(row && !row.classList.contains('static') && row.id !== 'themeToggle') fermeReglages();
+});
+
+// Le clavier s'ouvre : la barre d'onglets et les boutons flottants s'effacent.
+// Le délai à la sortie évite qu'ils remontent entre deux champs.
+const CHAMP_SAISIE = 'input:not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([readonly]), textarea';
+document.addEventListener('focusin', (e)=>{
+  if(e.target.matches && e.target.matches(CHAMP_SAISIE)) document.body.classList.add('clavier');
+});
+document.addEventListener('focusout', ()=>{
+  setTimeout(()=>{
+    const a = document.activeElement;
+    if(!a || !a.matches || !a.matches(CHAMP_SAISIE)) document.body.classList.remove('clavier');
+  }, 80);
+});
 
 function buildRangeTabs(){
   rangeTabsEl.innerHTML = RANGE_DEFS.map(r=>
@@ -6793,7 +7471,9 @@ function openSheet(order, presetClientId, prefill){
   ficheSupplierId = (order && order.supplierId) || '';
   majOrdSupplier();
   $('#f_unitPrice').value = order ? order.unitPrice : '';
-  $('#f_note').value = order ? order.note : (prefill ? (prefill.note||'') : '');
+  // `|| ''` : une commande venue d'une demande n'a pas toujours de note, et le
+  // champ affichait alors « undefined » en toutes lettres.
+  $('#f_note').value = order ? (order.note || '') : (prefill ? (prefill.note||'') : '');
   // Sur une commande existante on montre ses photos ; sur une création depuis
   // une demande, celles que la demande transporte et qui vont être écrites.
   // Les lignes avant les photos : on lit ce qu'on achète, puis on regarde à
@@ -6888,6 +7568,15 @@ function updateStepper(status){
   const idx = STATUS_FLOW.indexOf(status);
   $('#stepPrev').disabled = idx<=0;
   $('#stepNext').disabled = idx===-1 || idx>=STATUS_FLOW.length-1;
+  const track = $('#stepTrack');
+  if(track){
+    const pct = idx > 0 ? (idx / (STATUS_FLOW.length - 1)) * 100 : 0;
+    track.innerHTML = '<i class="st-rail"><i class="st-fill" style="width:' + pct + '%"></i></i>'
+      + STATUS_FLOW.map((st, i) =>
+          '<button type="button" class="st-dot' + (i < idx ? ' done' : '') + (i === idx ? ' cur' : '') + '" data-st="' + st + '"'
+          + ' title="' + escapeHtml(t(STATUS_META[st].key)) + '" aria-label="' + escapeHtml(t(STATUS_META[st].key)) + '"></button>').join('');
+    track.classList.toggle('annule', status === 'annule');
+  }
 }
 
 // Changer de statut est une action à part entière : la flèche enregistre.
@@ -6929,6 +7618,13 @@ $('#stepPrev').addEventListener('click', ()=>{
 $('#stepNext').addEventListener('click', ()=>{
   const idx = STATUS_FLOW.indexOf(stepperStatus);
   if(idx<STATUS_FLOW.length-1) stepTo(STATUS_FLOW[idx+1]);
+});
+// Toucher une étape de la frise y va directement : de « Payé » à « Expédié »,
+// c'est un geste au lieu de deux. Même chemin que les flèches, donc même
+// enregistrement groupé, même question « il a tout payé ? ».
+$('#stepTrack').addEventListener('click', (e)=>{
+  const d = e.target.closest('.st-dot');
+  if(d && d.dataset.st && d.dataset.st !== stepperStatus && stepperStatus !== 'annule') stepTo(d.dataset.st);
 });
 
 // Un appui copie la référence : pratique quand on la dicte ou qu'on la colle
@@ -9227,6 +9923,8 @@ function applyTheme(theme){
   if(tc) tc.setAttribute('content', bg);
   const svg = theme === 'light' ? THEME_ICONS.moon : THEME_ICONS.sun;
   document.querySelectorAll('.theme-icon').forEach(el => el.innerHTML = svg);
+  const tv = document.getElementById('themeVal');
+  if(tv && typeof t === 'function') tv.textContent = t(theme === 'light' ? 'themeLight' : 'themeDark');
 }
 let currentThemeMode = null;
 try{ currentThemeMode = localStorage.getItem('ds_theme'); }catch(e){}
@@ -9253,11 +9951,14 @@ document.getElementById('discreetBtn').addEventListener('click', ()=>{
   discreetMode = !discreetMode;
   try{ localStorage.setItem('ds_discreet', discreetMode ? '1' : '0'); }catch(e){}
   applyDiscreet();
+  // Les lignes d'argent sortent de « À faire » : son compte doit suivre.
+  renderTodo(); majTitre();
   showToast(t(discreetMode ? 'discreetOn' : 'discreetOff'));
 });
 
 document.getElementById('themeToggle').addEventListener('click', ()=>{
-  currentTheme = (currentTheme === 'light') ? 'dark' : 'light';
+  // On part du thème AFFICHÉ, pas d'une variable qui peut ne plus le suivre.
+  currentTheme = (document.documentElement.getAttribute('data-theme') === 'light') ? 'dark' : 'light';
   applyTheme(currentTheme);
   try{ localStorage.setItem('ds_theme', currentTheme); }catch(e){}
 });
@@ -9299,7 +10000,7 @@ lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
-const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .view-switch button, .sheet-ref, .preview-btn';
+const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .tabbar button, .sheet-ref, .preview-btn';
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function tapDown(el, cx, cy){
@@ -9365,6 +10066,7 @@ function hideSplash(){
 function showLogin(errorKey, detail){
   hideSplash();
   document.getElementById('app').style.display = 'none';
+  document.body.classList.remove('in-app');
   document.getElementById('fabAdd').style.display = 'none';
   const af = document.getElementById('assistantFab');
   if(af) af.style.display = 'none';
@@ -9382,6 +10084,9 @@ function showLogin(errorKey, detail){
 function showApp(){
   document.getElementById('loginScreen').classList.remove('show');
   document.getElementById('app').style.display = 'block';
+  document.body.classList.add('in-app');
+  majIdentite();
+  majTitre();
   document.getElementById('fabAdd').style.display = 'flex';
   applyRoleUI();
   appEntered = true;
@@ -9531,6 +10236,7 @@ function bioRegisteredHere(){
 function showLock(){
   hideSplash();
   document.getElementById('app').style.display = 'none';
+  document.body.classList.remove('in-app');
   document.getElementById('fabAdd').style.display = 'none';
   const af = document.getElementById('assistantFab');
   if(af) af.style.display = 'none';
