@@ -484,6 +484,191 @@ ouvre la page publique 17TRACK (`t.17track.net`), laquelle agrège la plupart de
 transporteurs chinois. Aucun compte, aucune clé, aucun coût : c'est le seul lien
 en dur autorisé, parce qu'il pointe un service tiers et non notre propre app.
 
+#### L'entrée : la porte, le rideau, l'arrivée
+
+Massif, le 29 septembre : « il faut que le client se dise *wow* dès qu'il
+rentre ». Avant de toucher à quoi que ce soit, **le parcours a été filmé** — une
+rafale de captures horodatées depuis la sixième touche du code — et la mesure a
+trouvé le vrai défaut, qui n'était pas un manque d'animation :
+
+| à l'instant | rideau | prénom | cartes révélées | frises | compteur |
+|---|---|---|---|---|---|
+| 300 ms | **opaque** | 65 % | 2 | dessinées | 2 |
+| 700 ms | **opaque** | **fini** | 2 | dessinées | **3, fini** |
+| 1 300 ms | se lève | fini | fini | fini | fini |
+
+**Toute la chorégraphie se jouait SOUS le rideau.** Il restait opaque 1,15 s,
+et à 700 ms le prénom, les cartes, les frises et les compteurs avaient fini
+leur entrée. Le client découvrait une page déjà immobile — le travail du
+tableau « Le mouvement » ne se voyait jamais.
+
+**Le correctif : `#app.hold`.** Pendant l'ouverture, l'app est invisible et
+**toutes ses animations en pause à leur première image**
+(`animation-play-state:paused` sur chaque descendant). `arriveApp()` retire la
+classe au moment où le rideau se lève, et tout part à cet instant. Trois
+choses ne sont pas des animations CSS et attendent aussi, par le drapeau
+`arrivee` : la révélation des cartes (IntersectionObserver), les compteurs
+(`countUp`) et l'arrivée de la une. `arrivee` est **vrai par défaut** — seul
+le rideau le suspend, donc l'aperçu du vendeur et les tests qui dessinent la
+page à la main ne voient aucune différence.
+
+**Le rideau est devenu TRANSPARENT**, et c'est ce qui rend l'ouverture
+continue. Il n'a plus à cacher l'app (elle est retenue), donc le fond qu'on
+voit pendant l'ouverture est celui de la porte — les mêmes lumières, au même
+endroit. Rien ne « change d'écran ».
+
+**La porte** (l'écran du code) était le premier jugement du client, et le
+plus pauvre de l'app : un emoji 🔒 dans un carré gris. Elle porte maintenant
+**la pièce de la marque** — la même que le rideau — et elle s'ouvre :
+
+- **Elle arrive** : la pièce éclot, le titre monte, les six points
+  apparaissent, le clavier arrive rangée par rangée. Une fois (`.entree`,
+  retirée après 1,5 s) : changer de langue redessine le clavier, il ne doit
+  pas refaire son entrée.
+- **Chaque chiffre éclot** : le point gonfle, se pose, et un anneau part de
+  lui. Les points sont posés **une fois** et on ne bascule que leur classe —
+  les redessiner à chaque touche relançait l'éclosion de TOUS les points déjà
+  pleins (six chiffres, le premier éclosait six fois). Vérifié : une touche,
+  une éclosion.
+- **Un mauvais code** : les six points restent pleins, en rouge, une
+  demi-seconde, l'écran tremble, puis ils se vident. Le rouge est réservé au
+  danger, un accès refusé en est un. Le clavier se tait pendant ce temps
+  (`codeBusy`), sinon une touche tapée dans l'élan partirait dans le vide.
+- **Le bon code** : les six points glissent au centre et s'y fondent en une
+  lumière, le clavier se retire en cascade, et il ne reste que la pièce — qui
+  **s'envole jusqu'au centre du rideau**. C'est le même objet qui se déplace :
+  on mesure où il est (`getBoundingClientRect` de la porte, **avant** de la
+  fermer), où il va, et l'écart devient le point de départ de son vol
+  (`--fx/--fy/--fs`, classe `.vol`). Pas d'éclosion dans ce cas — elle est
+  déjà là.
+- **Les écouteurs Firestore partent au bon code**, pas à l'ouverture du
+  rideau : les 360 ms de la porte qui s'ouvre sont du chargement gagné.
+
+**La levée** : la pièce et le prénom **montent** en s'effaçant (ils cèdent la
+place), l'app apparaît en fondu, puis chaque élément fait son entrée à son
+tour — la salutation mot par mot, la une, les compteurs, la barre d'onglets
+qui arrive par le bas, et les cartes en cascade, **après** l'en-tête
+(`revealBoost`) : on lit son prénom, puis ses colis.
+
+`#app.app-enter` **n'anime que l'opacité**. Un `transform` sur un ancêtre fait
+d'un `position:fixed` un simple `absolute` le temps de l'animation — la barre
+d'onglets aurait sauté au milieu de la page à chaque arrivée.
+
+Sous `prefers-reduced-motion` : pas de rideau, pas de retenue, tout est là
+d'emblée. Vérifié.
+
+**Et la toute première image était un éclair blanc.** Le thème n'était posé
+que par le script de fin de page : un client en thème sombre voyait d'abord la
+page blanche, puis un fondu de 0,45 s vers le noir (filmé : blanc à 0 ms, gris
+à 118 ms). Quelques lignes dans le `<head>` reprennent exactement la règle
+d'`applyTheme()` — choix mémorisé, sinon l'heure, et le thème passé par
+l'aperçu du vendeur — et le posent **avant la première image** ; une ligne
+juste après `<body>` recopie le fond sur le `body` (piège 1 : les deux portent
+un style en ligne). Le script complet réapplique ensuite la même chose, donc
+sans transition. Refilmé : sombre dès la première image.
+
+#### L'espace, une fois dedans
+
+**La salutation se révèle.** Chaque mot monte de derrière un cache
+(`overflow:hidden` sur le mot), l'un après l'autre ; **le prénom porte la
+couleur de la marque** — c'est le seul mot de l'écran qui soit à lui. Le titre
+n'est réécrit que s'il change (`dataset.cle`) : `updateGreeting()` est rappelée
+à chaque snapshot, et redessiner relancerait l'animation sous ses yeux.
+
+**« À la une » remplace la phrase grise.** « Suis tes commandes en direct » ne
+disait rien. `aLaUne()` calcule depuis ses commandes **ce qui se passe**, dans
+l'ordre de l'urgence pour lui — ce qui attend un geste de sa part passe avant
+ce qui avance tout seul :
+
+1. un devis envoyé qui reste à régler — **à l'ambre**, c'est un solde impayé ;
+2. un colis expédié, avec sa date estimée (toujours dite « estimée ») ;
+3. une commande passée chez le fournisseur ;
+4. un paiement reçu ;
+5. une commande enregistrée ;
+6. une demande en attente — **jamais un échange de coupon**, qui n'en est pas une ;
+7. une livraison de la semaine, avec les Dollarz qu'elle a rapportés, **tant
+   qu'il ne l'a pas rangée** — sinon la ligne mènerait à une carte absente.
+
+Une seule ligne : deux « à la une », c'est déjà une liste. Elle **se touche**
+et emmène à la carte, qui s'éclaire d'un anneau (`vaALaCommande`). Défilement
+doux, parce que c'est le doigt qui l'a demandé (piège 31). Le reste dû vient de
+`resteDu()`, **la même fonction que les montants de la carte** : deux calculs
+du même reste finiraient par annoncer deux montants sur le même écran.
+
+`#helloSub` n'a **plus de `data-i18n`** : `applyTranslations()` écraserait la
+une avec la phrase générique.
+
+**Les compteurs ne sont plus trois cartes** mais une seule barre coupée en
+trois : trois boîtes du même poids qu'une commande, c'était trois choses de
+plus à lire avant la première carte.
+
+**L'en-tête s'efface au défilement**, comme un grand titre d'iOS, piloté par
+le défilement lui-même (`animation-timeline:scroll()`) — **sans une ligne de
+JS**, sous `@supports` : là où le navigateur ne sait pas faire, l'en-tête
+défile comme avant.
+
+**LES ONGLETS SONT PASSÉS EN BAS.** Ils étaient dans la page, au-dessus des
+commandes : dès la troisième carte, il fallait remonter tout en haut pour
+changer d'onglet. Les clients viennent de TikTok et de Snapchat, où la
+navigation est **en bas, toujours sous le pouce**. C'est une capsule de verre
+qui flotte au-dessus du bas de l'écran, avec une icône par onglet.
+
+- **Hors de `#app`**, et c'est voulu : un `transform` sur un ancêtre (l'entrée
+  de l'app, `.view-in`) la ferait décrocher.
+- **Épaisse** (`--mat-thick`) : une barre qu'on lit à travers fait lire deux
+  choses à la fois — vu à l'écran avec `--mat`.
+- **La pastille s'étire comme une goutte** : ses deux bords ne partent pas
+  ensemble, celui de devant file et celui de derrière suit (`movePill()`
+  choisit selon le sens, en `left`/`right` et non plus en `transform`).
+- **Chaque onglet garde sa propre position de défilement** (`defilement`),
+  comme toutes les apps. En haut de page, on changeait forcément d'onglet
+  depuis le haut ; sous le pouce, on change de n'importe où — et arriver sur
+  Dollarz au milieu d'un défilement de commandes, c'est arriver nulle part.
+  Le saut est **instantané** : c'est un changement de pièce, pas un trajet.
+- **Retoucher l'onglet actif remonte en haut**, en douceur — le geste de
+  toutes les apps.
+- **Elle s'efface quand le clavier s'ouvre** (`body.clavier`, posé au
+  `focusin` d'un champ) : sinon elle finirait posée sur le champ qu'on
+  remplit. Le retrait attend 80 ms à la sortie, pour ne pas remonter et
+  redescendre en passant d'un champ à l'autre.
+- **Un point sur Dollarz** quand un coupon est à portée et qu'aucun échange
+  n'est en cours (`majPastilles`) : où qu'il soit, il le voit. Rien ne
+  clignote.
+- Le toast se pose **au-dessus** d'elle, et `#app` gagne la hauteur qu'il faut
+  pour que le numéro de version ne finisse jamais caché dessous — vérifié au
+  défilement maximal.
+
+Les libellés et les identifiants (`#tabHistory`…) n'ont pas changé : le texte
+qui cite un onglet reste juste, et les tests qui lisent `.tab.active` aussi.
+
+**La carte de commande se lit comme dans une boutique.** Le titre était la
+chaîne brute de la base — « Asics · Ensemble / Veste : Gris ×2 × 2 », quantité
+comptée deux fois — et la photo, la seule chose qui fasse envie, dormait
+derrière un repli. `teteCarte()` pose une **vignette** (la seconde photo
+dépasse derrière, légèrement tournée, avec « +N »), puis **la marque, le
+modèle, et les coloris avec leurs quantités et leurs tailles** lus dans
+`items[]` (`libelleCarte`). Sans `items[]` — une demande tapée à la main — la
+chaîne telle quelle, et la quantité à part : **jamais « × 1 »**. La vignette
+s'ouvre en grand au toucher ; le repli des photos reste, c'est la galerie.
+
+**La carte de fidélité.** Le solde Dollarz était un nombre dans un cadre. C'est
+maintenant **une carte** — la marque, « Carte de fidélité », le solde, la
+progression, son nom et sa date d'entrée — au dégradé de l'accent (vert en
+clair, orange Brabus en sombre), avec la trame fine d'une carte imprimée.
+
+- **Elle s'incline sous le doigt** et la lumière suit (`inclineCarte`).
+  `touch-action:pan-y` : le glissement vertical reste au défilement de la
+  page, sinon on ne pourrait plus faire défiler l'onglet en posant le doigt
+  dessus. Pendant le geste elle **suit** (transition courte) ; au lâcher, un
+  ressort la ramène.
+- **La pièce se retourne sur la carte** — claire sur le vert, sombre sur
+  l'orange — sinon elle se fondrait dans son propre fond.
+- **Son entrée ne se joue qu'une fois**, comme le compteur : la carte est
+  redessinée à chaque snapshot, et une carte qui refait son entrée sous les
+  doigts, c'est une carte qui tremble.
+- Le halo qui respirait derrière le solde a disparu : la carte **est** le
+  point focal, et « une seule chose bouge en boucle par écran ».
+
 ### Le catalogue
 
 Une vitrine que le client parcourt avant de commander : les marques, puis les
@@ -864,7 +1049,9 @@ tiennent d'un coup d'œil sur un iPhone — à 390 px « Mes commandes » et
 aucun dans une rangée qui défile : un onglet qu'il faut aller chercher n'existe
 pas. Le texte qui **cite** un onglet a été mis à jour en même temps (« dans
 l'onglet Dollarz ») : renommer un onglet sans relire ce qui le nomme, c'est
-envoyer le client vers une porte qui n'existe plus.
+envoyer le client vers une porte qui n'existe plus. Depuis le 29 septembre,
+ces quatre onglets sont **en bas de l'écran**, dans une barre qui flotte sous
+le pouce — voir « L'espace, une fois dedans ».
 
 La vitrine va **marque → modèle → coloris**, comme l'atelier du vendeur, mais
 elle ne montre que ce qui se regarde : une grille de marques avec une
@@ -1929,7 +2116,9 @@ quatre chiffres clés aussi. Ce qui a changé, c'est le vide.
 
 Résultat : **509 → 348 px** côté vendeur (quatre à cinq commandes visibles au
 lieu de trois), **et le portail client à 301 px**. Rien ne descend sous 30 px de
-zone tactile, c'est vérifié au navigateur.
+zone tactile, c'est vérifié au navigateur. Depuis que ses onglets sont passés
+en bas, la première carte du portail arrive à **277 px** — plus haut qu'avant,
+malgré un titre plus grand et la ligne « à la une ».
 
 Le portail, lui, est traité **plus doucement** : c'est la vitrine, l'accueil au
 prénom, les compteurs et le mouvement restent entiers. On n'y a repris que le
@@ -1956,6 +2145,9 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
   **couvre** le chargement Firestore qui a lieu à cet instant. Sans elle, le
   client regardait une page nue se peupler. Le calque est retiré du flux
   (`display:none`) une fois effacé, sinon il mangerait tous les touchers.
+  **Mais l'app est RETENUE derrière lui** (`#app.hold`, animations en pause) :
+  sans ça, toute son entrée se jouait sous le rideau — voir « L'entrée : la
+  porte, le rideau, l'arrivée » et le piège 35.
 - **Le portail client est la zone la plus travaillée**, parce que c'est la
   vitrine : c'est là que le client décide s'il reste. Compteurs du résumé et
   solde en Dollars qui montent depuis zéro, cartes et paliers de la boutique en
@@ -2679,6 +2871,25 @@ Le mouvement doit donner envie d'utiliser l'app, **jamais la ralentir**.
    Une sonde de dix lignes a répondu là où trois relectures n'auraient rien
    donné.
 
+35. **UNE ANIMATION QUI SE JOUE SOUS UN CALQUE OPAQUE N'EXISTE PAS.** Le
+   portail avait un rideau d'ouverture soigné et une arrivée soignée — et la
+   seconde se jouait entièrement sous le premier. Personne ne s'en était
+   aperçu, parce que chaque morceau, regardé seul, fonctionnait : le rideau
+   s'ouvrait, la page était belle. C'est leur **enchaînement** qui ne
+   marchait pas.
+
+   Ce qui a trouvé le défaut, c'est d'avoir **filmé** le parcours au lieu de
+   le regarder par morceaux : une rafale de captures horodatées depuis la
+   sixième touche, et une sonde qui relève, à chaque instant, l'opacité du
+   rideau et l'état de ce qui est dessous. À 700 ms : rideau opaque, prénom
+   posé, compteurs à 3, frises dessinées. Le tableau a répondu en une ligne.
+
+   **La règle** : dès qu'un calque plein écran couvre une page qui s'anime, la
+   page doit être **retenue** jusqu'à ce qu'il se lève — pas seulement
+   « montée dessous ». Et un mouvement se vérifie **dans sa séquence**, filmé,
+   jamais en capture fixe : une capture dit où les choses finissent, pas si
+   quelqu'un les a vues bouger.
+
 ## Assistant IA
 
 Répond en JSON strict. Types : `question`, `confirm`, `execute`, `answer`,
@@ -2731,7 +2942,12 @@ programme de fidélité complet
 (Dollars, boutique de coupons, échanges validés par le vendeur, remise sur la
 commande), annonce du programme aux clients, compteur de rentabilité de la
 fidélité dans les statistiques, fête de la livraison dans l'espace client
-(félicitations et Dollarz gagnés, une fois par commande).
+(félicitations et Dollarz gagnés, une fois par commande), entrée du portail
+repensée (porte à la marque qui s'ouvre, pièce qui s'envole jusqu'au rideau,
+arrivée qui se joue enfin après lui), ligne « à la une » calculée depuis les
+commandes, onglets en bas sous le pouce avec position gardée par onglet,
+cartes de commande avec photo et libellé lisible, carte de fidélité Dollarz
+qui s'incline sous le doigt.
 
 ## À faire
 
