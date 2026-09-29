@@ -2051,6 +2051,114 @@ Le filtre par statut, la recherche et le mode discret continuent de s'appliquer
 Les suppressions sont douces (`deletedAt`), restaurables 30 jours, avec un
 bouton « Annuler » immédiat dans le toast. Purge automatique au-delà.
 
+### L'atelier : l'app pro repensée
+
+Massif, le 29 septembre, après le portail : « fais de même pour le côté
+gestion ». L'app a d'abord été **capturée écran par écran avec un vrai carnet**
+(huit clients, seize commandes à tous les statuts, trois demandes, quatre
+fournisseurs, le vrai catalogue), et quatre défauts sont sortis qui n'étaient
+pas des questions de goût :
+
+1. **« Demandes » était HORS de l'écran.** Les six vues vivaient dans une
+   rangée en haut qui défilait ; sur un iPhone de 390 px, la seule vue qui
+   attend un geste de lui — avec sa pastille — était coupée au bord droit.
+2. **Huit boutons de même poids dans l'en-tête**, export, corbeille,
+   réinitialiser et déconnexion au rang du thème, alors qu'on ne se sert
+   presque que du mode discret.
+3. **Deux boutons flottants posés sur le bas des cartes**, pile sur les marges.
+4. **Rien ne disait quoi faire.** Un devis sans réponse depuis trois jours,
+   une commande payée à passer, un solde à encaisser : tout était dans la
+   liste, rien n'était dit.
+
+**La coquille.**
+
+- **Les six vues passent en bas**, dans une capsule de verre sous le pouce
+  (`#tabBar`, hors de `#app` : un `transform` d'ancêtre ferait décrocher un
+  `fixed`). **L'active s'élargit et montre son nom, les autres gardent leur
+  icône** : c'est ce qui fait tenir six vues sur l'iPhone le plus étroit.
+  Ordre : Commandes, **Demandes en deuxième**, Clients, Fournisseurs,
+  Catalogue, Stats — `VIEW_ORDER` suit, c'est lui qui donne le sens du
+  glissement.
+- **La part de l'onglet actif a été mesurée, pas devinée.** Elle se calcule
+  APRÈS les marges intérieures : à `flex-grow:2.6`, « Commandes » perdait
+  7 px à 390 px (« Comman… »). D'où 3,2, et 4 sous 380 px avec des marges
+  resserrées. Le test vérifie qu'aucun libellé actif n'est coupé à 320, 390,
+  430 et 768 px.
+- **Chaque vue garde sa position de défilement** (`defilementVue`), saut
+  instantané. En haut de page, on changeait forcément de vue depuis le haut ;
+  sous le pouce, on change de n'importe où.
+- **Un grand titre par vue, et une ligne d'état** (`majTitre`) : « Mardi 29
+  septembre · 10 en cours · **6 choses à faire** », « 3 en attente »,
+  « 8 clients ». Pas un slogan : où on en est.
+- **La barre du haut colle** et prend sa matière de verre avec le titre de la
+  vue quand le grand titre passe dessous — une sentinelle observée, jamais un
+  écouteur de défilement. **Elle a exigé de retirer `body{overflow-x:hidden}`**
+  de ce fichier aussi : c'est le piège 34, qui cassait tout `sticky`.
+- **L'en-tête ne garde que trois boutons** : l'assistant (qui quitte son
+  bouton flottant), le mode discret, et un rond à l'initiale qui ouvre les
+  **Réglages** — des listes groupées comme dans Réglages d'iOS : langue en
+  sélecteur à deux cases, apparence, export, corbeille, accès, réinitialiser,
+  se déconnecter. **Les boutons ont gardé leurs identifiants** (`#exportBtn`,
+  `#trashBtn`, `#themeToggle`…) : chacun fait exactement ce qu'il faisait, il
+  a seulement changé de place. Une ligne qui ouvre autre chose referme les
+  Réglages derrière elle ; le thème et la langue se règlent sur place.
+- **Il ne reste qu'un bouton flottant, « + »**, au-dessus de la barre. Clavier
+  ouvert, lui et la barre s'effacent (`body.clavier`).
+
+**« À faire » (`aFaire()`, `renderTodo()`).** L'app le calcule depuis les
+commandes et les demandes — **rien n'est stocké**, donc rien ne peut être en
+retard sur elles — dans l'ordre de ce qui presse :
+
+1. les demandes à chiffrer et les échanges de Dollarz à accorder ;
+2. les commandes « Nouvelle demande » à chiffrer ;
+3. **les devis sans réponse depuis deux jours ou plus**, les plus vieux
+   d'abord, avec un bouton **« Relancer »** ;
+4. les commandes payées à passer chez le fournisseur ;
+5. **l'argent qui reste dû** sur une commande payée ou au-delà — à l'ambre,
+   c'est un solde impayé, avec sa relance ;
+6. une livraison estimée dépassée, une commande chez le fournisseur depuis
+   plus de dix jours.
+
+Quatre lignes montrées, « Tout voir » pour le reste, et une ligne calme
+« Tout est à jour » quand il n'y a rien — une app à jour mérite de le dire.
+Chaque ligne mène au bon endroit (la fiche, la vue Demandes, la puce
+« Payé »).
+
+**La relance part déjà écrite** (`lienWa`) : prénom, référence, produit, prix
+ou reste dû — ouvrir WhatsApp sur une page blanche, c'était retaper ce que
+l'app sait. **C'est un vrai lien `<a>`**, jamais un `window.open()` (piège 17),
+et le numéro passe par `waDigits()` (piège 12).
+
+**Mode discret** : les lignes d'argent sont `.private` et disparaissent, et
+**elles sortent aussi du compte** — sinon le chiffre « 6 choses à faire »
+trahirait ce qu'on cache. Le bouton du mode discret recalcule donc la liste.
+
+**Les cartes de commande** se lisent comme une boîte de réception : la photo
+du produit (catalogue ou client) — **sinon les initiales du client**, parce
+qu'une pile de carrés gris ne se distingue pas —, qui, quoi (**marque ·
+modèle, puis les coloris avec leurs tailles** ; plus jamais « × 1 »), et
+**la prochaine étape en une pastille** : « À chiffrer », « Sans réponse ·
+3 j », « À commander », « Livraison dépassée ». C'est la logique d'« À
+faire », vue depuis la carte. Clients et fournisseurs ont leur monogramme,
+comme dans Contacts.
+
+**Les chiffres clés** tiennent en une barre coupée en quatre ; **chaque puce
+de statut dit combien elle contient** (une puce vide pâlit) ; la recherche a
+sa loupe (masque CSS, donc aux couleurs du thème) et partage sa ligne avec
+« Ranger par client », réduit à son icône sur téléphone — son nom reste en
+infobulle et pour les lecteurs d'écran.
+
+**La fiche commande : le statut en tête.** Faire avancer une commande est le
+geste le plus fréquent sur une fiche existante, et il était tout en bas. La
+frise des six étapes est maintenant la première chose de la fiche, et **on
+touche une étape pour y aller** : même chemin que les flèches (`stepTo`), donc
+même enregistrement groupé, même question « il a tout payé ? ». Le champ Note
+affichait « undefined » sur une commande venue d'une demande : corrigé.
+
+**Ce qui n'a pas bougé, volontairement** : aucune animation d'entrée sur les
+listes ni sur « À faire » — ce sont des zones de travail, elles sont
+instantanées (voir « Le mouvement »).
+
 ## Design — règles à respecter
 
 - **Thème clair** : fond blanc, vert (`#2eb35c`), gris nardo. **Jamais de noir pur.**
@@ -2123,6 +2231,10 @@ malgré un titre plus grand et la ligne « à la une ».
 Le portail, lui, est traité **plus doucement** : c'est la vitrine, l'accueil au
 prénom, les compteurs et le mouvement restent entiers. On n'y a repris que le
 vide entre les blocs.
+
+**Depuis le 29 septembre, l'en-tête décrit ici n'existe plus** : les sept
+actions sont dans les Réglages, les vues en bas, et les chiffres clés en une
+seule barre — voir « L'atelier : l'app pro repensée ».
 
 ### Le mouvement
 
@@ -2947,7 +3059,10 @@ repensée (porte à la marque qui s'ouvre, pièce qui s'envole jusqu'au rideau,
 arrivée qui se joue enfin après lui), ligne « à la une » calculée depuis les
 commandes, onglets en bas sous le pouce avec position gardée par onglet,
 cartes de commande avec photo et libellé lisible, carte de fidélité Dollarz
-qui s'incline sous le doigt.
+qui s'incline sous le doigt ; côté pro, vues en bas sous le pouce avec
+position gardée par vue, grand titre et ligne d'état, Réglages regroupés,
+« À faire » calculé avec relances WhatsApp prêtes, cartes avec photo ou
+initiales et prochaine étape, statut en tête de fiche avec frise à toucher.
 
 ## À faire
 
