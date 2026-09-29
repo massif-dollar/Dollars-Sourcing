@@ -42,6 +42,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- LE THÈME AVANT LA PREMIÈRE IMAGE. Il n'était posé que par le script de fin
+     de page : un client en thème sombre voyait donc d'abord une page BLANCHE,
+     puis un fondu de 0,45 s vers le noir — filmé : blanc à 0 ms, gris à
+     118 ms. La toute première image de l'espace était un éclair. Ces quelques
+     lignes reprennent exactement la règle d'`applyTheme()` (choix mémorisé,
+     sinon l'heure, et le thème passé par l'aperçu du vendeur) ; le script
+     complet la réapplique ensuite à l'identique, donc sans transition. -->
+<script>
+(function(){
+  var th = null;
+  try{ var q = new URLSearchParams(location.search).get('theme'); if(q === 'dark' || q === 'light') th = q; }catch(e){}
+  if(!th){ try{ th = localStorage.getItem('ds_theme'); }catch(e){} }
+  if(th !== 'dark' && th !== 'light'){ var h = new Date().getHours(); th = (h >= 7 && h < 19) ? 'light' : 'dark'; }
+  var r = document.documentElement;
+  r.setAttribute('data-theme', th);
+  r.style.background = th === 'light' ? '#fbfcfa' : '#0a0a0b';
+  var m = document.querySelector('meta[name="color-scheme"]');
+  if(m) m.setAttribute('content', 'only ' + th);
+})();
+</script>
 <style>
   :root{
     --danger:#e0293c;
@@ -270,53 +290,69 @@
   /* ===== Portail client ===== */
   #app{
     position:relative; z-index:1; max-width:520px; margin:0 auto;
-    padding:calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 60px);
+    padding:calc(env(safe-area-inset-top) + 66px) 18px calc(env(safe-area-inset-bottom) + 104px);
   }
   header{ text-align:center; margin-bottom:26px; }
   .brand{
     font-family:var(--font-display); font-size:11.5px; font-weight:700; letter-spacing:.1em;
     color:var(--text-ghost); text-transform:uppercase;
   }
-  header h1{ font-family:var(--font-display); font-size:26px; font-weight:700; margin:8px 0 3px; letter-spacing:-0.03em; }
+  header h1{ font-family:var(--font-display); font-size:31px; font-weight:700; margin:8px 0 6px; letter-spacing:-0.035em; line-height:1.12; }
   header p{ margin:0; font-size:13px; color:var(--text-faint); letter-spacing:-0.01em; }
 
-  .tabs{ display:flex; gap:8px; margin-bottom:20px; position:relative; }
+  /* ===== LES ONGLETS, SOUS LE POUCE =====
+     Une capsule de verre qui flotte au-dessus du bas de l'écran, comme la
+     barre d'onglets d'iOS : toujours à portée, jamais à aller chercher.
+     Elle arrive APRÈS le rideau, en montant, et s'efface quand le clavier
+     s'ouvre — sinon elle finirait posée sur le champ qu'on remplit. */
+  .tabs{
+    position:fixed; z-index:50; left:50%; bottom:calc(env(safe-area-inset-bottom) + 10px);
+    width:min(calc(100% - 24px), 460px);
+    display:none; padding:5px; border-radius:26px;
+    /* Épaisse : une barre qu'on lit à travers fait lire deux choses à la fois. */
+    background:var(--mat-thick); border:0.5px solid var(--hairline-strong); box-shadow:var(--raise-lg);
+    backdrop-filter:blur(26px) saturate(190%); -webkit-backdrop-filter:blur(26px) saturate(190%);
+    transform:translate(-50%, calc(100% + 34px));
+    transition:transform .62s var(--spring), background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  body.in-app .tabs{ display:flex; }
+  body.arrive .tabs{ transform:translate(-50%, 0); transition-delay:.22s; }
+  body.arrive.clavier .tabs{ transform:translate(-50%, calc(100% + 34px)); transition-delay:0s; }
+  /* LA PASTILLE S'ÉTIRE COMME UNE GOUTTE. Ses deux bords ne partent pas
+     ensemble : celui de devant file, celui de derrière suit — elle s'allonge
+     pendant le trajet et se ramasse en arrivant. C'est `movePill()` qui
+     choisit lequel mène, selon le sens. */
   .tab-pill{
-    position:absolute; top:0; left:0; height:100%; border-radius:100px; z-index:0;
-    background:var(--accent); box-shadow:var(--raise); pointer-events:none;
-    opacity:0; transform:translateX(0) scaleX(1); transform-origin:left center;
-    transition:transform .46s var(--spring), width .46s var(--spring), opacity .3s var(--ease-io);
+    position:absolute; top:5px; bottom:5px; left:5px; right:auto; width:auto; z-index:0;
+    border-radius:21px; background:var(--accent-soft); pointer-events:none; opacity:0;
   }
   .tab-pill.ready{ opacity:1; }
   .tab{
-    flex:1; padding:11px 8px; border-radius:100px; font-size:13.5px; font-weight:600; text-align:center;
-    background:var(--fill); border:0.5px solid var(--hairline); color:var(--text-faint); cursor:pointer;
-    letter-spacing:-0.01em; position:relative; overflow:hidden;
-    -webkit-user-select:none; user-select:none; box-shadow:var(--raise);
-    transition:transform .44s var(--spring), background .3s var(--ease-io),
-               color .3s var(--ease-io), border-color .3s var(--ease-io);
-  }
-  .tab.is-pressed{ transform:scale(.96); }
-  /* La pastille porte désormais la couleur : l'onglet actif devient
-     transparent et laisse voir le fond qui a glissé jusqu'à lui.
-     Piège : --fill n'est qu'à 10 % d'opacité. Si on laissait les onglets tels
-     quels, on verrait la pastille verte passer en fantôme sous les inactifs.
-     Ils deviennent donc opaques — fond de page + la même teinte par-dessus,
-     donc exactement la couleur perçue d'avant, mais sans transparence. */
-  .tab{ z-index:1; background:var(--bg); }
-  .tab::before{
-    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-    background:var(--fill); transition:opacity .3s var(--ease-io);
+    flex:1; min-width:0; position:relative; z-index:1; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:7px 2px 6px; border:0; border-radius:21px; background:transparent;
+    color:var(--text-faint); font-family:var(--font-body); font-size:10.5px; font-weight:600;
+    letter-spacing:-0.01em; cursor:pointer; -webkit-user-select:none; user-select:none;
+    transition:color .3s var(--ease-io), transform .44s var(--spring);
   }
   .tab > *{ position:relative; z-index:1; }
-  .tab.active{ background:transparent; border-color:transparent; color:var(--on-accent); }
-  .tab.active::before{ opacity:0; }
+  .tab-ic{ width:23px; height:23px; transition:transform .5s var(--spring); }
+  .tab-l{ white-space:nowrap; }
+  .tab.active{ color:var(--accent); }
+  .tab.active .tab-ic{ transform:translateY(-1px) scale(1.1); }
+  .tab.is-pressed{ transform:scale(.9); }
   .tab .ripple{
     position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
-    background:radial-gradient(circle, rgba(255,255,255,.35) 0%, transparent 66%);
+    background:radial-gradient(circle, var(--ripple) 0%, transparent 66%);
     transform:translate(-50%,-50%) scale(0);
     animation:rippleOut .6s var(--ease-out) forwards;
   }
+  .tab-dot{
+    position:absolute; top:5px; left:calc(50% + 7px); width:8px; height:8px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 0 2px var(--bg-elevated);
+    transform:scale(0); transition:transform .45s var(--spring);
+  }
+  .tab-dot.on{ transform:scale(1); }
 
   .card{
     background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius);
@@ -557,9 +593,59 @@
     18%{ opacity:.9; }
     100%{ left:150%; opacity:0; }
   }
-  .card-top{ display:flex; align-items:center; justify-content:space-between; gap:9px; }
-  .card-top .product{ font-weight:600; font-size:15px; letter-spacing:-0.015em; }
-  .badge{ font-size:10.5px; font-weight:600; padding:3.5px 9px; border-radius:100px; white-space:nowrap; flex-shrink:0; }
+  /* Une carte qui se révèle au défilement n'a qu'UNE entrée : la révélation.
+     Avec `cardIn` en plus, les deux se chevauchaient — l'animation finissait
+     à pleine opacité, puis la carte retombait à zéro le temps que la
+     révélation parte. Et son reflet attend qu'elle soit là : balayer une
+     carte invisible, c'est un reflet que personne ne voit. */
+  .order-card.reveal{ animation:none; }
+  .order-card.reveal:not(.revealed)::before{ animation:none; }
+  /* ===== LA TÊTE DE CARTE =====
+     Le titre était la chaîne brute de la base — « Asics · Ensemble / Veste :
+     Gris ×2 × 2 », quantité comptée deux fois — et la photo, la seule chose
+     qui fasse envie, dormait derrière un repli. Une carte de commande se lit
+     comme dans une boutique : l'image, la marque, le modèle, puis le détail. */
+  .card-top{ display:flex; align-items:flex-start; gap:12px; }
+  .card-id{ flex:1; min-width:0; padding-top:1px; }
+  .card-brand{
+    display:block; margin-bottom:2px; font-family:var(--font-display); font-size:10.5px;
+    font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
+  }
+  .card-top .product{ font-weight:600; font-size:15.5px; letter-spacing:-0.02em; line-height:1.25; overflow-wrap:anywhere; }
+  .card-sub{ display:block; margin-top:3px; font-size:12.5px; line-height:1.4; color:var(--text-muted); letter-spacing:-0.005em; }
+  .badge{ font-size:10.5px; font-weight:600; padding:3.5px 9px; border-radius:100px; white-space:nowrap; flex-shrink:0; margin-top:1px; }
+  /* La vignette. Deux photos ou plus, et la seconde dépasse derrière la
+     première, légèrement tournée : on voit qu'il y en a d'autres sans qu'une
+     rangée de miniatures ne mange la carte. Elle s'ouvre en grand au toucher. */
+  .card-thumb{ position:relative; flex:none; width:58px; height:58px; }
+  .card-thumb img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+    border-radius:14px; border:0.5px solid var(--hairline); box-shadow:var(--raise); background:var(--fill-2);
+  }
+  .card-thumb-img{ z-index:1; cursor:zoom-in; transition:transform .34s var(--spring); }
+  .card-thumb-img:active{ transform:scale(.95); }
+  .card-thumb-dos{ z-index:0; transform:rotate(9deg) translate(6px,-3px) scale(.9); opacity:.8; }
+  .card-thumb-n{
+    position:absolute; z-index:2; right:-6px; bottom:-6px; min-width:21px; height:21px; padding:0 5px;
+    border-radius:100px; display:grid; place-items:center;
+    background:var(--accent); color:var(--on-accent); font-style:normal; font-size:10.5px; font-weight:700;
+    font-variant-numeric:tabular-nums; box-shadow:0 0 0 2px var(--bg-elevated);
+  }
+  .card-thumb.vide{
+    display:grid; place-items:center; border-radius:14px;
+    background:var(--accent-soft); color:var(--accent);
+  }
+  .card-thumb.vide svg{ width:25px; height:25px; }
+  /* À la révélation, la photo se pose et la seconde s'écarte en éventail —
+     une fois, avec la carte, jamais en boucle. */
+  .order-card.revealed .card-thumb-img, .order-card:not(.reveal) .card-thumb-img{
+    animation:thumbIn .6s var(--spring) backwards; animation-delay:calc(var(--d, 0ms) + 140ms);
+  }
+  .order-card.revealed .card-thumb-dos, .order-card:not(.reveal) .card-thumb-dos{
+    animation:thumbFan .7s var(--spring) backwards; animation-delay:calc(var(--d, 0ms) + 300ms);
+  }
+  @keyframes thumbIn{ from{ opacity:0; transform:scale(.7); } to{ opacity:1; transform:none; } }
+  @keyframes thumbFan{ from{ transform:none; opacity:0; } to{ transform:rotate(9deg) translate(6px,-3px) scale(.9); opacity:.8; } }
   .card-mid{ font-size:13px; color:var(--text-faint); margin-top:5px; font-style:italic; letter-spacing:-0.005em; }
   .card-bottom{ margin-top:9px; font-size:12px; color:var(--text-ghost); }
   /* La référence de la commande : le client peut la citer, le vendeur la
@@ -592,26 +678,123 @@
     to{ transform:translate(26px,18px) scale(1.22); }
   }
   .hello .brand{ animation:helloIn .6s var(--ease-out) both; }
-  .hello h1{ animation:helloIn .7s var(--ease-out) .08s both; }
-  .hello .hello-sub{ animation:helloIn .7s var(--ease-out) .16s both; }
+  .hello .hello-sub{ animation:helloIn .7s var(--ease-out) .42s both; }
   @keyframes helloIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
-  .hello-sub{ margin:6px 0 0; font-size:13.5px; color:var(--text-faint); letter-spacing:-0.01em; }
+  /* LA SALUTATION SE RÉVÈLE. Chaque mot monte de derrière un cache, l'un
+     après l'autre : c'est la typographie des lancements de produits, et c'est
+     ce qui fait lire « Bonsoir Yanis » comme un accueil plutôt qu'un titre.
+     Le cache est le mot lui-même (`overflow:hidden`) ; la marge négative
+     rattrape le jambage que le cache couperait. */
+  .hello h1 .w{
+    display:inline-block; overflow:hidden; vertical-align:bottom;
+    padding:0 .03em .12em; margin:0 -.03em -.12em;
+  }
+  .hello h1 .w > span{
+    display:inline-block;
+    animation:motIn .9s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay:calc(.08s + var(--w,0) * .09s);
+  }
+  @keyframes motIn{
+    from{ transform:translateY(108%) rotate(5deg); opacity:0; }
+    40%{ opacity:1; }
+    to{ transform:none; opacity:1; }
+  }
+  /* Le prénom porte la couleur de la marque : c'est le seul mot de l'écran
+     qui soit à lui. */
+  .hello h1 .nom > span{
+    background:linear-gradient(115deg, var(--accent-deep), var(--accent) 70%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+  }
+  html[data-theme="dark"] .hello h1 .nom > span{
+    background-image:linear-gradient(115deg, var(--accent), var(--accent-bright));
+  }
+  .hello-sub{ margin:8px 0 0; font-size:13.5px; color:var(--text-faint); letter-spacing:-0.01em; }
 
-  .summary{ display:flex; gap:9px; margin-bottom:18px; }
-  .summary-tile{
-    animation:helloIn .7s var(--ease-out) both;
-    animation-delay:calc(220ms + var(--i,0) * 80ms);
-    flex:1; text-align:center; padding:12px 8px; border-radius:15px;
+  /* ===== « À la une » =====
+     Une pastille, pas une phrase grise : elle dit ce qui se passe et elle se
+     touche. Le point est à l'accent, et à l'ambre quand un montant attend —
+     l'ambre est réservé aux soldes impayés, c'en est un. */
+  .une{
+    display:inline-flex; align-items:center; gap:10px; max-width:100%;
+    margin-top:4px; padding:8px 10px 8px 13px; border-radius:17px; cursor:pointer;
     background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
     backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+    font:inherit; color:var(--text); text-align:left;
+    position:relative; overflow:hidden;
+    transition:transform .4s var(--spring), background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .une:active{ transform:scale(.97); }
+  .une-dot{
+    flex:none; width:8px; height:8px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 0 3.5px var(--accent-soft);
+  }
+  .une.warn .une-dot{ background:var(--warn); box-shadow:0 0 0 3.5px var(--warn-soft); }
+  .une-t{ min-width:0; display:flex; flex-direction:column; }
+  .une-t b{
+    font-size:13.5px; font-weight:600; letter-spacing:-0.015em; line-height:1.3;
+  }
+  .une-t small{ font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; margin-top:1px; line-height:1.3; }
+  .une.warn .une-t small{ color:var(--warn); font-weight:600; }
+  .une-go{
+    flex:none; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+    background:var(--fill); color:var(--text-faint);
+  }
+  .une-go svg{ width:13px; height:13px; }
+  /* Une nouvelle nouvelle — un colis qui part pendant qu'il regarde — arrive
+     en montant, avec un reflet : c'est ce qui la fait remarquer sans clignoter. */
+  .hello-sub.swap{ animation:uneIn .5s var(--ease-out) both; }
+  .hello-sub.swap .une::after{
+    content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%;
+    background:linear-gradient(100deg, transparent, var(--sheen), transparent);
+    transform:rotate(18deg); pointer-events:none;
+    animation:cardSheen 1s var(--ease-io) .2s backwards;
+  }
+  @keyframes uneIn{ from{ opacity:0; transform:translateY(8px) scale(.97); } to{ opacity:1; transform:none; } }
+
+  /* La carte que la une désigne se signale d'un éclat, une fois. */
+  .order-card{ scroll-margin-top:calc(env(safe-area-inset-top) + 64px); }
+  .order-card.flash{ animation:flashCarte 1.5s var(--ease-out); }
+  @keyframes flashCarte{
+    0%{ box-shadow:var(--raise), 0 0 0 0 var(--accent-soft); border-color:var(--hairline); }
+    25%{ box-shadow:var(--raise), 0 0 0 5px var(--accent-soft); border-color:var(--accent); }
+    100%{ box-shadow:var(--raise), 0 0 0 0 transparent; border-color:var(--hairline); }
+  }
+
+  /* LES COMPTEURS NE SONT PLUS TROIS CARTES, mais une seule barre coupée en
+     trois. Trois boîtes de même poids qu'une commande, c'était trois choses
+     de plus à lire avant d'arriver à la première carte. */
+  .summary{
+    display:flex; margin-bottom:18px; padding:3px; border-radius:18px;
+    background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(20px) saturate(170%); -webkit-backdrop-filter:blur(20px) saturate(170%);
+    animation:helloIn .7s var(--ease-out) .3s both;
     transition:background .45s var(--ease-io), border-color .45s var(--ease-io);
+  }
+  .summary-tile{ flex:1; text-align:center; padding:10px 6px 9px; position:relative; }
+  .summary-tile + .summary-tile::before{
+    content:''; position:absolute; left:0; top:24%; bottom:24%; width:0.5px;
+    background:var(--hairline-strong);
   }
   .summary-tile .n{
     font-family:var(--font-display); font-size:21px; font-weight:600; letter-spacing:-0.03em;
-    font-variant-numeric:tabular-nums; display:block;
+    font-variant-numeric:tabular-nums; display:block; line-height:1.15;
   }
   .summary-tile .l{ font-size:11px; color:var(--text-faint); letter-spacing:-0.005em; }
   .summary-tile.accent .n{ color:var(--accent); }
+
+  /* L'EN-TÊTE S'EFFACE AU DÉFILEMENT, comme un grand titre d'iOS : il recule
+     et pâlit à mesure que la barre compacte prend le relais. Piloté par le
+     défilement lui-même, sans une ligne de JS — et là où le navigateur ne sait
+     pas faire, l'en-tête défile simplement, comme avant. */
+  @supports (animation-timeline: scroll()){
+    .hello{
+      animation:heroFuit linear both;
+      animation-timeline:scroll(root);
+      animation-range:0 150px;
+    }
+    @keyframes heroFuit{ to{ opacity:0; transform:translateY(22px) scale(.95); } }
+  }
 
   .reveal{
     opacity:0; transform:translateY(16px);
@@ -950,7 +1133,7 @@
      par-dessus la rangée d'onglets de l'aperçu. Elles appartiennent au client,
      pas à la fenêtre du vendeur — c'est lui qui a déjà les siennes. */
   body.apercu .lang-toggle, body.apercu .theme-toggle{ display:none !important; }
-  body.apercu .tabs{ pointer-events:none; margin-top:4px; }
+  body.apercu .tabs{ pointer-events:none; }
   body.apercu #app{ padding-top:calc(env(safe-area-inset-top) + 10px); }
 
 
@@ -1190,37 +1373,90 @@
   }
   @keyframes coinShine{ 0%{ background-position:180% 0; } 40%,100%{ background-position:-80% 0; } }
 
+  /* ===== LA CARTE DE FIDÉLITÉ =====
+     Le solde était un nombre dans un cadre. Il devient une CARTE — la marque,
+     son nom, son solde, sa date d'entrée — qu'on incline du doigt et dont le
+     reflet suit la lumière. C'est un objet qu'on a envie de toucher, et c'est
+     exactement ce qu'on attend d'un programme de fidélité : qu'on y revienne.
+     Aux couleurs de l'app : vert en clair, orange Brabus en sombre. */
   .balance-card{
-    position:relative; overflow:hidden; text-align:center;
-    background:var(--mat); border:0.5px solid var(--hairline); border-radius:var(--radius);
-    padding:24px 18px 20px; box-shadow:var(--raise-lg); margin-bottom:18px;
-    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    position:relative; overflow:hidden; text-align:left; margin-bottom:22px;
+    padding:18px 20px 16px; border-radius:24px; color:var(--on-accent);
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,.26), transparent 55%),
+      linear-gradient(150deg, var(--accent-bright) 0%, var(--accent) 50%, var(--accent-deep) 100%);
+    box-shadow:0 2px 6px rgba(0,0,0,.12), 0 22px 44px var(--accent-soft), inset 0 0 0 0.5px rgba(255,255,255,.32);
+    transform:perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition:transform .8s var(--spring);
+    /* Le glissement vertical reste au défilement de la page ; l'horizontal est
+       à la carte. Sans ça, on ne pourrait plus faire défiler l'onglet en
+       posant le doigt dessus. */
+    touch-action:pan-y; -webkit-user-select:none; user-select:none;
   }
-  .balance-orb{
-    position:absolute; top:-80px; left:50%; margin-left:-110px; width:220px; height:220px;
-    border-radius:50%; background:radial-gradient(circle, var(--accent-soft), transparent 66%);
-    pointer-events:none; filter:blur(4px);
-    animation:balanceOrb 11s var(--ease-io) infinite alternate;
+  /* Pendant que le doigt bouge, elle le SUIT : un ressort à chaque pixel
+     donnerait une carte molle. Au lâcher, le ressort la ramène. */
+  .balance-card.tenue{ transition:transform .12s var(--ease-out); }
+  .balance-card.entre{ animation:fidIn 1s cubic-bezier(.2,.8,.2,1) backwards; }
+  @keyframes fidIn{
+    from{ opacity:0; transform:perspective(900px) rotateX(26deg) translateY(28px) scale(.93); }
+    to{ opacity:1; transform:perspective(900px); }
   }
-  @keyframes balanceOrb{
-    from{ transform:scale(1) translate(0,0); opacity:.85; }
-    to{ transform:scale(1.18) translate(14px,8px); opacity:1; }
+  /* La trame d'une carte bancaire : des cercles fins qui ne se voient qu'en
+     y regardant. C'est ce détail qui la fait lire comme un objet imprimé. */
+  .balance-card::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.55;
+    background:repeating-radial-gradient(circle at 112% 118%, rgba(255,255,255,.09) 0 1px, transparent 1px 8px);
   }
+  /* Le reflet, une fois à l'arrivée. */
+  .balance-card.entre::after{
+    content:''; position:absolute; top:-60%; left:-140%; width:50%; height:220%; pointer-events:none;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+    transform:rotate(18deg); opacity:0;
+    animation:cardSheen 1.2s var(--ease-io) .55s backwards;
+  }
+  /* La lumière qui suit le doigt. */
+  .fid-glare{
+    position:absolute; inset:0; pointer-events:none; opacity:.35;
+    background:radial-gradient(circle at var(--gx, 20%) var(--gy, 0%), rgba(255,255,255,.5), transparent 46%);
+    mix-blend-mode:soft-light; transition:opacity .4s var(--ease-io);
+  }
+  .balance-card.tenue .fid-glare{ opacity:1; }
+  .balance-card > *{ position:relative; }
+  .fid-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+  .fid-brand{ font-family:var(--font-display); font-size:11px; font-weight:700; letter-spacing:.2em; opacity:.92; }
+  .fid-kind{ font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; opacity:.72; white-space:nowrap; }
   .balance-amount{
-    position:relative; display:inline-flex; align-items:center; gap:.34em;
-    font-family:var(--font-display); font-weight:700; font-size:40px;
-    letter-spacing:-0.04em; font-variant-numeric:tabular-nums; color:var(--text);
+    position:relative; display:inline-flex; align-items:center; gap:.3em;
+    font-family:var(--font-display); font-weight:700; font-size:44px; line-height:1.05;
+    letter-spacing:-0.045em; font-variant-numeric:tabular-nums; color:inherit;
   }
-  .balance-label{ position:relative; display:block; margin-top:4px; font-size:13px; color:var(--text-faint); letter-spacing:-0.01em; }
-  .balance-next{ position:relative; margin-top:16px; }
-  .balance-bar{ height:6px; border-radius:6px; background:var(--fill-2); overflow:hidden; }
+  /* La pièce se retourne sur la carte : claire sur le vert, sombre sur
+     l'orange — sinon elle se fondrait dans son propre fond. */
+  .balance-card .ds-coin{
+    background:var(--on-accent); color:var(--accent-deep);
+    box-shadow:0 3px 10px rgba(0,0,0,.16);
+  }
+  html[data-theme="dark"] .balance-card .ds-coin{ color:var(--accent); }
+  .balance-label{ position:relative; display:block; margin-top:2px; font-size:13px; font-weight:600; letter-spacing:-0.01em; opacity:.82; }
+  .balance-next{ position:relative; margin-top:15px; }
+  .balance-bar{ height:6px; border-radius:6px; background:rgba(255,255,255,.26); overflow:hidden; }
+  html[data-theme="dark"] .balance-bar{ background:rgba(0,0,0,.16); }
   .balance-fill{
     display:block;              /* un <i> est en ligne : sans ça, la largeur ne s'applique pas */
     height:100%; border-radius:6px; width:0;
-    background:linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
-    transition:width 1s var(--ease-out) .2s;
+    background:var(--on-accent);
+    transition:width 1.1s var(--ease-out) .5s;
   }
-  .balance-next p{ margin:9px 0 0; font-size:12.5px; color:var(--text-faint); letter-spacing:-0.01em; }
+  .balance-next p{ margin:8px 0 0; font-size:12.5px; letter-spacing:-0.01em; opacity:.88; }
+  .fid-bottom{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:16px;
+    font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  }
+  .fid-name{
+    min-width:0; font-family:var(--font-display); font-size:12.5px; font-weight:600; letter-spacing:.12em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .fid-since{ flex:none; opacity:.72; font-size:9.5px; }
 
   .shop-title{ font-size:13px; font-weight:600; color:var(--text-muted); margin:0 0 10px; letter-spacing:-0.01em; }
   .shop-item{
@@ -1283,7 +1519,8 @@
   .track-fill{
     position:absolute; inset:0 auto 0 0; border-radius:3px; width:0;
     background:linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
-    transition:width .95s var(--ease-out) .15s;
+    transition:width .95s var(--ease-out);
+    transition-delay:calc(var(--d, 0ms) + .15s);   /* la frise suit sa carte */
   }
   .track-steps{ display:flex; justify-content:space-between; }
   .track-step{ flex:1; text-align:center; position:relative; }
@@ -1302,7 +1539,7 @@
      sinon la frise se dessinerait derrière l'écran, avant qu'on l'ait vue. */
   .track.animate .track-dot{
     animation:dotIn .55s var(--spring) backwards;
-    animation-delay:calc(var(--i,0) * 90ms + 120ms);
+    animation-delay:calc(var(--d, 0ms) + var(--i,0) * 90ms + 120ms);
   }
   @keyframes dotIn{
     from{ opacity:0; transform:scale(.15); }
@@ -1310,7 +1547,7 @@
   }
   .track.animate .track-label{
     animation:trackLabelIn .5s var(--ease-out) backwards;
-    animation-delay:calc(var(--i,0) * 90ms + 200ms);
+    animation-delay:calc(var(--d, 0ms) + var(--i,0) * 90ms + 200ms);
   }
   @keyframes trackLabelIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
   .track-step.current .track-dot::after{
@@ -1428,6 +1665,8 @@
     opacity:0; transition:opacity .3s var(--ease-io), transform .35s var(--spring); pointer-events:none;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  /* Au-dessus de la barre d'onglets, jamais dessous. */
+  body.in-app .toast{ bottom:calc(env(safe-area-inset-bottom) + 92px); }
 
   .error-screen{ text-align:center; padding:80px 24px; }
   .error-screen .icon{ font-size:40px; margin-bottom:16px; }
@@ -1437,26 +1676,96 @@
   #loadingScreen{ text-align:center; padding:100px 24px; color:var(--text-ghost); font-size:14.5px; }
 
   /* --- Écran de code --- */
-  #codeScreen{ display:none; padding:56px 8px; text-align:center; }
+  /* ===== LA PORTE =====
+     Le premier écran que voit le client, donc le premier jugement. Il ne se
+     pose pas d'un bloc : la pièce éclot (la même que le rideau), le titre
+     monte, les points apparaissent, le clavier arrive rangée par rangée. Moins
+     d'une seconde, et c'est ce qui dit « ici, quelqu'un a soigné les
+     détails » avant même la première touche. */
+  #codeScreen{
+    display:none; text-align:center; position:relative; z-index:1;
+    padding:calc(env(safe-area-inset-top) + 50px) 8px calc(env(safe-area-inset-bottom) + 30px);
+  }
   #codeScreen.show{ display:block; }
-  #codeScreen .code-icon{
-    width:60px; height:60px; margin:0 auto 18px; border-radius:19px;
-    background:var(--mat); border:0.5px solid var(--hairline); box-shadow:var(--raise-lg);
-    display:flex; align-items:center; justify-content:center; font-size:25px;
-    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  /* Préfixé par l'identifiant : `.curtain-mark` est défini plus bas avec la
+     même spécificité, et c'est la dernière règle qui gagne — la pièce de la
+     porte faisait 82 px, et le vol n'avait plus rien à faire grandir. */
+  #codeScreen .door-mark{ width:66px; height:66px; margin:0 auto 14px; }
+  #codeScreen .door-mark .curtain-tile{ border-radius:21px; }
+  #codeScreen .door-mark .curtain-glyph{ font-size:31px; }
+  .door-brand{
+    margin:0 0 20px; font-family:var(--font-display); font-size:10.5px; font-weight:700;
+    letter-spacing:.2em; color:var(--text-ghost); text-transform:uppercase;
   }
-  #codeScreen h2{ font-family:var(--font-display); font-size:20px; margin:0 0 7px; font-weight:700; letter-spacing:-0.025em; }
-  #codeScreen p{ font-size:13.5px; color:var(--text-faint); margin:0 0 24px; line-height:1.55; letter-spacing:-0.01em; }
-  .code-dots{ display:flex; gap:12px; justify-content:center; margin-bottom:26px; }
+  #codeScreen h2{ font-family:var(--font-display); font-size:22px; margin:0 0 7px; font-weight:700; letter-spacing:-0.03em; }
+  #codeScreen p#codeSubtitle{ font-size:13.5px; color:var(--text-faint); margin:0 auto 26px; max-width:300px; line-height:1.55; letter-spacing:-0.01em; }
+  #codeScreen.entree .door-brand{ animation:doorUp .6s var(--ease-out) .22s both; }
+  #codeScreen.entree h2{ animation:doorUp .6s var(--ease-out) .3s both; }
+  #codeScreen.entree p#codeSubtitle{ animation:doorUp .6s var(--ease-out) .37s both; }
+  #codeScreen.entree .code-dot{ animation:dotAppear .5s var(--spring) backwards; animation-delay:calc(.42s + var(--i,0) * 45ms); }
+  /* `backwards` et jamais `both` : figée à la fin, l'animation écraserait le
+     `transform` de l'enfoncement — la touche ne réagirait plus au doigt. */
+  #codeScreen.entree .code-key{ animation:keyIn .6s var(--spring) backwards; animation-delay:calc(.5s + var(--k,0) * 32ms); }
+  @keyframes doorUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  @keyframes dotAppear{ from{ opacity:0; transform:scale(.2); } to{ opacity:1; transform:none; } }
+  @keyframes keyIn{ from{ opacity:0; transform:translateY(16px) scale(.9); } to{ opacity:1; transform:none; } }
+
+  .code-dots{ display:flex; gap:13px; justify-content:center; margin-bottom:28px; }
   .code-dot{
-    width:13px; height:13px; border-radius:50%; border:1.5px solid var(--hairline-strong);
-    transition:background .18s var(--ease-out), border-color .18s var(--ease-out), transform .3s var(--spring);
+    position:relative; width:14px; height:14px; border-radius:50%;
+    border:1.5px solid var(--hairline-strong);
+    transition:background .2s var(--ease-out), border-color .2s var(--ease-out),
+               transform .35s var(--spring), box-shadow .3s var(--ease-out);
   }
-  .code-dot.filled{ background:var(--accent); border-color:var(--accent); transform:scale(1.15); }
+  /* Chaque chiffre ÉCLOT : le point gonfle au-delà de sa taille puis se pose,
+     et un anneau part de lui. Le doigt sent que la touche a compté. */
+  .code-dot.filled{
+    background:var(--accent); border-color:var(--accent); transform:scale(1.1);
+    box-shadow:0 0 0 4px var(--accent-soft), 0 0 16px var(--accent-soft);
+    animation:dotPop .42s var(--spring);
+  }
+  .code-dot.filled::after{
+    content:''; position:absolute; inset:-2px; border-radius:50%; pointer-events:none;
+    border:1.5px solid var(--accent); opacity:0;
+    animation:dotRing .6s var(--ease-out);
+  }
+  @keyframes dotPop{ 0%{ transform:scale(.35); } 60%{ transform:scale(1.35); } 100%{ transform:scale(1.1); } }
+  @keyframes dotRing{ from{ transform:scale(1); opacity:.85; } to{ transform:scale(2.6); opacity:0; } }
+  /* Un mauvais code : les points passent au rouge une demi-seconde, l'écran
+     tremble, puis ils se vident. Le rouge est réservé au danger — un accès
+     refusé en est un. */
+  .code-dots.faux .code-dot{
+    background:var(--danger); border-color:var(--danger); animation:none;
+    box-shadow:0 0 0 4px rgba(224,41,60,.14);
+  }
+  .code-dots.faux .code-dot::after{ display:none; }
+  /* LE BON CODE. Les six points glissent au centre et s'y fondent, le clavier
+     se retire en cascade, et il ne reste que la pièce — qui s'envole alors
+     jusqu'au rideau. On voit la porte s'ouvrir au lieu d'un écran qui saute. */
+  #codeScreen.ouvre .code-dot{
+    animation:dotFuse .36s var(--ease-io) forwards;
+  }
+  @keyframes dotFuse{
+    0%{ transform:scale(1.1); }
+    55%{ transform:translateX(var(--dx,0px)) scale(1.25); opacity:1; }
+    100%{ transform:translateX(var(--dx,0px)) scale(.2); opacity:0; }
+  }
+  #codeScreen .code-key, #codeScreen h2, #codeScreen p, #codeScreen .client-bio-btn,
+  #codeScreen .bio-enable-link, #codeScreen .code-error{
+    transition:opacity .26s var(--ease-io), transform .34s var(--ease-io);
+  }
+  #codeScreen.ouvre .code-key{
+    opacity:0; transform:translateY(12px) scale(.92);
+    transition-delay:calc(var(--k,0) * 14ms);
+  }
+  #codeScreen.ouvre h2, #codeScreen.ouvre p, #codeScreen.ouvre .client-bio-btn,
+  #codeScreen.ouvre .bio-enable-link, #codeScreen.ouvre .code-error{ opacity:0; transform:translateY(-6px); }
+  #codeScreen.ouvre .code-pad{ pointer-events:none; }
+
   .code-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px; max-width:290px; margin:0 auto; }
   .code-key{
-    min-height:58px; border-radius:17px; border:0.5px solid var(--hairline); background:var(--fill);
-    font-family:var(--font-display); font-size:23px; font-weight:600; color:var(--text); cursor:pointer;
+    min-height:60px; border-radius:18px; border:0.5px solid var(--hairline); background:var(--fill);
+    font-family:var(--font-display); font-size:24px; font-weight:600; color:var(--text); cursor:pointer;
     box-shadow:var(--raise); position:relative; overflow:hidden;
     -webkit-user-select:none; user-select:none;
     display:flex; align-items:center; justify-content:center;
@@ -1478,8 +1787,10 @@
   .code-key.fn{
     font-family:var(--font-body); font-size:13.5px; font-weight:600; color:var(--text-faint);
     background:transparent; border-color:transparent; box-shadow:none;
+    backdrop-filter:none; -webkit-backdrop-filter:none;
   }
   .code-key.fn::after{ opacity:0; }
+  .code-key.fn svg{ width:24px; height:24px; }
   .code-error{ margin-top:18px; font-size:13.5px; color:var(--danger); min-height:18px; }
 
   .client-bio-btn{
@@ -1509,12 +1820,39 @@
   /* ===== Ouverture du portail =====
      Elle ne fait pas attendre : elle couvre le chargement Firestore qui a lieu
      à cet instant précis. Sans elle, le client voit une page nue se peupler. */
+  /* LE RIDEAU EST TRANSPARENT, et c'est ce qui le rend continu. Il n'a plus à
+     cacher l'app : elle est retenue invisible derrière lui (`#app.hold`). Le
+     fond qu'on voit pendant l'ouverture est donc celui de la porte — les mêmes
+     lumières, au même endroit — et rien ne « change d'écran ». */
   .curtain{
     position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
-    background:var(--bg); text-align:center;
-    transition:opacity .5s var(--ease-io), transform .5s var(--ease-io);
+    background:transparent; text-align:center;
+    transition:opacity .4s var(--ease-io);
   }
-  .curtain.lift{ opacity:0; transform:scale(1.04); pointer-events:none; }
+  .curtain > div{ transition:transform .5s var(--ease-io); }
+  .curtain.lift{ opacity:0; pointer-events:none; }
+  /* Il ne se lève pas en grossissant : la pièce et le prénom MONTENT, comme
+     s'ils cédaient la place à ce qui arrive dessous. */
+  .curtain.lift > div{ transform:translateY(-34px) scale(.94); }
+  /* La pièce de la porte devient celle du rideau : même objet, il se déplace.
+     Pas d'éclosion donc, elle est déjà là — seulement le vol, du cadenas au
+     centre de l'écran. `--fx/--fy/--fs` sont mesurés au moment du succès. */
+  .curtain.vol .curtain-mark{ animation:curtainVol .72s cubic-bezier(.2,.8,.25,1) both; }
+  .curtain.vol .curtain-tile, .curtain.vol .curtain-glyph{ animation:none; }
+  @keyframes curtainVol{
+    from{ transform:translate(var(--fx,0px), var(--fy,0px)) scale(var(--fs,1)); }
+    to{ transform:none; }
+  }
+
+  /* L'APP ATTEND LE RIDEAU. Mesuré avant ce correctif : à 700 ms le prénom,
+     les compteurs, les cartes et les frises avaient FINI leur entrée — sous un
+     rideau opaque jusqu'à 1 150 ms. Le client découvrait une page déjà
+     immobile, et toute la chorégraphie se jouait pour personne.
+     Pendant l'ouverture, l'app est donc invisible et ses animations en pause
+     à leur première image. Elles partent toutes au moment où le rideau se
+     lève — `arriveApp()` retire la classe. */
+  #app.hold{ opacity:0; pointer-events:none; }
+  #app.hold *, #app.hold *::before, #app.hold *::after{ animation-play-state:paused !important; }
   .curtain-mark{ position:relative; width:82px; height:82px; margin:0 auto 20px; }
   .curtain-glow{
     position:absolute; inset:-48%; border-radius:50%; pointer-events:none;
@@ -1665,12 +2003,12 @@
     background:transparent; color:var(--text-muted); font-size:14px; font-weight:600;
   }
 
-  /* L'app prend la main pendant que l'ouverture s'efface : jamais de trou noir. */
-  #app.app-enter{ animation:appEnter .55s var(--ease-out) both; }
-  @keyframes appEnter{
-    from{ opacity:0; transform:scale(.985) translateY(6px); }
-    to{ opacity:1; transform:none; }
-  }
+  /* L'app prend la main pendant que l'ouverture s'efface : jamais de trou noir.
+     OPACITÉ SEULEMENT, pas de transform : un transform sur un ancêtre fait
+     d'un `position:fixed` un simple `absolute` le temps de l'animation. Ce
+     sont les éléments eux-mêmes qui bougent, chacun à son tour. */
+  #app.app-enter{ animation:appEnter .5s var(--ease-out) both; }
+  @keyframes appEnter{ from{ opacity:0; } to{ opacity:1; } }
 
   .shake{ animation:shakeX .4s var(--ease-out); }
   @keyframes shakeX{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
@@ -1744,17 +2082,13 @@
       padding-top:calc(env(safe-area-inset-top) + 58px);
     }
     header{ margin-bottom:17px; }
-    header h1{ font-size:23px; margin:6px 0 2px; }
+    header h1{ font-size:28px; margin:6px 0 4px; }
     header p{ font-size:12.5px; }
 
     .summary{ gap:8px; margin-bottom:13px; }
     .summary-tile{ padding:9px 6px; border-radius:13px; }
     .summary-tile .n{ font-size:19px; }
 
-    .tabs{ gap:6px; margin-bottom:13px; }
-    /* Quatre onglets et non plus trois : à 390 px, « Commandes » débordait
-       de sa pastille. On resserre le texte, on n'enlève aucun onglet. */
-    .tab{ padding:9px 4px; font-size:11.8px; letter-spacing:-0.022em; }
     .cat-grid{ gap:9px; }
     .cat-colors{ gap:8px; }
   }
@@ -1762,8 +2096,9 @@
      « Commandes » y débordait encore. On rétrécit le texte plutôt que de
      retirer un onglet — les quatre doivent rester visibles d'un coup d'œil. */
   @media (max-width:340px){
-    .tabs{ gap:5px; }
-    .tab{ padding:9px 3px; font-size:10.2px; letter-spacing:-0.03em; }
+    /* « Commandes » doit tenir sous son icône : on resserre, on ne retire
+       aucun onglet — les quatre restent visibles d'un coup d'œil. */
+    .tab{ font-size:9.8px; letter-spacing:-0.03em; }
 
     .order-card{ padding:12px 13px; border-radius:15px; }
 
@@ -1775,7 +2110,7 @@
     *{ animation-duration:.01ms !important; transition-duration:.01ms !important;
        animation-iteration-count:1 !important; }
     body::before, .track-step.current .track-dot::after,
-    .balance-amount .ds-coin::before, .balance-orb,
+    .balance-amount .ds-coin::before,
     .shop-item.affordable, .track.animate .track-dot,
     .track.animate .track-label, .hello-aura,
     #aurora i, .skel::after,
@@ -1787,13 +2122,18 @@
        opaque, et la photo la remplace quand elle arrive. */
     .cat-lb-img img.chargement{ opacity:1 !important; }
     .skel::after{ display:none !important; }
-    .order-card::before, .cat-note::after{ display:none !important; }
+    .order-card::before, .cat-note::after, .balance-card.entre::after{ display:none !important; }
+    /* L'en-tête piloté par le défilement : coupé, pas accéléré — accéléré, il
+       disparaîtrait au premier pixel. */
+    .hello{ animation:none !important; }
+    .hello-sub.swap .une::after{ display:none !important; }
     .reveal{ opacity:1 !important; transform:none !important; }
     .track-fill{ transition:none !important; }
   }
 </style>
 </head>
 <body style="background:#fbfcfa;">
+<script>document.body.style.background = document.documentElement.style.background;</script>
 <div id="bgfill"></div>
 <div id="aurora" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
 <button class="lang-toggle" id="langToggle" data-i18n-title="langTitle" title="Langue"><span id="langCode">FR</span></button>
@@ -1825,7 +2165,10 @@
     <span class="hello-aura hello-aura-2" aria-hidden="true"></span>
     <div class="brand">DOLLAR$ SOURCING</div>
     <h1 id="greeting">Bonjour</h1>
-    <p class="hello-sub" id="helloSub" data-i18n="helloSub">Ton espace personnel</p>
+    <!-- Pas de data-i18n : cette ligne est calculée depuis ses commandes
+         (`renderUne`), et applyTranslations() l'écraserait avec une phrase
+         générique. -->
+    <p class="hello-sub" id="helloSub">Ton espace personnel</p>
   </header>
   <div id="headSentinel" aria-hidden="true"></div>
 
@@ -1907,14 +2250,6 @@
     <div class="summary-tile" style="--i:2"><span class="n" id="sumWaiting">0</span><span class="l" data-i18n="sumWaiting">En attente</span></div>
   </div>
 
-  <div class="tabs">
-    <i class="tab-pill" id="tabPill" aria-hidden="true"></i>
-    <button class="tab" id="tabHistory" data-i18n="tabHistory">Commandes</button>
-    <button class="tab active" id="tabOrder" data-i18n="tabOrder">Demande</button>
-    <button class="tab" id="tabCatalog" data-i18n="tabCatalog">Catalogue</button>
-    <button class="tab" id="tabDollars" data-i18n="tabDollars">Dollarz</button>
-  </div>
-
   <div id="orderPanel">
     <div class="card">
       <form id="orderForm" novalidate>
@@ -1981,8 +2316,43 @@
   <div class="build-stamp" id="clientBuild"></div>
 </div>
 
+<!-- LES ONGLETS, SOUS LE POUCE. Ils étaient dans la page, au-dessus des
+     commandes : à la troisième carte il fallait remonter tout en haut pour
+     changer d'onglet. Les clients arrivent de TikTok et de Snapchat, où la
+     navigation est en bas, toujours à portée — c'est là qu'est leur pouce.
+     HORS de #app, et c'est voulu : un `transform` sur un ancêtre (l'entrée de
+     l'app en a un) ferait d'un `position:fixed` un simple `absolute`. -->
+<nav class="tabs" id="tabBar">
+  <i class="tab-pill" id="tabPill" aria-hidden="true"></i>
+  <button class="tab" id="tabHistory">
+    <svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 7.6 12 3 3.5 7.6 12 12.2z"/><path d="M3.5 7.6v8.8L12 21l8.5-4.6V7.6"/><path d="M12 12.2V21"/><path d="m7.8 5.3 8.5 4.6"/></svg>
+    <span class="tab-l" data-i18n="tabHistory">Commandes</span>
+  </button>
+  <button class="tab active" id="tabOrder">
+    <svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5.5"/><path d="M12 8.2v7.6M8.2 12h7.6"/></svg>
+    <span class="tab-l" data-i18n="tabOrder">Demande</span>
+  </button>
+  <button class="tab" id="tabCatalog">
+    <svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.2 8h13.6l-1 11.4a1.8 1.8 0 0 1-1.8 1.6H8a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.8 10.5V7a3.2 3.2 0 0 1 6.4 0v3.5"/></svg>
+    <span class="tab-l" data-i18n="tabCatalog">Catalogue</span>
+  </button>
+  <button class="tab" id="tabDollars">
+    <svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5.5"/><path d="M14.6 9.2c-.5-.8-1.4-1.2-2.6-1.2-1.6 0-2.6.8-2.6 1.9 0 2.6 5.3 1.4 5.3 4.1 0 1.1-1.1 2-2.7 2-1.2 0-2.2-.5-2.7-1.3"/><path d="M12 6.4v1.6M12 16v1.6"/></svg>
+    <span class="tab-l" data-i18n="tabDollars">Dollarz</span>
+    <!-- Un coupon est à sa portée : un point le lui dit, où qu'il soit. -->
+    <i class="tab-dot" id="tabDollarsDot" aria-hidden="true"></i>
+  </button>
+</nav>
+
+<!-- LA PORTE. C'est le premier écran que voit le client, donc le premier
+     jugement : plus d'emoji ici, mais la pièce de la marque — celle-là même
+     qui s'envolera jusqu'au rideau quand le code sera bon. -->
 <div id="codeScreen">
-  <div class="code-icon">🔒</div>
+  <div class="curtain-mark door-mark" aria-hidden="true">
+    <span class="curtain-glow"></span>
+    <span class="curtain-tile"><span class="curtain-glyph">$</span><i class="curtain-sheen"></i></span>
+  </div>
+  <p class="door-brand">DOLLAR$ SOURCING</p>
   <h2 id="codeTitle" data-i18n="codeTitle">Code d'accès</h2>
   <p id="codeSubtitle" data-i18n="codeSubtitle">Saisis le code à 6 chiffres reçu de ton vendeur.</p>
   <button type="button" class="client-bio-btn" id="clientBioBtn">
@@ -2124,6 +2494,15 @@ const I18N = {
     langTitle:'Langue', themeTitle:'Thème', loading:'Chargement...',
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
+    uneDevis:'Ton devis {ref} est prêt', uneDevisD:'{amount} à régler',
+    uneRoute:'Ton colis {ref} est en route', uneRouteEta:'Arrivée estimée : {date}',
+    uneRouteSuivi:'Suivi disponible',
+    uneCommande:'Ta commande {ref} est passée', uneCommandeD:'On attend l\'expédition du fournisseur',
+    unePaye:'Paiement reçu pour {ref}', unePayeD:'On passe commande',
+    uneNouveau:'Commande {ref} enregistrée', uneNouveauD:'Ton devis arrive bientôt',
+    uneDemande:'Ta demande est bien arrivée', uneDemandeD:'Réponse très vite',
+    uneLivre:'Ta commande {ref} est arrivée', uneLivreD:'+{n} Dollarz gagnés',
+    uneAller:'Voir la commande', cardColour:'Coloris {n}',
     cwTitle:'Bienvenue {name}', cwTitleNoName:'Bienvenue',
     curtainHello:'{name}', curtainHelloNoName:'Ton espace',
     cwIntro:'Tu es chez toi ici : tu retrouves toutes tes commandes et leur avancement, en direct.',
@@ -2181,6 +2560,7 @@ const I18N = {
     pieceOne:'{n} pièce', pieceMany:'{n} pièces',
     freeHint:'Tu veux autre chose qui n\u2019est pas au catalogue ? Écris-le ici, je te réponds directement.',
     dollarsLabel:'Dollarz', dollarsNext:'Encore {n} Dollarz pour un coupon de {value}.',
+    fidKind:'Carte de fidélité', fidSince:'Membre depuis {date}',
     shopTitle:'La boutique', myCoupons:'Mes coupons', shopMin:'dès {min} de commande',
     shopGet:'Obtenir', shopMissing:'il te manque {n}', shopPending:'échange en cours',
     shopSent:'Échange envoyé ! Ton vendeur va le valider.',
@@ -2213,7 +2593,7 @@ const I18N = {
     codeOkTitle:'Code validé', codeOkSubtitle:'Active Face ID pour ne plus avoir à saisir ton code.',
     codeUnlockTitle:'Déverrouiller', codeUnlockSubtitle:'Utilise Face ID, ou saisis ton code.',
     codeWrong:'Code incorrect. Réessaie.', codeTooMany:'Trop de tentatives. Contacte ton vendeur.',
-    codeClear:'Effacer', bioUnlock:'Déverrouiller avec Face ID',
+    codeClear:'Effacer', codeBack:'Effacer le dernier chiffre', bioUnlock:'Déverrouiller avec Face ID',
     bioEnable:'Activer Face ID sur cet appareil', bioLater:'Plus tard',
     bioUnavailable:'Non disponible sur cet appareil.', bioFailed:'Vérification échouée, utilise ton code.',
     bioUseCode:'Utilise ton code.', bioEnableFailed:'Activation impossible sur cet appareil.',
@@ -2243,6 +2623,15 @@ const I18N = {
     langTitle:'Language', themeTitle:'Theme', loading:'Loading...',
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
+    uneDevis:'Your quote {ref} is ready', uneDevisD:'{amount} to pay',
+    uneRoute:'Your parcel {ref} is on its way', uneRouteEta:'Estimated arrival: {date}',
+    uneRouteSuivi:'Tracking available',
+    uneCommande:'Order {ref} has been placed', uneCommandeD:'Waiting for the supplier to ship',
+    unePaye:'Payment received for {ref}', unePayeD:'We\'re placing the order',
+    uneNouveau:'Order {ref} registered', uneNouveauD:'Your quote is coming soon',
+    uneDemande:'Your request came through', uneDemandeD:'We\'ll get back to you shortly',
+    uneLivre:'Order {ref} has arrived', uneLivreD:'+{n} Dollarz earned',
+    uneAller:'See the order', cardColour:'Colour {n}',
     cwTitle:'Welcome {name}', cwTitleNoName:'Welcome',
     curtainHello:'{name}', curtainHelloNoName:'Your space',
     cwIntro:'This is your own space: every order and where it stands, live.',
@@ -2300,6 +2689,7 @@ const I18N = {
     pieceOne:'{n} item', pieceMany:'{n} items',
     freeHint:'Want something that is not in the catalogue? Type it here and I will get back to you.',
     dollarsLabel:'Dollarz', dollarsNext:'{n} more Dollarz for a {value} coupon.',
+    fidKind:'Loyalty card', fidSince:'Member since {date}',
     shopTitle:'The shop', myCoupons:'My coupons', shopMin:'from {min} per order',
     shopGet:'Get it', shopMissing:'{n} to go', shopPending:'exchange pending',
     shopSent:'Exchange sent! Your seller will confirm it.',
@@ -2331,7 +2721,7 @@ const I18N = {
     codeOkTitle:'Code accepted', codeOkSubtitle:'Turn on Face ID so you never have to type it again.',
     codeUnlockTitle:'Unlock', codeUnlockSubtitle:'Use Face ID, or enter your code.',
     codeWrong:'Wrong code. Try again.', codeTooMany:'Too many attempts. Contact your seller.',
-    codeClear:'Clear', bioUnlock:'Unlock with Face ID',
+    codeClear:'Clear', codeBack:'Delete last digit', bioUnlock:'Unlock with Face ID',
     bioEnable:'Turn on Face ID on this device', bioLater:'Later',
     bioUnavailable:'Not available on this device.', bioFailed:'Check failed, use your code.',
     bioUseCode:'Use your code.', bioEnableFailed:'Could not turn it on for this device.',
@@ -2435,7 +2825,7 @@ function closeLightbox(){
   lightboxImg.removeAttribute('src');
 }
 document.addEventListener('click', (e)=>{
-  const img = e.target.closest && e.target.closest('.card-photo, .photo-item img');
+  const img = e.target.closest && e.target.closest('.card-photo, .photo-item img, .card-thumb-img');
   if(!img) return;
   e.preventDefault();
   e.stopPropagation();
@@ -2665,18 +3055,47 @@ const CODE_LENGTH = 6;
 let codeBuffer = '';
 let codeAttempts = 0;
 
+let codeBusy = false;      // pendant l'éclat rouge ou l'ouverture, le clavier se tait
+// Les points sont posés UNE fois et on ne fait que basculer leur classe. Les
+// redessiner à chaque touche relançait l'éclosion de TOUS les points déjà
+// pleins : six chiffres, et le premier point éclosait six fois.
 function renderCodeDots(){
-  document.getElementById('codeDots').innerHTML =
-    Array.from({length:CODE_LENGTH}, (_,i)=>
-      `<div class="code-dot ${i < codeBuffer.length ? 'filled' : ''}"></div>`).join('');
+  const box = document.getElementById('codeDots');
+  if(box.children.length !== CODE_LENGTH){
+    box.innerHTML = Array.from({length:CODE_LENGTH}, (_,i)=>
+      `<div class="code-dot" style="--i:${i}"></div>`).join('');
+  }
+  Array.prototype.forEach.call(box.children, (d,i)=> d.classList.toggle('filled', i < codeBuffer.length));
 }
+const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5"/></svg>';
 function buildCodePad(){
   const keys = ['1','2','3','4','5','6','7','8','9','clear','0','back'];
-  document.getElementById('codePad').innerHTML = keys.map(k=>{
-    if(k==='clear') return `<button type="button" class="code-key fn" data-key="clear">${escapeHtml(t('codeClear'))}</button>`;
-    if(k==='back')  return `<button type="button" class="code-key fn" data-key="back">⌫</button>`;
-    return `<button type="button" class="code-key" data-key="${k}">${k}</button>`;
+  document.getElementById('codePad').innerHTML = keys.map((k,i)=>{
+    // L'indice règle la cascade d'arrivée et celle de départ.
+    if(k==='clear') return `<button type="button" class="code-key fn" data-key="clear" style="--k:${i}">${escapeHtml(t('codeClear'))}</button>`;
+    if(k==='back')  return `<button type="button" class="code-key fn" data-key="back" style="--k:${i}" aria-label="${escapeHtml(t('codeBack'))}">${ICON_BACK}</button>`;
+    return `<button type="button" class="code-key" data-key="${k}" style="--k:${i}">${k}</button>`;
   }).join('');
+}
+// Le bon code : les points se rejoignent au centre, le clavier se retire, et
+// c'est seulement ensuite que la pièce s'envole (`enterApp`). Les écouteurs
+// partent DÈS MAINTENANT : les 360 ms de l'ouverture sont du chargement
+// gagné, pas du temps ajouté.
+function porteSOuvre(suite){
+  codeBusy = true;
+  // La retenue commence ICI, pas au rideau : les commandes arrivent souvent
+  // pendant ces 360 ms, et le compteur comme la une se consommaient alors hors
+  // de la vue — mesuré, le compteur était déjà à 3 sous le rideau.
+  if(!reduceMotion() && $('#portalCurtain')) arrivee = false;
+  listenOrders();
+  listenCatalog(clientData && clientData.ownerId);
+  if(reduceMotion()){ suite(); return; }
+  const box = document.getElementById('codeDots');
+  const pas = 14 + 13;                       // un point et son écart
+  Array.prototype.forEach.call(box.children, (d,i)=>
+    d.style.setProperty('--dx', (((CODE_LENGTH - 1) / 2 - i) * pas) + 'px'));
+  document.getElementById('codeScreen').classList.add('ouvre');
+  setTimeout(suite, 360);
 }
 function codeError(msg){
   const el = document.getElementById('codeError');
@@ -2691,14 +3110,124 @@ function clientFirstName(){
   const raw = ((clientData && clientData.name) || '').trim();
   return raw ? raw.split(/\s+/)[0] : '';
 }
+// La salutation se RÉVÈLE mot par mot, chacun montant de derrière un cache —
+// le prénom à la couleur de la marque, parce que c'est le mot qui compte.
+// On ne réécrit le titre que s'il a changé : il est rappelé à chaque
+// snapshot, et le redessiner relancerait l'animation sous ses yeux.
 function updateGreeting(){
   const h = new Date().getHours();
   const hello = (h >= 18 || h < 5) ? t('helloEvening') : t('helloMorning');
   const name = clientFirstName();
-  $('#greeting').textContent = name ? hello + ' ' + name : hello;
-  const hasOrders = myOrders.length > 0 || myPending.length > 0;
-  $('#helloSub').textContent = hasOrders ? t('helloSubOrders') : t('helloSub');
+  const h1 = $('#greeting');
+  const cle = hello + '|' + name;
+  if(h1.dataset.cle !== cle){
+    h1.dataset.cle = cle;
+    let i = 0;
+    const mot = (w, nom) => '<span class="w' + (nom ? ' nom' : '') + '"><span style="--w:' + (i++) + '">'
+                          + escapeHtml(w) + '</span></span>';
+    h1.innerHTML = hello.split(/\s+/).map(w => mot(w, false)).join(' ')
+                 + (name ? ' ' + mot(name, true) : '');
+  }
+  renderUne();
 }
+
+// ---- « À la une » : ce qui compte pour lui, maintenant ----
+// Une phrase générique (« Suis tes commandes en direct ») ne dit rien. Celle-ci
+// est calculée depuis ses commandes et dit CE QUI SE PASSE : un devis qui
+// attend son paiement, un colis en route et sa date, une demande bien reçue.
+// L'ordre est celui de l'urgence pour lui — ce qui attend un geste de sa part
+// passe avant ce qui avance tout seul. Une seule ligne : deux « à la une »,
+// c'est déjà une liste. Et on la touche pour aller droit à la commande.
+function resteDu(o){
+  if(!o || o.status === 'annule') return 0;
+  const total = (Number(o.unitPrice)||0) * (Number(o.qty)||1);
+  return Math.max(0, total - (Number(o.paidAmount)||0));
+}
+function aLaUne(){
+  const ref = o => '#' + orderRef(o);
+  const enCours = myOrders.filter(o => o.status !== 'livre' && o.status !== 'annule');
+  let o;
+  if((o = enCours.find(x => x.status === 'devis' && resteDu(x) > 0)))
+    return { id:o.id, ton:'warn', titre:t('uneDevis').replace('{ref}', ref(o)),
+             detail:t('uneDevisD').replace('{amount}', fmtMoney(resteDu(o))) };
+  if((o = enCours.find(x => x.status === 'expedie'))){
+    const eta = o.eta || o.estimatedDelivery;
+    const suivi = o.tracking || o.trackingNumber;
+    // Toujours présentée comme une estimation, jamais comme une promesse.
+    return { id:o.id, titre:t('uneRoute').replace('{ref}', ref(o)),
+             detail: eta ? t('uneRouteEta').replace('{date}', fmtEta(eta)) : (suivi ? t('uneRouteSuivi') : '') };
+  }
+  if((o = enCours.find(x => x.status === 'commande')))
+    return { id:o.id, titre:t('uneCommande').replace('{ref}', ref(o)), detail:t('uneCommandeD') };
+  if((o = enCours.find(x => x.status === 'paye')))
+    return { id:o.id, titre:t('unePaye').replace('{ref}', ref(o)), detail:t('unePayeD') };
+  if((o = enCours.find(x => !x.status || x.status === 'nouveau')))
+    return { id:o.id, titre:t('uneNouveau').replace('{ref}', ref(o)), detail:t('uneNouveauD') };
+  const dem = myPending.find(x => x.type !== 'coupon');
+  if(dem) return { id:dem.id, titre:t('uneDemande'), detail:t('uneDemandeD') };
+  // Une livraison de la semaine, tant qu'il ne l'a pas rangée : sinon la
+  // ligne mènerait à une carte qui n'est plus dans la liste.
+  const ranges = archivedIds();
+  o = myOrders.find(x => x.status === 'livre' && ranges.indexOf(x.id) === -1
+                      && x.statusAt && x.statusAt.livre && Date.now() - x.statusAt.livre < 7 * 86400000);
+  if(o){
+    const n = dollarsDe(o);
+    return { id:o.id, titre:t('uneLivre').replace('{ref}', ref(o)),
+             detail: n > 0 ? t('uneLivreD').replace('{n}', n) : '' };
+  }
+  return null;
+}
+const ICON_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+function renderUne(){
+  const el = $('#helloSub');
+  if(!el) return;
+  const une = aLaUne();
+  let html, cle;
+  if(une){
+    cle = une.id + '|' + une.titre + '|' + une.detail;
+    html = '<button type="button" class="une' + (une.ton ? ' ' + une.ton : '') + '" data-une="' + escapeHtml(une.id) + '"'
+         + ' aria-label="' + escapeHtml(une.titre + (une.detail ? ' — ' + une.detail : '') + ' · ' + t('uneAller')) + '">'
+         + '<i class="une-dot" aria-hidden="true"></i>'
+         + '<span class="une-t"><b>' + escapeHtml(une.titre) + '</b>'
+         + (une.detail ? '<small>' + escapeHtml(une.detail) + '</small>' : '') + '</span>'
+         + '<span class="une-go">' + ICON_CHEVRON + '</span></button>';
+  } else {
+    const txt = (myOrders.length || myPending.length) ? t('helloSubOrders') : t('helloSub');
+    cle = txt;
+    html = escapeHtml(txt);
+  }
+  if(el.dataset.cle === cle) return;
+  // Une nouvelle nouvelle arrive en montant ; la toute première se joue avec
+  // l'en-tête, elle n'a pas besoin d'effet en plus.
+  const change = el.dataset.cle !== undefined;
+  el.dataset.cle = cle;
+  el.innerHTML = html;
+  // Seulement sous ses yeux. Les commandes arrivent souvent PENDANT
+  // l'ouverture de la porte (les écouteurs partent au bon code) : jouée à ce
+  // moment-là, l'arrivée de la une passait devant la salutation au lieu de la
+  // suivre.
+  const app = $('#app');
+  const visible = arrivee && app.style.display !== 'none' && !app.classList.contains('hold');
+  if(change && visible){ el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap'); }
+}
+// Toucher la une emmène à la carte, et la carte le dit d'un éclat. Défilement
+// doux : c'est le doigt qui l'a demandé (piège 31 : jamais sans geste).
+function vaALaCommande(id){
+  if(currentTab !== 'history') switchTab('history');
+  requestAnimationFrame(()=>{
+    const carte = Array.prototype.find.call(document.querySelectorAll('#historyList .order-card'),
+                                            c => c.dataset.id === id);
+    if(!carte) return;
+    carte.classList.add('revealed');
+    fillTracks(carte);
+    carte.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block:'start' });
+    carte.classList.remove('flash'); void carte.offsetWidth; carte.classList.add('flash');
+  });
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('.une[data-une]');
+  if(b) vaALaCommande(b.dataset.une);
+});
 // Accueil de première visite : on explique l'espace, une seule fois.
 function welcomeKey(){ return 'ds_client_welcomed_' + clientId; }
 function welcomeSeen(){
@@ -2940,10 +3469,32 @@ $('#cwBioBtn').addEventListener('click', async ()=>{
 // corrige quelque chose de visible ici — c'est la seule façon de savoir, à
 // distance et par téléphone, si le client regarde la nouvelle page ou celle
 // que Safari garde en cache.
-const BUILD_CLIENT = '2026-09-28e';
+const BUILD_CLIENT = '2026-09-29a';
+
+// L'arrivée est RETENUE tant que le rideau est là (`#app.hold`) : sans ça,
+// tout se jouait dessous et le client découvrait une page déjà immobile.
+// Vrai par défaut — seul le rideau la suspend, et rien d'autre n'a à s'en
+// soucier (l'aperçu du vendeur, les tests qui dessinent la page à la main).
+let arrivee = true;
+function arriveApp(){
+  const app = $('#app');
+  arrivee = true;
+  app.classList.remove('hold', 'app-enter');
+  void app.offsetWidth;
+  app.classList.add('app-enter');
+  document.body.classList.add('arrive');
+  // Les cartes passent APRÈS l'en-tête : on lit le prénom, puis ses colis.
+  revealCards(true);
+  // Les compteurs montent quand leur barre est arrivée, pas avant.
+  setTimeout(renderSummary, 320);
+}
 
 function enterApp(){
-  document.getElementById('codeScreen').classList.remove('show');
+  const porte = document.getElementById('codeScreen');
+  // Mesuré AVANT de fermer la porte : c'est de là que la pièce s'envole.
+  const depuis = porte.classList.contains('show') ? porte.querySelector('.door-mark') : null;
+  const rectDepuis = depuis ? depuis.getBoundingClientRect() : null;
+  porte.classList.remove('show', 'ouvre');
   updateGreeting();
   $('#loadingScreen').style.display = 'none';
 
@@ -2952,14 +3503,31 @@ function enterApp(){
   // chargement déguisé, pas du temps ajouté.
   const rideau = $('#portalCurtain');
   const prenom = clientFirstName();
-  const jouer = rideau && !reduceMotion();
+  // Déjà dedans (Face ID qui répond pendant qu'on tape le code) : on ne
+  // rejoue pas l'ouverture, elle masquerait une app déjà sous ses yeux.
+  const deja = document.body.classList.contains('in-app');
+  const jouer = rideau && !reduceMotion() && !deja;
+  const vol = jouer && rectDepuis && rectDepuis.width > 0;
   if(jouer){
     $('#curtainName').textContent = prenom ? t('curtainHello').replace('{name}', prenom) : t('curtainHelloNoName');
+    rideau.classList.remove('lift', 'vol');
     rideau.style.display = 'flex';
-    rideau.classList.remove('lift');
+    if(vol){
+      // Le même objet se déplace : on mesure où il est, où il va, et l'écart
+      // devient le point de départ de son vol. Aucune image n'est dupliquée.
+      const marque = rideau.querySelector('.curtain-mark');
+      const vers = marque.getBoundingClientRect();
+      marque.style.setProperty('--fx', ((rectDepuis.left + rectDepuis.width/2) - (vers.left + vers.width/2)).toFixed(1) + 'px');
+      marque.style.setProperty('--fy', ((rectDepuis.top + rectDepuis.height/2) - (vers.top + vers.height/2)).toFixed(1) + 'px');
+      marque.style.setProperty('--fs', (rectDepuis.width / vers.width).toFixed(3));
+      rideau.classList.add('vol');
+    }
+    arrivee = false;
+    $('#app').classList.add('hold');
   }
 
   $('#app').style.display = 'block';
+  document.body.classList.add('in-app');
   const tampon = $('#clientBuild');
   if(tampon) tampon.textContent = 'DOLLAR$ SOURCING · v' + BUILD_CLIENT;
   renderWelcome();
@@ -2971,6 +3539,8 @@ function enterApp(){
 
   if(!jouer){
     if(rideau) rideau.style.display = 'none';
+    arrivee = true;
+    document.body.classList.add('arrive');
     setupTopbar(); refreshTopbar();
     requestAnimationFrame(movePill);
     feteAutorisee = true; verifieFete();
@@ -2979,28 +3549,33 @@ function enterApp(){
   setupTopbar();
   refreshTopbar();
   requestAnimationFrame(movePill);
-  $('#app').classList.add('app-enter');
   setTimeout(()=>{
     rideau.classList.add('lift');
+    arriveApp();
     // Retiré du flux une fois effacé : un calque plein écran laissé là
     // mangerait tous les touchers.
     setTimeout(()=>{
       rideau.style.display = 'none';
+      rideau.classList.remove('vol');
       feteAutorisee = true; verifieFete();
-    }, 520);
-  }, 1150);
+    }, 460);
+  }, vol ? 950 : 1150);
 }
 function askCode(){
   $('#loadingScreen').style.display = 'none';
   buildCodePad();
   codeBuffer = '';
   renderCodeDots();
-  document.getElementById('codeScreen').classList.add('show');
+  const porte = document.getElementById('codeScreen');
+  porte.classList.add('show', 'entree');
+  // L'entrée ne se joue qu'une fois : changer de langue redessine le clavier,
+  // et il ne doit pas refaire son arrivée pour autant.
+  setTimeout(()=> porte.classList.remove('entree'), 1500);
 }
 
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('#codePad button[data-key]');
-  if(!btn) return;
+  if(!btn || codeBusy) return;
   const k = btn.dataset.key;
   if(k==='clear'){ codeBuffer=''; renderCodeDots(); codeError(''); return; }
   if(k==='back'){ codeBuffer = codeBuffer.slice(0,-1); renderCodeDots(); codeError(''); return; }
@@ -3027,12 +3602,21 @@ document.addEventListener('click', (e)=>{
         document.getElementById('codeScreen').appendChild(skip);
         return;
       }
-      enterApp();
+      porteSOuvre(enterApp);
     } else {
       codeAttempts++;
-      codeBuffer = '';
-      renderCodeDots();
       codeError(codeAttempts >= 5 ? t('codeTooMany') : t('codeWrong'));
+      // Les six points restent pleins, en rouge, le temps qu'on voie que
+      // c'est le CODE qui est faux — pas une touche qui n'a pas pris.
+      const points = document.getElementById('codeDots');
+      codeBusy = true;
+      points.classList.add('faux');
+      setTimeout(()=>{
+        points.classList.remove('faux');
+        codeBuffer = '';
+        renderCodeDots();
+        codeBusy = false;
+      }, reduceMotion() ? 0 : 520);
       if(codeAttempts >= 5){
         document.getElementById('codePad').style.pointerEvents = 'none';
         document.getElementById('codePad').style.opacity = '0.4';
@@ -3050,7 +3634,7 @@ function entreApercu(){
   if(th === 'dark' || th === 'light') applyTheme(th);
   const lg = params.get('lang');
   if(lg === 'fr' || lg === 'en'){ currentLang = lg; applyTranslations(); }
-  document.body.classList.add('apercu');
+  document.body.classList.add('apercu', 'in-app', 'arrive');
   $('#loadingScreen').style.display = 'none';
   const rideau = $('#portalCurtain');
   if(rideau) rideau.style.display = 'none';
@@ -3367,15 +3951,31 @@ function renderDollars(){
       </div>`;
   }).join('');
 
+  // Sa carte, à son nom. L'entrée et le reflet ne se jouent qu'à la première
+  // ouverture — comme le compteur : la carte est rappelée à chaque snapshot,
+  // et une carte qui refait son entrée sous les doigts, c'est une carte qui
+  // tremble.
+  const entre = !dollarsCounted && !reduceMotion();
+  const depuis = clientData && Number(clientData.createdAt)
+    ? new Date(Number(clientData.createdAt)).toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-GB', { month:'short', year:'numeric' })
+    : '';
   el.innerHTML = `
-    <div class="balance-card">
-      <span class="balance-orb"></span>
+    <div class="balance-card${entre ? ' entre' : ''}" id="carteFid">
+      <i class="fid-glare" aria-hidden="true"></i>
+      <div class="fid-top">
+        <span class="fid-brand">DOLLAR$ SOURCING</span>
+        <span class="fid-kind">${escapeHtml(t('fidKind'))}</span>
+      </div>
       <span class="balance-amount"><span class="ds-coin">$</span><span class="balance-n">0</span></span>
       <span class="balance-label">${escapeHtml(t('dollarsLabel'))}</span>
       ${next ? `<div class="balance-next">
         <div class="balance-bar"><i class="balance-fill" data-pct="${pct}"></i></div>
         <p>${escapeHtml(t('dollarsNext').replace('{n}', next.dollars - solde).replace('{value}', fmtMoney(next.value)))}</p>
       </div>` : ''}
+      <div class="fid-bottom">
+        <span class="fid-name">${escapeHtml(((clientData && clientData.name) || '').trim())}</span>
+        ${depuis ? `<span class="fid-since">${escapeHtml(t('fidSince').replace('{date}', depuis))}</span>` : ''}
+      </div>
     </div>
     ${dispo.length ? `<p class="shop-title">${escapeHtml(t('myCoupons'))}</p>
       <div style="margin-bottom:18px;">${dispo.map(c =>
@@ -3396,6 +3996,34 @@ function renderDollars(){
     const fill = el.querySelector('.balance-fill');
     if(fill) fill.style.width = (fill.dataset.pct || 0) + '%';
   });
+  inclineCarte(el.querySelector('#carteFid'));
+}
+
+// La carte s'incline sous le doigt, et la lumière suit. Au toucher sur
+// téléphone, à la souris sur ordinateur ; au lâcher, un ressort la ramène.
+// Rien de tout ça sous `prefers-reduced-motion` : une carte qui bouge quand
+// on la touche n'est pas un mouvement qu'on a demandé.
+function inclineCarte(carte){
+  if(!carte || reduceMotion()) return;
+  const suit = (e)=>{
+    const r = carte.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    carte.style.setProperty('--ry', ((x - .5) * 16).toFixed(2) + 'deg');
+    carte.style.setProperty('--rx', ((.5 - y) * 12).toFixed(2) + 'deg');
+    carte.style.setProperty('--gx', (x * 100).toFixed(1) + '%');
+    carte.style.setProperty('--gy', (y * 100).toFixed(1) + '%');
+  };
+  const lache = ()=>{
+    carte.classList.remove('tenue');
+    carte.style.removeProperty('--rx'); carte.style.removeProperty('--ry');
+  };
+  carte.addEventListener('pointerdown', (e)=>{ carte.classList.add('tenue'); suit(e); });
+  carte.addEventListener('pointermove', (e)=>{
+    if(e.pointerType !== 'mouse' && !carte.classList.contains('tenue')) return;
+    carte.classList.add('tenue'); suit(e);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => carte.addEventListener(ev, lache));
 }
 
 $('#dollarsPanel').addEventListener('click', async (e)=>{
@@ -3455,7 +4083,9 @@ function amountsHtml(o){
   const total = (Number(o.unitPrice)||0) * (Number(o.qty)||1);
   if(total <= 0) return '';
   const paid = Number(o.paidAmount) || 0;
-  const due = o.status === 'annule' ? 0 : Math.max(0, total - paid);
+  // La même formule que la une : deux calculs du même reste finiraient par
+  // annoncer deux montants différents sur le même écran.
+  const due = resteDu(o);
   return `<div class="amounts">
       <div class="amount-row total"><span class="k">${escapeHtml(t('amountTotal'))}</span><span class="v">${fmtMoney(total)}</span></div>
       ${paid > 0 ? `<div class="amount-row paid"><span class="k">${escapeHtml(t('amountPaid'))}</span><span class="v">${fmtMoney(paid)}</span></div>` : ''}
@@ -3526,6 +4156,47 @@ function derivedRef(id){
 }
 function orderRef(o){ return (o && o.ref) ? o.ref : derivedRef(o && o.id); }
 
+// Ce qu'on lit en tête de carte. Avec `items[]` (une commande du catalogue) :
+// la marque, le modèle, puis les coloris avec leur quantité et leurs tailles.
+// Sans (une demande tapée à la main) : la chaîne telle quelle, et la quantité
+// à part — jamais « × 1 », qui ne dit rien.
+function libelleCarte(o){
+  const items = Array.isArray(o.items) ? o.items.filter(Boolean) : [];
+  if(items.length){
+    const tailles = sz => {
+      const e = Object.keys(sz || {}).filter(k => Number(sz[k]) > 0);
+      return e.length ? ' (' + e.map(k => Number(sz[k]) > 1 ? k + '×' + sz[k] : k).join(', ') + ')' : '';
+    };
+    const coloris = items.map((it, i) =>
+      ((it.name || '').trim() || t('cardColour').replace('{n}', i + 1))
+      + ((Number(it.qty) || 1) > 1 ? ' ×' + it.qty : '') + tailles(it.sizes)).join(' · ');
+    return { marque: items[0].brand || '', titre: items[0].model || items[0].brand || o.product || '', sous: coloris };
+  }
+  const q = Number(o.qty) || 1;
+  return { marque:'', titre: o.product || '', sous: q > 1 ? '× ' + q : '' };
+}
+const ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 7.6 12 3 3.5 7.6 12 12.2z"/><path d="M3.5 7.6v8.8L12 21l8.5-4.6V7.6"/><path d="M12 12.2V21"/></svg>';
+function vignetteCarte(o){
+  const ps = photosDe(o);
+  if(!ps.length) return '<span class="card-thumb vide" aria-hidden="true">' + ICON_BOX + '</span>';
+  const src = p => 'data:' + p.type + ';base64,' + p.data;
+  const titre = escapeHtml(t('photoOpenTitle'));
+  return '<span class="card-thumb' + (ps.length > 1 ? ' pile' : '') + '">'
+       + (ps.length > 1 ? '<img class="card-thumb-dos" src="' + src(ps[1]) + '" alt="" aria-hidden="true">' : '')
+       + '<img class="card-thumb-img" src="' + src(ps[0]) + '" alt="" title="' + titre + '" aria-label="' + titre + '">'
+       + (ps.length > 1 ? '<i class="card-thumb-n">+' + (ps.length - 1) + '</i>' : '')
+       + '</span>';
+}
+function teteCarte(o, badge){
+  const l = libelleCarte(o);
+  return '<div class="card-top">' + vignetteCarte(o)
+       + '<div class="card-id">'
+       + (l.marque ? '<span class="card-brand">' + escapeHtml(l.marque) + '</span>' : '')
+       + '<div class="product">' + escapeHtml(l.titre) + '</div>'
+       + (l.sous ? '<span class="card-sub">' + escapeHtml(l.sous) + '</span>' : '')
+       + '</div>' + badge + '</div>';
+}
+
 function orderCardHtml(o, archived){
   const meta = STATUS_META[o.status] || STATUS_META.nouveau;
   const finished = isFinished(o);
@@ -3534,11 +4205,8 @@ function orderCardHtml(o, archived){
          ${escapeHtml(t(archived ? 'unarchiveBtn' : 'archiveBtn'))}</button>`
     : '';
   return `
-    <div class="order-card${archived ? '' : ' reveal'}">
-      <div class="card-top">
-        <div class="product">${escapeHtml(o.product)} × ${o.qty}</div>
-        <div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>
-      </div>
+    <div class="order-card${archived ? '' : ' reveal'}" data-id="${escapeHtml(o.id)}">
+      ${teteCarte(o, `<div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>`)}
       ${blocPhotos(o)}
       ${trackHtml(o.status, o)}
       ${amountsHtml(o)}
@@ -3558,11 +4226,8 @@ function renderHistory(){
   const ranges = myOrders.filter(inArchive);
 
   const pendingCards = myPending.map(p=>`
-    <div class="order-card reveal">
-      <div class="card-top">
-        <div class="product">${escapeHtml(p.product)} × ${p.qty}</div>
-        <div class="badge" style="background:var(--warn-soft); color:var(--warn);">${escapeHtml(t('stWaiting'))}</div>
-      </div>
+    <div class="order-card reveal" data-id="${escapeHtml(p.id)}">
+      ${teteCarte(p, `<div class="badge" style="background:var(--warn-soft); color:var(--warn);">${escapeHtml(t('stWaiting'))}</div>`)}
       ${blocPhotos(p)}
       ${trackHtml('nouveau', p)}
       ${p.note ? `<div class="card-note"><span class="k">${escapeHtml(t('yourDetails'))}</span>${escapeHtml(p.note)}</div>` : ''}
@@ -3577,6 +4242,7 @@ function renderHistory(){
   renderArchive(ranges);
   renderSummary();
   refreshTopbar();
+  renderUne();          // ranger une livraison change ce qui est à la une
   revealCards();
 }
 
@@ -3671,6 +4337,7 @@ function refreshTopbar(){
   const solde = myDollars();
   sac.classList.toggle('hidden', !solde);
   n.textContent = solde;
+  majPastilles();
 }
 
 // Retard progressif sur une liste. Plafonné à cinq éléments : au-delà, un
@@ -3706,7 +4373,14 @@ function fillTracks(scope){
   if(reduceMotion()) return;
   root.querySelectorAll('.track').forEach(tr => tr.classList.add('animate'));
 }
-function revealCards(){
+// Le retard se compte DANS LE LOT qui arrive ensemble, pas dans la liste :
+// une carte qui entre seule au défilement n'a aucune raison d'attendre ses
+// voisines du dessus. Et le premier lot après le rideau part après l'en-tête
+// (`revealBoost`) — on lit le prénom, puis ses colis.
+let revealBoost = 0;
+function revealCards(boost){
+  if(!arrivee) return;          // le rideau est là : tout attend sa levée
+  if(boost) revealBoost = 380;
   const cards = document.querySelectorAll('#historyList .reveal');
   if(reduceMotion() || !('IntersectionObserver' in window)){
     cards.forEach(c=>c.classList.add('revealed'));
@@ -3715,18 +4389,26 @@ function revealCards(){
   }
   if(!revealObserver){
     revealObserver = new IntersectionObserver((entries)=>{
+      const base = revealBoost; revealBoost = 0;
+      let k = 0;
       entries.forEach(en=>{
         if(!en.isIntersecting) return;
-        en.target.classList.add('revealed');
-        fillTracks(en.target);
-        revealObserver.unobserve(en.target);
+        const d = base + Math.min(k++, 5) * 80;
+        const c = en.target;
+        // Un seul retard pour tout ce qui appartient à la carte : son entrée,
+        // son reflet, sa frise. Sinon la frise se dessinerait avant la carte.
+        c.style.setProperty('--d', d + 'ms');
+        c.style.transitionDelay = d + 'ms';
+        c.classList.add('revealed');
+        fillTracks(c);
+        revealObserver.unobserve(c);
+        // Le retard ne doit pas survivre à l'entrée : il ralentirait aussi le
+        // changement de thème de la carte.
+        setTimeout(()=>{ c.style.transitionDelay = ''; }, d + 700);
       });
     }, { rootMargin:'0px 0px -5% 0px', threshold:0.06 });
   }
-  cards.forEach((c,i)=>{
-    c.style.transitionDelay = Math.min(i,6)*70 + 'ms';
-    revealObserver.observe(c);
-  });
+  cards.forEach(c=> revealObserver.observe(c));
 }
 
 let summaryCounted = false;
@@ -3738,6 +4420,9 @@ function renderSummary(){
   const waiting = myPending.length;
   if(!active && !delivered && !waiting){ box.style.display = 'none'; return; }
   box.style.display = 'flex';
+  // Sous le rideau, rien ne compte : le compteur se consommerait hors de la
+  // vue. Il montera à la levée, quand `arriveApp()` rappelle cette fonction.
+  if(!arrivee) return;
   // Les chiffres montent à l'arrivée seulement. Aux rendus suivants ils se
   // posent net : un compteur qui repart à chaque mise à jour est une attente.
   const duree = summaryCounted ? 0 : 950;
@@ -4029,17 +4714,42 @@ const TABS = ['history','order','catalog','dollars'];
 let currentTab = 'order';
 // La pastille se cale sur l'onglet actif. Recalculée à chaque bascule et au
 // changement de langue : les libellés n'ont pas la même largeur en anglais.
+let pillX = null;
 function movePill(){
-  const pill = $('#tabPill');
+  const pill = $('#tabPill'), bar = $('#tabBar');
   const actif = document.querySelector('.tab.active');
-  if(!pill || !actif) return;
-  pill.style.width = actif.offsetWidth + 'px';
-  pill.style.transform = 'translateX(' + actif.offsetLeft + 'px)';
-  pill.classList.add('ready');
+  if(!pill || !bar || !actif || !bar.offsetWidth) return;
+  const x = actif.offsetLeft, w = actif.offsetWidth;
+  const droite = bar.clientWidth - x - w;
+  const courbe = 'cubic-bezier(.3,.9,.3,1)';
+  if(!pill.classList.contains('ready') || pillX === null) pill.style.transition = 'none';
+  // Le bord de devant file, celui de derrière suit : la goutte s'étire.
+  else if(x > pillX) pill.style.transition = 'right .34s ' + courbe + ', left .5s ' + courbe + ' .06s';
+  else if(x < pillX) pill.style.transition = 'left .34s ' + courbe + ', right .5s ' + courbe + ' .06s';
+  pill.style.left = x + 'px';
+  pill.style.right = droite + 'px';
+  pillX = x;
+  if(!pill.classList.contains('ready')){ void pill.offsetWidth; pill.classList.add('ready'); }
 }
+// Le point sur l'onglet Dollarz : un coupon est à sa portée et rien n'est déjà
+// en cours d'échange. Où qu'il soit dans l'app, il le voit.
+function majPastilles(){
+  const dot = $('#tabDollarsDot');
+  if(!dot) return;
+  const solde = clientData ? myDollars() : 0;
+  const peut = solde >= LOYALTY_TIERS[0].dollars && !pendingExchange() && currentTab !== 'dollars';
+  dot.classList.toggle('on', !!peut);
+}
+// CHAQUE ONGLET GARDE SA PROPRE POSITION, comme dans une vraie app. Les
+// onglets étaient en haut de la page : on y était forcément quand on changeait.
+// Sous le pouce, on peut changer de n'importe où — et arriver sur le panneau
+// Dollarz au milieu d'un défilement de commandes, ce serait arriver nulle part.
+const defilement = {};
 function switchTab(tab){
   const from = TABS.indexOf(currentTab);
   const to = TABS.indexOf(tab);
+  const change = tab !== currentTab;
+  if(change) defilement[currentTab] = window.scrollY;
   currentTab = tab;
   const panels = { history:'#historyPanel', order:'#orderPanel', catalog:'#catalogPanel', dollars:'#dollarsPanel' };
   const boutons = { history:'#tabHistory', order:'#tabOrder', catalog:'#tabCatalog', dollars:'#tabDollars' };
@@ -4055,12 +4765,36 @@ function switchTab(tab){
   void panel.offsetWidth;
   panel.classList.add('view-in');
   movePill();
+  majPastilles();
+  // Instantané, jamais animé : c'est un changement de pièce, pas un trajet.
+  if(change) window.scrollTo(0, defilement[tab] || 0);
   if(tab === 'history') revealCards();
 }
-$('#tabOrder').addEventListener('click', ()=>switchTab('order'));
-$('#tabHistory').addEventListener('click', ()=>switchTab('history'));
-$('#tabCatalog').addEventListener('click', ()=>switchTab('catalog'));
-$('#tabDollars').addEventListener('click', ()=>switchTab('dollars'));
+// Retoucher l'onglet où l'on est remonte en haut — le geste de toutes les
+// apps. Doux cette fois : c'est le doigt qui le demande.
+function toucheOnglet(tab){
+  if(tab === currentTab){
+    window.scrollTo({ top:0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+    return;
+  }
+  switchTab(tab);
+}
+$('#tabOrder').addEventListener('click', ()=>toucheOnglet('order'));
+$('#tabHistory').addEventListener('click', ()=>toucheOnglet('history'));
+$('#tabCatalog').addEventListener('click', ()=>toucheOnglet('catalog'));
+$('#tabDollars').addEventListener('click', ()=>toucheOnglet('dollars'));
+// Le clavier s'ouvre : la barre s'efface. Le délai à la sortie évite qu'elle
+// ne remonte et redescende en passant d'un champ à l'autre.
+const CHAMP = 'input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select';
+document.addEventListener('focusin', (e)=>{
+  if(e.target.matches && e.target.matches(CHAMP)) document.body.classList.add('clavier');
+});
+document.addEventListener('focusout', ()=>{
+  setTimeout(()=>{
+    const a = document.activeElement;
+    if(!a || !a.matches || !a.matches(CHAMP)) document.body.classList.remove('clavier');
+  }, 80);
+});
 // Rotation de l'écran, clavier qui s'ouvre : la pastille suit.
 window.addEventListener('resize', movePill);
 
