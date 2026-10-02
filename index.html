@@ -534,6 +534,9 @@
   html[data-discreet="1"] #marginPreview,
   html[data-discreet="1"] #chartContainer,
   html[data-discreet="1"] #f_unitCost,
+  html[data-discreet="1"] #f_shipCost,
+  html[data-discreet="1"] #f_yuan,
+  html[data-discreet="1"] .set-num,
   html[data-discreet="1"] #f_unitPrice,
   html[data-discreet="1"] #f_paid{
     filter:blur(7px);
@@ -1450,6 +1453,25 @@
   #shippingZone .section-title{ margin-bottom:3px; }
   .field-hint{ margin:0 0 13px; font-size:12px; color:var(--text-faint); letter-spacing:-0.005em; line-height:1.45; }
   /* Le champ garde la largeur, le raccourci ne prend que sa place (piège 6). */
+  /* Le prix conseillé : une carte calme sous les deux prix, qui fait le calcul
+     que Massif faisait de tête — achat + livraison + sa marge + la réserve.
+     Elle propose, elle n'écrit rien : le prix client reste un champ à lui. */
+  .pc-box{ margin-top:4px; padding:12px 14px; border-radius:14px; background:var(--accent-soft);
+    border:0.5px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .pc-yuan{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .pc-yuan input{ flex:1; min-width:0; }
+  .pc-yuan span{ font-size:13px; color:var(--text-muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .pc-main{ display:flex; align-items:center; gap:10px; }
+  .pc-main b{ font-family:var(--font-display); font-size:24px; letter-spacing:-0.03em; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .pc-main small{ font-size:13px; color:var(--text-muted); }
+  .pc-main button{ margin-left:auto; flex:0 0 auto; width:auto; padding:8px 14px; font-size:13px; color:var(--accent); white-space:nowrap; }
+  .pc-detail{ margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.45; font-variant-numeric:tabular-nums; }
+  /* Les tarifs se règlent sur place, dans la ligne : un nombre, son unité. */
+  .set-num{ width:76px; flex:none; text-align:right; padding:7px 9px; border-radius:10px;
+    border:0.5px solid var(--hairline); background:var(--bg-elevated); color:var(--text);
+    font-family:var(--font-body); font-size:15px; font-variant-numeric:tabular-nums; }
+  .set-unit{ flex:none; width:22px; font-size:13px; color:var(--text-faint); }
+  .set-note{ margin:7px 6px 0; font-size:12px; color:var(--text-faint); line-height:1.45; }
   .paid-row{ display:flex; gap:8px; align-items:stretch; }
   .paid-row input{ flex:1; min-width:0; }
   /* .btn-secondary est rouge par défaut (il sert surtout à annuler) : ici ce
@@ -2420,6 +2442,31 @@
       </button>
     </div>
 
+    <p class="set-group" data-i18n="setTarifs">Tarifs</p>
+    <div class="set-list">
+      <label class="set-row static">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17.5" cy="17.5" r="1.6"/></svg></span>
+        <span class="set-l" data-i18n="tarifLivraison">Livraison par pièce</span>
+        <input type="number" class="set-num" id="t_livraison" min="0" step="0.5" inputmode="decimal"><span class="set-unit">€</span>
+      </label>
+      <label class="set-row static private">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/></svg></span>
+        <span class="set-l" data-i18n="tarifMarge">Ta marge par pièce</span>
+        <input type="number" class="set-num" id="t_marge" min="0" step="1" inputmode="decimal"><span class="set-unit">€</span>
+      </label>
+      <label class="set-row static">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z"/></svg></span>
+        <span class="set-l" data-i18n="tarifReserve">Réserve de sécurité</span>
+        <input type="number" class="set-num" id="t_reserve" min="0" max="50" step="1" inputmode="decimal"><span class="set-unit">%</span>
+      </label>
+      <label class="set-row static">
+        <span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 7 5-7M12 11v9M8 13h8M8 16.5h8"/></svg></span>
+        <span class="set-l" data-i18n="tarifTaux">Yuans pour 1 €</span>
+        <input type="number" class="set-num" id="t_taux" min="1" step="0.01" inputmode="decimal"><span class="set-unit">¥</span>
+      </label>
+    </div>
+    <p class="set-note" data-i18n="tarifNote">Le prix conseillé de chaque commande = achat + livraison + ta marge + la réserve sur l'achat et la livraison.</p>
+
     <p class="set-group" data-i18n="setData">Données</p>
     <div class="set-list">
       <button type="button" class="set-row" id="exportBtn">
@@ -2517,6 +2564,25 @@
           <input type="number" id="f_unitPrice" min="0" step="0.01">
           <div class="field-error"></div>
         </div>
+      </div>
+      <div class="field private" id="pcField">
+        <label data-i18n="pcTitle">Prix conseillé</label>
+        <div class="pc-box">
+          <div class="pc-yuan">
+            <input type="number" id="f_yuan" min="0" step="0.1" inputmode="decimal" data-i18n-placeholder="pcYuanPh" placeholder="Prix fournisseur en ¥">
+            <span id="pcYuanEq"></span>
+          </div>
+          <div class="pc-main">
+            <b id="pcPrix">—</b><small data-i18n="pcPerPiece">/ pièce</small>
+            <button type="button" class="btn-secondary" id="pcApply" data-i18n="pcApply">Utiliser</button>
+          </div>
+          <div class="pc-detail" id="pcDetail"></div>
+        </div>
+      </div>
+      <div class="field private">
+        <label data-i18n="fieldShipCost">Frais d'envoi réels (total)</label>
+        <input type="number" id="f_shipCost" min="0" step="0.01" inputmode="decimal">
+        <p class="field-hint" data-i18n="shipCostHint" style="margin:6px 0 0;">Ce que BW te facture pour ce colis. Vide = estimé avec ta livraison par pièce.</p>
       </div>
       <div class="field" id="couponField" style="display:none;">
         <label data-i18n="fieldCoupon">Coupon fidélité</label>
@@ -3162,6 +3228,12 @@ const I18N = {
     discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
+    setTarifs:'Tarifs', tarifLivraison:'Livraison par pièce', tarifMarge:'Ta marge par pièce', tarifReserve:'Réserve de sécurité', tarifTaux:'Yuans pour 1 €',
+    tarifNote:'Le prix conseillé de chaque commande = achat + livraison + ta marge + la réserve sur l\'achat et la livraison.',
+    pcTitle:'Prix conseillé', pcYuanPh:'Prix fournisseur en ¥', pcPerPiece:'/ pièce', pcApply:'Utiliser',
+    pcDetail:'achat {a} + livraison {l} + marge {m} + réserve {r} %', pcTotal:'soit {t} pour {q} pièces', pcEmpty:'Entre le prix d\'achat (en € ou en ¥) pour voir le prix conseillé.',
+    fieldShipCost:'Frais d\'envoi réels (total)', shipCostHint:'Ce que BW te facture pour ce colis. Vide = estimé avec ta livraison par pièce.',
+    shipEstimated:'estimés : {v}', shipLineEst:'dont livraison {v} (estimée)', shipLineReal:'dont livraison {v}',
     fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)', fieldClientPhotos:'Photos du client', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Enregistrer', cancelOrder:'Annuler la commande', reactivateOrder:'Réactiver la commande', deleteOrder:'Supprimer',
     clientProfile:'Profil client', fieldName:'Nom', fieldAddress:'Adresse de livraison',
@@ -3416,6 +3488,12 @@ const I18N = {
     discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
+    setTarifs:'Pricing', tarifLivraison:'Shipping per piece', tarifMarge:'Your margin per piece', tarifReserve:'Safety buffer', tarifTaux:'Yuan per €1',
+    tarifNote:'Each order\'s suggested price = purchase + shipping + your margin + the buffer on purchase and shipping.',
+    pcTitle:'Suggested price', pcYuanPh:'Supplier price in ¥', pcPerPiece:'/ piece', pcApply:'Use',
+    pcDetail:'purchase {a} + shipping {l} + margin {m} + buffer {r} %', pcTotal:'i.e. {t} for {q} pieces', pcEmpty:'Enter the purchase price (in € or ¥) to see the suggested price.',
+    fieldShipCost:'Actual shipping cost (total)', shipCostHint:'What BW bills you for this parcel. Empty = estimated from your per-piece shipping.',
+    shipEstimated:'estimated: {v}', shipLineEst:'incl. shipping {v} (estimated)', shipLineReal:'incl. shipping {v}',
     fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)', fieldClientPhotos:'Client photos', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Save', cancelOrder:'Cancel order', reactivateOrder:'Reactivate order', deleteOrder:'Delete',
     clientProfile:'Client profile', fieldName:'Name', fieldAddress:'Delivery address',
@@ -3593,7 +3671,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-09-29b';
+const BUILD = '2026-10-02';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3866,7 +3944,22 @@ function freshRef(){
   return randomRef();
 }
 
-function orderTotalCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1); }
+// Les tarifs de Massif (voir userSettings plus bas). `var` et posés ICI, avant
+// le premier calcul de marge : un `let` déclaré plus loin dans le fichier
+// ferait planter tout rendu qui passerait avant lui.
+var TARIFS_DEFAUT = { livraison: 20, marge: 20, reserve: 5, taux: 7.6 };
+var mesTarifs = Object.assign({}, TARIFS_DEFAUT);
+// LES FRAIS D'ENVOI SONT UN COÛT. Le prix client inclut toujours la livraison :
+// sans cette ligne, la marge affichée était plus haute que la vraie du montant
+// du transport. Le réel (ce que BW facture) gagne ; à défaut, on estime avec le
+// forfait par pièce des Réglages — 20 € par défaut, la règle de Massif.
+function orderShipping(o){
+  const s = o ? o.shipCost : null;
+  if(s !== null && s !== undefined && s !== '' && isFinite(Number(s))) return Number(s);
+  return (Number(o && o.qty) || 1) * (Number(mesTarifs.livraison) || 0);
+}
+function orderPurchaseCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1); }
+function orderTotalCost(o){ return orderPurchaseCost(o) + orderShipping(o); }
 function orderTotalPrice(o){ return (Number(o.unitPrice)||0) * (Number(o.qty)||1); }
 // Ce que le client paie réellement : une remise fidélité sort de ta poche,
 // elle doit donc baisser la marge, le reste à régler et le chiffre d'affaires.
@@ -7154,7 +7247,7 @@ function majIdentite(){
   const b = $('#menuBuild'); if(b) b.textContent = 'DOLLAR$ SOURCING · v' + BUILD;
   const tv = $('#themeVal'); if(tv) tv.textContent = t(document.documentElement.getAttribute('data-theme') === 'light' ? 'themeLight' : 'themeDark');
 }
-function ouvreReglages(){ majIdentite(); $('#menuOverlay').classList.add('open'); }
+function ouvreReglages(){ majIdentite(); remplisTarifs(); $('#menuOverlay').classList.add('open'); }
 function fermeReglages(){ $('#menuOverlay').classList.remove('open'); }
 $('#menuBtn').addEventListener('click', ouvreReglages);
 $('#closeMenu').addEventListener('click', fermeReglages);
@@ -7418,12 +7511,39 @@ function buildCouponSelect(order){
     : '';
 }
 
+// Le prix conseillé : achat + livraison + marge, plus la réserve sur ce que la
+// pièce coûte vraiment (achat + livraison), arrondi à l'euro du dessus.
+// Arrondir vers le bas, ce serait rendre la réserve.
+function prixConseille(achat){
+  const T = mesTarifs, base = (Number(achat)||0) + (Number(T.livraison)||0);
+  return Math.ceil(base + (Number(T.marge)||0) + base * (Number(T.reserve)||0) / 100 - 1e-9);
+}
+function majPrixConseil(){
+  const achat = parseFloat($('#f_unitCost').value);
+  const qty = parseInt($('#f_qty').value) || 1;
+  const y = parseFloat($('#f_yuan').value);
+  $('#pcYuanEq').textContent = y > 0 ? '≈ ' + fmtMoney(y / (Number(mesTarifs.taux) || 7.6)) : '';
+  const ok = !isNaN(achat) && achat >= 0 && $('#f_unitCost').value !== '';
+  const p = ok ? prixConseille(achat) : null;
+  $('#pcPrix').textContent = ok ? fmtMoney(p) : '—';
+  $('#pcApply').disabled = !ok;
+  $('#pcDetail').textContent = ok
+    ? t('pcDetail').replace('{a}', fmtMoney(achat)).replace('{l}', fmtMoney(mesTarifs.livraison))
+        .replace('{m}', fmtMoney(mesTarifs.marge)).replace('{r}', mesTarifs.reserve)
+      + ' · ' + t('pcTotal').replace('{t}', fmtMoney(p * qty)).replace('{q}', qty)
+    : t('pcEmpty');
+  $('#f_shipCost').placeholder = t('shipEstimated').replace('{v}', fmtMoney(qty * (Number(mesTarifs.livraison)||0)));
+}
 function updateMarginPreview(){
   const qty = parseInt($('#f_qty').value)||1;
   const uc = parseFloat($('#f_unitCost').value)||0;
   const up = parseFloat($('#f_unitPrice').value)||0;
   const discount = selectedCouponValue();
-  const totalCost = uc*qty, gross = up*qty;
+  // Le coût, c'est l'achat ET l'envoi : le prix client inclut la livraison.
+  const shipVal = $('#f_shipCost').value;
+  const shipReel = shipVal !== '' && !isNaN(parseFloat(shipVal));
+  const ship = shipReel ? parseFloat(shipVal) : qty * (Number(mesTarifs.livraison)||0);
+  const totalCost = uc*qty + ship, gross = up*qty;
   const totalPrice = Math.max(0, gross - discount);
   const margin = totalPrice-totalCost;
   const mult = totalCost>0 ? (totalPrice/totalCost) : 0;
@@ -7431,12 +7551,14 @@ function updateMarginPreview(){
   const remaining = Math.max(totalPrice - paid, 0);
   $('#marginPreview').innerHTML =
     `${t('totalCostLabel')} : ${fmtMoney(totalCost)} &nbsp;·&nbsp; ${t('totalSaleLabel')} : ${fmtMoney(totalPrice)}<br>` +
+    `<span style="color:var(--text-faint)">${t(shipReel ? 'shipLineReal' : 'shipLineEst').replace('{v}', fmtMoney(ship))}</span><br>` +
     (discount > 0 ? `${t('couponApplied').replace('{value}', fmtMoney(discount))}<br>` : '') +
     `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
     `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
     (paid > 0
       ? `<br><span style="color:${remaining>0?'var(--warn)':'var(--accent)'}">${remaining>0 ? t('remainingLabel')+' : '+fmtMoney(remaining) : t('fullyPaid')}</span>`
       : '');
+  majPrixConseil();
 }
 
 function buildClientSelect(selectedId){
@@ -7468,6 +7590,8 @@ function openSheet(order, presetClientId, prefill){
   $('#f_product').value = order ? order.product : (prefill ? (prefill.product||'') : '');
   $('#f_qty').value = order ? order.qty : (prefill ? (prefill.qty||1) : 1);
   $('#f_unitCost').value = order ? order.unitCost : '';
+  $('#f_yuan').value = '';
+  $('#f_shipCost').value = order && order.shipCost !== null && order.shipCost !== undefined && order.shipCost !== '' ? order.shipCost : '';
   ficheSupplierId = (order && order.supplierId) || '';
   majOrdSupplier();
   $('#f_unitPrice').value = order ? order.unitPrice : '';
@@ -7685,6 +7809,20 @@ $('#f_qty').addEventListener('input', updateMarginPreview);
 $('#f_unitCost').addEventListener('input', updateMarginPreview);
 $('#f_unitPrice').addEventListener('input', updateMarginPreview);
 $('#f_paid').addEventListener('input', updateMarginPreview);
+$('#f_shipCost').addEventListener('input', updateMarginPreview);
+// Le prix fournisseur se dit en yuans au stand : on le tape tel quel, l'app
+// remplit le prix d'achat en euros au taux des Réglages.
+$('#f_yuan').addEventListener('input', ()=>{
+  const y = parseFloat($('#f_yuan').value);
+  if(y > 0) $('#f_unitCost').value = (y / (Number(mesTarifs.taux) || 7.6)).toFixed(2);
+  updateMarginPreview();
+});
+$('#pcApply').addEventListener('click', ()=>{
+  const achat = parseFloat($('#f_unitCost').value);
+  if(isNaN(achat)) return;
+  $('#f_unitPrice').value = prixConseille(achat);
+  $('#f_unitPrice').dispatchEvent(new Event('input'));
+});
 // Raccourci pour solder une commande en un geste — y compris les anciennes,
 // créées avant que la question soit posée au passage à « Payé ».
 $('#paidAllBtn').addEventListener('click', ()=>{
@@ -7789,6 +7927,9 @@ form.addEventListener('submit', async (e)=>{
   const data = { clientId, product, qty:qtyVal, unitCost:ucVal, unitPrice:upVal,
                  supplierId: ficheSupplierId || '',
                  paidAmount: parseFloat($('#f_paid').value) || 0,
+                 // null = « pas encore facturé » : la marge l'estime au forfait.
+                 shipCost: $('#f_shipCost').value === '' || isNaN(parseFloat($('#f_shipCost').value))
+                   ? null : parseFloat($('#f_shipCost').value),
                  note:$('#f_note').value.trim(),
                  carrier:$('#f_carrier').value.trim(),
                  tracking:$('#f_tracking').value.trim(),
@@ -10286,13 +10427,43 @@ async function loadPinHash(){
     // `userSettings/{uid}` est déjà ouvert à son propriétaire dans les règles,
     // donc aucune collection nouvelle et rien à republier (piège 29).
     monTransitaire = d.forwarder || null;
+    mesTarifs = Object.assign({}, TARIFS_DEFAUT, d.tarifs || {});
   }catch(e){ storedPinHash = null; }
+  remplisTarifs();
 }
 // Le transitaire de Massif : c'est CHEZ LUI que le fournisseur livre, et c'est
 // LUI qui expédie ensuite au client. Les deux fiches en ont donc besoin, mais
 // pas pour la même raison — l'une le donne comme destination, l'autre lui donne
 // l'adresse du client.
 let monTransitaire = null;   // { name, address, phone }
+// Les tarifs de Massif, décidés le 30 septembre : 20 € de livraison par pièce
+// (avion, minimum 10 pièces par commande), sa marge visée par pièce, une réserve
+// de sécurité, et le taux du yuan. Ils vivent dans `userSettings/{uid}`, comme
+// le transitaire : déjà ouvert à son propriétaire, rien à republier.
+function remplisTarifs(){
+  [['livraison','#t_livraison'],['marge','#t_marge'],['reserve','#t_reserve'],['taux','#t_taux']]
+    .forEach(([k, sel]) => { const el = $(sel); if(el && document.activeElement !== el) el.value = mesTarifs[k]; });
+}
+let tarifsTimer = null;
+function tarifChange(){
+  const v = {};
+  [['livraison','#t_livraison',0],['marge','#t_marge',0],['reserve','#t_reserve',0],['taux','#t_taux',1]]
+    .forEach(([k, sel, min]) => { const n = parseFloat($(sel).value); v[k] = isNaN(n) || n < min ? TARIFS_DEFAUT[k] : n; });
+  mesTarifs = v;
+  render();
+  // Une frappe n'est pas une décision : on écrit quand la saisie se pose.
+  clearTimeout(tarifsTimer);
+  tarifsTimer = setTimeout(async ()=>{
+    try{
+      if(!currentUid) return;
+      await db.collection('userSettings').doc(currentUid).set({ tarifs: v, updatedAt: Date.now() }, { merge: true });
+    }catch(e){ showToast(t('toastSaveError') + ' [' + (e && e.code ? e.code : 'erreur') + ']'); }
+  }, 600);
+}
+['#t_livraison','#t_marge','#t_reserve','#t_taux'].forEach(sel => {
+  const el = document.querySelector(sel);
+  if(el){ el.addEventListener('input', tarifChange); el.addEventListener('blur', remplisTarifs); }
+});
 async function saveTransitaire(v){
   try{
     if(!currentUid) throw new Error('uid manquant');

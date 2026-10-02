@@ -1869,6 +1869,69 @@ viennent de Google Fonts, injoignable en Chine : la fiche se rabat sur la pile
 système, **c'est voulu** — une fiche qui dépend d'un CDN pour être lisible ne
 vaut rien là où on s'en sert.
 
+### Les tarifs : prix à l'unité, livraison comprise, 10 pièces minimum
+
+Décidé par Massif le 30 septembre, après avoir choisi son transitaire.
+
+**Le transitaire, c'est BW Transport** (entrepôt à Foshan, référence client
+`BW-2655`, qui sert de **nom du destinataire** sur chaque colis fournisseur).
+Envoi **en avion uniquement**, en DDP : douane, TVA et livraison à domicile
+comprises, le client ne paie rien à l'arrivée. BW pèse **et mesure** le colis
+emballé : une doudoune de 800 g est facturée à son volume, autour de 1,5 kg.
+
+**La règle tient en trois chiffres, tous réglables dans les Réglages → Tarifs**
+(`userSettings/{uid}.tarifs`, le même document que le PIN et le transitaire :
+déjà ouvert à son propriétaire, **rien à republier**) :
+
+| | défaut | pourquoi |
+|---|---|---|
+| livraison par pièce | **20 €** | le forfait d'un collègue du métier, vérifié sur la grille BW |
+| marge visée par pièce | **20 €** | sa cible : 15 à 30 € par article |
+| réserve de sécurité | **5 %** | sur achat + livraison : un poids mal estimé, le yuan qui bouge |
+| yuans pour 1 € | **7,6** | le taux de la grille BW |
+
+**Pourquoi 10 pièces minimum.** Une doudoune seule coûte ~30 € d'envoi ; à
+partir de 8 pièces (12 kg), BW passe à 70 ¥/kg et la pièce tombe à ~14 €. À
+10 pièces, le forfait de 20 € contient donc déjà ~6 € de marge par pièce, et
+le cas perdant — la pièce seule — n'existe plus. Le minimum est **dans le
+portail seulement** (`MIN_PIECES` dans `client.html`, écrit en dur : le portail
+ne lit pas `userSettings`) ; dans l'app pro, aucune limite, une exception reste
+le geste de Massif. Il n'y a **pas de bouton « tester avec 2 pièces »** : Massif
+l'a écarté, les photos montrent la qualité.
+
+Le portail le dit **avant** qu'on remplisse (`#minNote`, la même consigne à
+l'accent que le catalogue), compte en direct ce qui manque quand on coche des
+coloris (`#minProg`, neutre puis à l'accent — jamais d'ambre, réservé aux
+soldes), et le refus nomme le chiffre : « tu en as 5 ». On peut mélanger les
+coloris et les tailles du même modèle : la règle « une demande = un modèle » ne
+change pas.
+
+**Le prix conseillé** (`prixConseille()`, carte `#pcField` de la fiche
+commande) = achat + livraison + marge + réserve sur (achat + livraison),
+**arrondi à l'euro du dessus** — arrondir vers le bas, ce serait rendre la
+réserve. Le prix fournisseur se tape **en yuans** (`#f_yuan`), comme on le dit
+au stand ; l'app remplit le prix d'achat en euros. Le bouton « Utiliser » remplit
+le prix client, il n'écrit rien d'autre : le prix reste un champ de Massif.
+
+**LES FRAIS D'ENVOI SONT ENFIN UN COÛT.** Le prix client inclut toujours la
+livraison, mais `orderTotalCost()` ne comptait que l'achat : **toutes les marges
+affichées étaient trop hautes du montant du transport.** `orderShipping()`
+prend les frais réels du colis (`shipCost`, champ de la fiche : ce que BW
+facture) et, à défaut, les estime au forfait par pièce. `null` veut dire « pas
+encore facturé », exactement comme `coverDraft` : on estime, on ne suppose pas
+zéro. La marge, le multiplicateur, les stats et l'instantané de l'assistant
+suivent tous, puisqu'ils passent par `orderTotalCost()`.
+
+`shipCost` et tout le calcul sont `.private` : en mode discret ils
+disparaissent. Ils n'entrent **jamais** dans `publicOrderData()` — la liste y est
+explicite, rien à faire pour qu'ils n'y soient pas.
+
+Piège évité en l'écrivant : `TARIFS_DEFAUT` et `mesTarifs` sont des `var` posés
+**avant** `orderTotalCost()`. Déclarés en `let` plus bas, avec le transitaire,
+le premier rendu qui calcule une marge avant cette ligne aurait planté toute
+l'app. Même raison pour `var MIN_PIECES` dans le portail : `renderPicked()` peut
+être appelée par `applyTranslations()` avant que le script n'y arrive.
+
 ### Dates de parcours
 
 Chaque commande porte une carte `statusAt` : une date par étape franchie
@@ -3062,7 +3125,10 @@ cartes de commande avec photo et libellé lisible, carte de fidélité Dollarz
 qui s'incline sous le doigt ; côté pro, vues en bas sous le pouce avec
 position gardée par vue, grand titre et ligne d'état, Réglages regroupés,
 « À faire » calculé avec relances WhatsApp prêtes, cartes avec photo ou
-initiales et prochaine étape, statut en tête de fiche avec frise à toucher.
+initiales et prochaine étape, statut en tête de fiche avec frise à toucher,
+tarifs réglables (livraison par pièce, marge, réserve, taux du yuan), prix
+conseillé dans la fiche commande avec saisie en yuans, frais d'envoi réels
+déduits de la marge, minimum de 10 pièces par demande dans le portail.
 
 ## À faire
 
