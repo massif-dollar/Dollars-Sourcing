@@ -1940,6 +1940,36 @@ le premier rendu qui calcule une marge avant cette ligne aurait planté toute
 l'app. Même raison pour `var MIN_PIECES` dans le portail : `renderPicked()` peut
 être appelée par `applyTranslations()` avant que le script n'y arrive.
 
+#### La marge n'est pas la même sur tous les produits
+
+Massif, le 2 octobre : « sur certains produits je vais gagner plus, sur
+d'autres moins ». Le défaut des Réglages reste, mais il n'est plus qu'un point
+de départ.
+
+**Trois niveaux, du plus précis au plus général**, et la fiche dit lequel
+s'applique (`#pcMargeSrc`) :
+
+1. **la marge déjà fixée sur cette commande** (`orders.marge`) ;
+2. **celle retenue pour son modèle** (`userSettings/{uid}.margesModele`, clé
+   `marque|modèle` en minuscules, lue dans `items[]`) ;
+3. **le défaut des Réglages** (`mesTarifs.marge`).
+
+Le champ « Ta marge par pièce » est dans la carte du prix conseillé : on la
+change, le prix suit. **À l'enregistrement, la marge de la commande devient
+celle du modèle** (`retiensMargeModele`) : la prochaine demande du même modèle
+arrive avec la bonne marge, sans rien régler nulle part. Une demande tapée à la
+main n'a pas de modèle : elle prend le défaut, et rien n'est retenu.
+
+**Où ça vit, et pourquoi pas ailleurs** : `catalog` est lisible par tout le
+monde (le portail est anonyme), donc **une marge n'y entre jamais**.
+`userSettings/{uid}` est déjà ouvert à son seul propriétaire : **rien à
+republier**. `orders.marge` n'entre pas dans `publicOrderData()`, dont la liste
+est explicite. Le champ est `.private` et disparaît en mode discret.
+
+**L'écriture passe par un objet imbriqué** (`set({margesModele:{[clé]:v}},
+{merge:true})`), jamais par un chemin pointé : la clé contient des espaces et
+des « | », un `update('margesModele.'+clé)` l'aurait découpée.
+
 ### Dates de parcours
 
 Chaque commande porte une carte `statusAt` : une date par étape franchie
@@ -3135,7 +3165,8 @@ position gardée par vue, grand titre et ligne d'état, Réglages regroupés,
 « À faire » calculé avec relances WhatsApp prêtes, cartes avec photo ou
 initiales et prochaine étape, statut en tête de fiche avec frise à toucher,
 tarifs réglables (livraison par pièce, marge, réserve, taux du yuan), prix
-conseillé dans la fiche commande avec saisie en yuans, frais d'envoi réels
+conseillé dans la fiche commande avec saisie en yuans, marge par commande
+retenue par modèle du catalogue, frais d'envoi réels
 déduits de la marge, minimum de 10 pièces par demande dans le portail.
 
 ## À faire

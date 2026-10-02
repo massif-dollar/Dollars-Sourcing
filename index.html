@@ -536,6 +536,7 @@
   html[data-discreet="1"] #f_unitCost,
   html[data-discreet="1"] #f_shipCost,
   html[data-discreet="1"] #f_yuan,
+  html[data-discreet="1"] #f_marge,
   html[data-discreet="1"] .set-num,
   html[data-discreet="1"] #f_unitPrice,
   html[data-discreet="1"] #f_paid{
@@ -1461,6 +1462,11 @@
   .pc-yuan{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .pc-yuan input{ flex:1; min-width:0; }
   .pc-yuan span{ font-size:13px; color:var(--text-muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .pc-marge{ display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+  .pc-box .pc-marge label{ flex:1; min-width:0; margin:0; font-size:13px; color:var(--text); }
+  .pc-box .pc-marge input{ flex:0 0 76px; width:76px; text-align:right; font-variant-numeric:tabular-nums; }
+  .pc-marge span{ font-size:13px; color:var(--text-muted); }
+  .pc-src{ font-size:11.5px; color:var(--text-muted); margin-bottom:8px; min-height:1em; }
   .pc-main{ display:flex; align-items:center; gap:10px; }
   .pc-main b{ font-family:var(--font-display); font-size:24px; letter-spacing:-0.03em; color:var(--accent); font-variant-numeric:tabular-nums; }
   .pc-main small{ font-size:13px; color:var(--text-muted); }
@@ -2572,6 +2578,12 @@
             <input type="number" id="f_yuan" min="0" step="0.1" inputmode="decimal" data-i18n-placeholder="pcYuanPh" placeholder="Prix fournisseur en ¥">
             <span id="pcYuanEq"></span>
           </div>
+          <div class="pc-marge">
+            <label for="f_marge" data-i18n="pcMarge">Ta marge par pièce</label>
+            <input type="number" id="f_marge" min="0" step="1" inputmode="decimal">
+            <span>€</span>
+          </div>
+          <div class="pc-src" id="pcMargeSrc"></div>
           <div class="pc-main">
             <b id="pcPrix">—</b><small data-i18n="pcPerPiece">/ pièce</small>
             <button type="button" class="btn-secondary" id="pcApply" data-i18n="pcApply">Utiliser</button>
@@ -3228,9 +3240,12 @@ const I18N = {
     discreetTitle:'Masquer les montants', discreetOn:'Montants masqués.', discreetOff:'Montants de nouveau visibles.', ordersActive:'En cours', ordersDone:'Terminées', shipSection:'Expédition', shipHint:"Ces informations s'affichent dans l'espace du client.",
     fieldCarrier:'Transitaire', fieldTracking:'Numéro de suivi', fieldEta:'Livraison estimée',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
-    setTarifs:'Tarifs', tarifLivraison:'Livraison par pièce', tarifMarge:'Ta marge par pièce', tarifReserve:'Réserve de sécurité', tarifTaux:'Yuans pour 1 €',
-    tarifNote:'Le prix conseillé de chaque commande = achat + livraison + ta marge + la réserve sur l\'achat et la livraison.',
+    setTarifs:'Tarifs', tarifLivraison:'Livraison par pièce', tarifMarge:'Ta marge par défaut (par pièce)', tarifReserve:'Réserve de sécurité', tarifTaux:'Yuans pour 1 €',
+    tarifNote:'Le prix conseillé de chaque commande = achat + livraison + ta marge + la réserve sur l\'achat et la livraison. La marge se change commande par commande, et l\'app retient celle de chaque modèle du catalogue.',
     pcTitle:'Prix conseillé', pcYuanPh:'Prix fournisseur en ¥', pcPerPiece:'/ pièce', pcApply:'Utiliser',
+    pcMarge:'Ta marge par pièce', pcMargeOrder:'La marge choisie pour cette commande.',
+    pcMargeModel:'Ta marge habituelle sur ce modèle.', pcMargeNewModel:'Marge par défaut — change-la, elle sera retenue pour ce modèle.',
+    pcMargeDefault:'Marge par défaut des Réglages.', pcMargeWillRemember:'Elle sera retenue pour ce modèle à l\'enregistrement.',
     pcDetail:'achat {a} + livraison {l} + marge {m} + réserve {r} %', pcTotal:'soit {t} pour {q} pièces', pcEmpty:'Entre le prix d\'achat (en € ou en ¥) pour voir le prix conseillé.',
     fieldShipCost:'Frais d\'envoi réels (total)', shipCostHint:'Ce que BW te facture pour ce colis. Vide = estimé avec ta livraison par pièce.',
     shipEstimated:'estimés : {v}', shipLineEst:'dont livraison {v} (estimée)', shipLineReal:'dont livraison {v}',
@@ -3489,9 +3504,12 @@ const I18N = {
     discreetTitle:'Hide amounts', discreetOn:'Amounts hidden.', discreetOff:'Amounts visible again.', ordersActive:'In progress', ordersDone:'Completed', shipSection:'Shipping', shipHint:'This shows up in your client\'s own space.',
     fieldCarrier:'Carrier', fieldTracking:'Tracking number', fieldEta:'Estimated delivery',
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
-    setTarifs:'Pricing', tarifLivraison:'Shipping per piece', tarifMarge:'Your margin per piece', tarifReserve:'Safety buffer', tarifTaux:'Yuan per €1',
-    tarifNote:'Each order\'s suggested price = purchase + shipping + your margin + the buffer on purchase and shipping.',
+    setTarifs:'Pricing', tarifLivraison:'Shipping per piece', tarifMarge:'Your default margin (per piece)', tarifReserve:'Safety buffer', tarifTaux:'Yuan per €1',
+    tarifNote:'Each order\'s suggested price = purchase + shipping + your margin + the buffer on purchase and shipping. The margin can be changed order by order, and the app remembers it for each catalogue model.',
     pcTitle:'Suggested price', pcYuanPh:'Supplier price in ¥', pcPerPiece:'/ piece', pcApply:'Use',
+    pcMarge:'Your margin per piece', pcMargeOrder:'The margin chosen for this order.',
+    pcMargeModel:'Your usual margin on this model.', pcMargeNewModel:'Default margin — change it and it will be remembered for this model.',
+    pcMargeDefault:'Default margin from Settings.', pcMargeWillRemember:'It will be remembered for this model when you save.',
     pcDetail:'purchase {a} + shipping {l} + margin {m} + buffer {r} %', pcTotal:'i.e. {t} for {q} pieces', pcEmpty:'Enter the purchase price (in € or ¥) to see the suggested price.',
     fieldShipCost:'Actual shipping cost (total)', shipCostHint:'What BW bills you for this parcel. Empty = estimated from your per-piece shipping.',
     shipEstimated:'estimated: {v}', shipLineEst:'incl. shipping {v} (estimated)', shipLineReal:'incl. shipping {v}',
@@ -3673,7 +3691,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-02b';
+const BUILD = '2026-10-02c';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3953,6 +3971,10 @@ function freshRef(){
 // (2,5 kg facturés) coûte 23 € d'envoi. Le cas courant (~14 €) laisse ~11 € de plus.
 var TARIFS_DEFAUT = { livraison: 25, marge: 20, reserve: 5, taux: 7.6 };
 var mesTarifs = Object.assign({}, TARIFS_DEFAUT);
+// La marge n'est pas la même sur tous les produits : celle d'un modèle du
+// catalogue est retenue ici, clé « marque|modèle ». Dans `userSettings`, privé
+// à son propriétaire — JAMAIS dans `catalog`, qui est public.
+var mesMargesModele = {};
 // LES FRAIS D'ENVOI SONT UN COÛT. Le prix client inclut toujours la livraison :
 // sans cette ligne, la marge affichée était plus haute que la vraie du montant
 // du transport. Le réel (ce que BW facture) gagne ; à défaut, on estime avec le
@@ -7518,22 +7540,43 @@ function buildCouponSelect(order){
 // Le prix conseillé : achat + livraison + marge, plus la réserve sur ce que la
 // pièce coûte vraiment (achat + livraison), arrondi à l'euro du dessus.
 // Arrondir vers le bas, ce serait rendre la réserve.
-function prixConseille(achat){
+function prixConseille(achat, marge){
   const T = mesTarifs, base = (Number(achat)||0) + (Number(T.livraison)||0);
-  return Math.ceil(base + (Number(T.marge)||0) + base * (Number(T.reserve)||0) / 100 - 1e-9);
+  const m = Number.isFinite(Number(marge)) && marge !== '' && marge !== null ? Number(marge) : (Number(T.marge)||0);
+  return Math.ceil(base + m + base * (Number(T.reserve)||0) / 100 - 1e-9);
 }
+// Le modèle d'une commande, quand elle vient du catalogue : une demande = une
+// marque et un seul modèle, donc la première ligne suffit. Sans `items` (une
+// demande tapée à la main), pas de modèle : la marge par défaut s'applique.
+function cleModele(items){
+  const it = Array.isArray(items) && items.find(x => x && (x.brand || x.model));
+  if(!it) return '';
+  return (String(it.brand||'').trim() + '|' + String(it.model||'').trim()).toLowerCase().replace(/\s+/g,' ');
+}
+function margeDuModele(cle){
+  const v = cle ? mesMargesModele[cle] : undefined;
+  return Number.isFinite(Number(v)) && v !== null ? Number(v) : null;
+}
+// La marge de la fiche ouverte : celle tapée dans le champ, sinon le défaut.
+function margeFiche(){
+  const n = parseFloat($('#f_marge').value);
+  return isNaN(n) || n < 0 ? (Number(mesTarifs.marge)||0) : n;
+}
+let ficheCleModele = '';
 function majPrixConseil(){
   const achat = parseFloat($('#f_unitCost').value);
   const qty = parseInt($('#f_qty').value) || 1;
   const y = parseFloat($('#f_yuan').value);
   $('#pcYuanEq').textContent = y > 0 ? '≈ ' + fmtMoney(y / (Number(mesTarifs.taux) || 7.6)) : '';
   const ok = !isNaN(achat) && achat >= 0 && $('#f_unitCost').value !== '';
-  const p = ok ? prixConseille(achat) : null;
+  const marge = margeFiche();
+  const p = ok ? prixConseille(achat, marge) : null;
+  if(document.activeElement !== $('#f_marge') && $('#f_marge').value === '') $('#f_marge').placeholder = mesTarifs.marge;
   $('#pcPrix').textContent = ok ? fmtMoney(p) : '—';
   $('#pcApply').disabled = !ok;
   $('#pcDetail').textContent = ok
     ? t('pcDetail').replace('{a}', fmtMoney(achat)).replace('{l}', fmtMoney(mesTarifs.livraison))
-        .replace('{m}', fmtMoney(mesTarifs.marge)).replace('{r}', mesTarifs.reserve)
+        .replace('{m}', fmtMoney(marge)).replace('{r}', mesTarifs.reserve)
       + ' · ' + t('pcTotal').replace('{t}', fmtMoney(p * qty)).replace('{q}', qty)
     : t('pcEmpty');
   $('#f_shipCost').placeholder = t('shipEstimated').replace('{v}', fmtMoney(qty * (Number(mesTarifs.livraison)||0)));
@@ -7601,6 +7644,16 @@ function openSheet(order, presetClientId, prefill){
   $('#f_qty').value = order ? order.qty : (prefill ? (prefill.qty||1) : 1);
   $('#f_unitCost').value = order ? order.unitCost : '';
   $('#f_yuan').value = '';
+  // La marge : celle déjà décidée pour cette commande, sinon celle retenue
+  // pour ce modèle, sinon le défaut des Réglages.
+  ficheCleModele = cleModele(order ? order.items : pendingItems);
+  {
+    const dejaFixee = order && Number.isFinite(Number(order.marge)) && order.marge !== null && order.marge !== '';
+    const duModele = margeDuModele(ficheCleModele);
+    $('#f_marge').value = dejaFixee ? Number(order.marge) : (duModele !== null ? duModele : mesTarifs.marge);
+    $('#pcMargeSrc').textContent = dejaFixee ? t('pcMargeOrder')
+      : duModele !== null ? t('pcMargeModel') : (ficheCleModele ? t('pcMargeNewModel') : t('pcMargeDefault'));
+  }
   $('#f_shipCost').value = order && order.shipCost !== null && order.shipCost !== undefined && order.shipCost !== '' ? order.shipCost : '';
   ficheSupplierId = (order && order.supplierId) || '';
   majOrdSupplier();
@@ -7827,10 +7880,14 @@ $('#f_yuan').addEventListener('input', ()=>{
   if(y > 0) $('#f_unitCost').value = (y / (Number(mesTarifs.taux) || 7.6)).toFixed(2);
   updateMarginPreview();
 });
+$('#f_marge').addEventListener('input', ()=>{
+  $('#pcMargeSrc').textContent = ficheCleModele ? t('pcMargeWillRemember') : '';
+  updateMarginPreview();
+});
 $('#pcApply').addEventListener('click', ()=>{
   const achat = parseFloat($('#f_unitCost').value);
   if(isNaN(achat)) return;
-  $('#f_unitPrice').value = prixConseille(achat);
+  $('#f_unitPrice').value = prixConseille(achat, margeFiche());
   $('#f_unitPrice').dispatchEvent(new Event('input'));
 });
 // Raccourci pour solder une commande en un geste — y compris les anciennes,
@@ -7940,6 +7997,9 @@ form.addEventListener('submit', async (e)=>{
                  // null = « pas encore facturé » : la marge l'estime au forfait.
                  shipCost: $('#f_shipCost').value === '' || isNaN(parseFloat($('#f_shipCost').value))
                    ? null : parseFloat($('#f_shipCost').value),
+                 // La marge visée pour CETTE commande. Privée : `publicOrderData`
+                 // a une liste explicite, elle n'y entre pas.
+                 marge: margeFiche(),
                  note:$('#f_note').value.trim(),
                  carrier:$('#f_carrier').value.trim(),
                  tracking:$('#f_tracking').value.trim(),
@@ -7951,6 +8011,7 @@ form.addEventListener('submit', async (e)=>{
   // modèle, une référence, un colis, un suivi. C'est la règle de Massif, et
   // c'est `items` qui en porte le détail.
   if(pendingItems.length) data.items = pendingItems;
+  retiensMargeModele(ficheCleModele, data.marge);
   if(editingId){
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
   } else {
@@ -10438,6 +10499,7 @@ async function loadPinHash(){
     // donc aucune collection nouvelle et rien à republier (piège 29).
     monTransitaire = d.forwarder || null;
     mesTarifs = Object.assign({}, TARIFS_DEFAUT, d.tarifs || {});
+    mesMargesModele = (d.margesModele && typeof d.margesModele === 'object') ? d.margesModele : {};
   }catch(e){ storedPinHash = null; }
   remplisTarifs();
 }
@@ -10453,6 +10515,17 @@ let monTransitaire = null;   // { name, address, phone }
 function remplisTarifs(){
   [['livraison','#t_livraison'],['marge','#t_marge'],['reserve','#t_reserve'],['taux','#t_taux']]
     .forEach(([k, sel]) => { const el = $(sel); if(el && document.activeElement !== el) el.value = mesTarifs[k]; });
+}
+// La marge d'une commande devient celle de son modèle : la prochaine demande
+// du même modèle la retrouve toute seule. On n'écrit que si elle a changé.
+// `set` + merge avec un objet imbriqué : la clé contient des espaces et des
+// « | », un chemin pointé l'aurait découpée.
+function retiensMargeModele(cle, marge){
+  if(!cle || !currentUid || !Number.isFinite(marge) || mesMargesModele[cle] === marge) return;
+  mesMargesModele[cle] = marge;
+  db.collection('userSettings').doc(currentUid)
+    .set({ margesModele: { [cle]: marge }, updatedAt: Date.now() }, { merge: true })
+    .catch(e => showToast(t('toastSaveError') + ' [' + (e && e.code ? e.code : 'erreur') + ']'));
 }
 let tarifsTimer = null;
 function tarifChange(){
