@@ -1885,15 +1885,23 @@ déjà ouvert à son propriétaire, **rien à republier**) :
 
 | | défaut | pourquoi |
 |---|---|---|
-| livraison par pièce | **20 €** | le forfait d'un collègue du métier, vérifié sur la grille BW |
+| livraison par pièce | **25 €** | couvre le pire cas réaliste (voir plus bas) |
 | marge visée par pièce | **20 €** | sa cible : 15 à 30 € par article |
 | réserve de sécurité | **5 %** | sur achat + livraison : un poids mal estimé, le yuan qui bouge |
 | yuans pour 1 € | **7,6** | le taux de la grille BW |
 
 **Pourquoi 10 pièces minimum.** Une doudoune seule coûte ~30 € d'envoi ; à
-partir de 8 pièces (12 kg), BW passe à 70 ¥/kg et la pièce tombe à ~14 €. À
-10 pièces, le forfait de 20 € contient donc déjà ~6 € de marge par pièce, et
-le cas perdant — la pièce seule — n'existe plus. Le minimum est **dans le
+partir de 8 pièces (12 kg), BW passe à 70 ¥/kg et la pièce tombe à ~14 €. Le
+cas perdant — la pièce seule — n'existe donc plus.
+
+**Pourquoi 25 € et pas 20.** Le premier forfait (20 €, le conseil d'un collègue
+du métier) couvrait le cas courant, pas le pire. Massif a demandé d'être
+**toujours gagnant, marge visée comprise** : à 10 pièces, le coût par pièce
+dépend du poids facturé (volume compris) — 1,5 kg → 13,8 €, 2 kg → 18,4 €,
+**2,5 kg → 23 €**. 25 € couvre donc même une pièce très volumineuse, et le cas
+courant laisse ~11 € de plus par pièce. Et si un envoi réel dépasse quand même
+le forfait, la fiche le dit (`shipOver`) : sans rouge, la marge reste positive ;
+sans ambre, réservé aux soldes. Le minimum est **dans le
 portail seulement** (`MIN_PIECES` dans `client.html`, écrit en dur : le portail
 ne lit pas `userSettings`) ; dans l'app pro, aucune limite, une exception reste
 le geste de Massif. Il n'y a **pas de bouton « tester avec 2 pièces »** : Massif
