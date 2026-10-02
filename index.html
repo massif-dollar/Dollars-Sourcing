@@ -3234,6 +3234,7 @@ const I18N = {
     pcDetail:'achat {a} + livraison {l} + marge {m} + réserve {r} %', pcTotal:'soit {t} pour {q} pièces', pcEmpty:'Entre le prix d\'achat (en € ou en ¥) pour voir le prix conseillé.',
     fieldShipCost:'Frais d\'envoi réels (total)', shipCostHint:'Ce que BW te facture pour ce colis. Vide = estimé avec ta livraison par pièce.',
     shipEstimated:'estimés : {v}', shipLineEst:'dont livraison {v} (estimée)', shipLineReal:'dont livraison {v}',
+    shipOver:'⚠ Envoi plus cher que ton forfait : {v} en moins sur ta marge. Pense à relever ta livraison par pièce dans les Réglages.',
     fieldUnitCost:'Prix usine / unité (€)', fieldUnitPrice:'Prix client / unité (€)', fieldNote:'Note (précisions pour le client...)', fieldClientPhotos:'Photos du client', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Enregistrer', cancelOrder:'Annuler la commande', reactivateOrder:'Réactiver la commande', deleteOrder:'Supprimer',
     clientProfile:'Profil client', fieldName:'Nom', fieldAddress:'Adresse de livraison',
@@ -3494,6 +3495,7 @@ const I18N = {
     pcDetail:'purchase {a} + shipping {l} + margin {m} + buffer {r} %', pcTotal:'i.e. {t} for {q} pieces', pcEmpty:'Enter the purchase price (in € or ¥) to see the suggested price.',
     fieldShipCost:'Actual shipping cost (total)', shipCostHint:'What BW bills you for this parcel. Empty = estimated from your per-piece shipping.',
     shipEstimated:'estimated: {v}', shipLineEst:'incl. shipping {v} (estimated)', shipLineReal:'incl. shipping {v}',
+    shipOver:'⚠ Shipping cost more than your flat rate: {v} less on your margin. Consider raising your per-piece shipping in Settings.',
     fieldUnitCost:'Factory price / unit (€)', fieldUnitPrice:'Client price / unit (€)', fieldNote:'Note (details for your client...)', fieldClientPhotos:'Client photos', photoCountOne:'1 photo', photoCountMany:'{n} photos',
     save:'Save', cancelOrder:'Cancel order', reactivateOrder:'Reactivate order', deleteOrder:'Delete',
     clientProfile:'Client profile', fieldName:'Name', fieldAddress:'Delivery address',
@@ -3671,7 +3673,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-02';
+const BUILD = '2026-10-02b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3947,7 +3949,9 @@ function freshRef(){
 // Les tarifs de Massif (voir userSettings plus bas). `var` et posés ICI, avant
 // le premier calcul de marge : un `let` déclaré plus loin dans le fichier
 // ferait planter tout rendu qui passerait avant lui.
-var TARIFS_DEFAUT = { livraison: 20, marge: 20, reserve: 5, taux: 7.6 };
+// 25 € et pas 20 : à 10 pièces en avion, même une pièce très volumineuse
+// (2,5 kg facturés) coûte 23 € d'envoi. Le cas courant (~14 €) laisse ~11 € de plus.
+var TARIFS_DEFAUT = { livraison: 25, marge: 20, reserve: 5, taux: 7.6 };
 var mesTarifs = Object.assign({}, TARIFS_DEFAUT);
 // LES FRAIS D'ENVOI SONT UN COÛT. Le prix client inclut toujours la livraison :
 // sans cette ligne, la marge affichée était plus haute que la vraie du montant
@@ -7542,7 +7546,8 @@ function updateMarginPreview(){
   // Le coût, c'est l'achat ET l'envoi : le prix client inclut la livraison.
   const shipVal = $('#f_shipCost').value;
   const shipReel = shipVal !== '' && !isNaN(parseFloat(shipVal));
-  const ship = shipReel ? parseFloat(shipVal) : qty * (Number(mesTarifs.livraison)||0);
+  const forfaitTotal = qty * (Number(mesTarifs.livraison)||0);
+  const ship = shipReel ? parseFloat(shipVal) : forfaitTotal;
   const totalCost = uc*qty + ship, gross = up*qty;
   const totalPrice = Math.max(0, gross - discount);
   const margin = totalPrice-totalCost;
@@ -7552,6 +7557,11 @@ function updateMarginPreview(){
   $('#marginPreview').innerHTML =
     `${t('totalCostLabel')} : ${fmtMoney(totalCost)} &nbsp;·&nbsp; ${t('totalSaleLabel')} : ${fmtMoney(totalPrice)}<br>` +
     `<span style="color:var(--text-faint)">${t(shipReel ? 'shipLineReal' : 'shipLineEst').replace('{v}', fmtMoney(ship))}</span><br>` +
+    // L'envoi réel a coûté plus que le forfait facturé au client : la marge
+    // visée est entamée. On le dit — sans rouge (la marge reste positive, ce
+    // n'est pas un danger) et sans ambre (réservé aux soldes impayés).
+    (shipReel && ship > forfaitTotal + 0.009
+      ? `<span style="color:var(--text);font-weight:600">${t('shipOver').replace('{v}', fmtMoney(ship - forfaitTotal))}</span><br>` : '') +
     (discount > 0 ? `${t('couponApplied').replace('{value}', fmtMoney(discount))}<br>` : '') +
     `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
     `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
