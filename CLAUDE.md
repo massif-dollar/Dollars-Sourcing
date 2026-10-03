@@ -1940,6 +1940,15 @@ prix ni aucune marge, mais lui montre **chez qui transitent les colis**. La
 fiche **transitaire**, elle, porte l'adresse du client lui-même : c'est celle
 qui se montre au client sans rien se demander.
 
+**Le téléphone du client sort au format international** (`telColis()`) :
+le colis part de Chine, et ni BW ni le livreur ne composent un « 06 ». Un
+numéro français devient `+33 6 12 34 56 78`. Un 0 suivi de neuf chiffres n'est
+converti que si l'adresse est française — le mot « France », ou un code postal
+à cinq chiffres (la Belgique, la Suisse et le Luxembourg en ont quatre) : un
+04 belge a la même forme, et le convertir fabriquerait un numéro faux. Tout le
+reste sort tel qu'il a été tapé. Rien n'est réécrit dans la fiche client :
+c'est la fiche image qui formate, au moment de dessiner.
+
 #### Ce que la fiche fait de la chaîne produit
 
 Avec `items[]`, une ligne par coloris, sa quantité à droite. **Sans `items[]`
