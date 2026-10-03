@@ -3729,7 +3729,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-03';
+const BUILD = '2026-10-03b';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4584,7 +4584,8 @@ function libellePro(o){
     };
     return {
       titre: [items[0].brand, items[0].model].filter(Boolean).join(' · ') || String(o.product || ''),
-      sous: items.map(it => ((it.name || '').trim() || '—') + ((Number(it.qty) || 1) > 1 ? ' ×' + it.qty : '') + tailles(it.sizes)).join(' · ')
+      // Les tailles disent déjà combien : « Gris ×4 (S×4) » comptait deux fois.
+      sous: items.map(it => ((it.name || '').trim() || '—') + (tailles(it.sizes) || ((Number(it.qty) || 1) > 1 ? ' ×' + it.qty : ''))).join(' · ')
     };
   }
   const q = Number(o.qty) || 1;
