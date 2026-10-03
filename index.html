@@ -2709,6 +2709,7 @@
   <div class="sheet">
     <button class="icon-btn close-x" id="closeClientSheet">✕</button>
     <h2 id="clientSheetTitle">Profil client</h2>
+    <div class="sheet-ref" id="clientCodeChip" style="display:none;" data-i18n-title="clientCodeCopy" title="Copier le code"></div>
     <div id="clientStatsSummary" style="display:none;"></div>
     <div id="clientLoyalty" style="display:none;"></div>
     <form id="clientForm" novalidate>
@@ -3453,6 +3454,10 @@ const I18N = {
     toastLinkCopied:'Lien copié',
     toastNoWaNumber:'Aucun numéro WhatsApp valide pour ce client : choisis le destinataire dans WhatsApp.',
     refOnBox:'à écrire sur le colis', refCopied:'Référence copiée', refCopyTitle:'Copier la référence',
+    clientCodeLabel:'code client', clientCodeCopy:'Copier le code client', clientCodeCopied:'Code client copié',
+    cartonAskOne:'Même carton ? {name} a une autre commande pas encore expédiée ({refs}). Lui mettre ce suivi et la passer en Expédié ?',
+    cartonAskMany:'Même carton ? {name} a {n} autres commandes pas encore expédiées ({refs}). Leur mettre ce suivi et les passer en Expédié ?',
+    cartonYes:'Oui, même carton', cartonNo:'Non', cartonDone:'Suivi posé sur {n} autre(s) commande(s)',
     waLinkMessage:'*Bienvenue chez DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nTon espace personnel est prêt : tes commandes suivies en direct, tes demandes envoyées en deux clics, et des Dollarz cumulés à chaque achat.\n\n\ud83d\udd17 *Ton lien personnel*\n{link}\n\n\ud83d\udd11 *Ton code d\u2019accès* — {code}\n\n\ud83d\udcf2 *Mets-le sur ton écran d\u2019accueil*\nOuvre le lien, appuie sur _Partager_, puis _Sur l\u2019écran d\u2019accueil_. Tu l\u2019auras comme une vraie application.\n\n_Ce lien est personnel : ne le partage pas._',
     clientCreatedTitle:'Profil créé', clientCreatedText:'Envoie-lui son lien et son code : il pourra suivre ses commandes et cumuler ses Dollarz.',
     emptyRequests:"Pas encore de demande de commande.<br>Envoie son lien à un client pour qu'il en passe une.",
@@ -3717,6 +3722,10 @@ const I18N = {
     toastLinkCopied:'Link copied',
     toastNoWaNumber:'No valid WhatsApp number for this client: pick the recipient in WhatsApp.',
     refOnBox:'to write on the parcel', refCopied:'Reference copied', refCopyTitle:'Copy the reference',
+    clientCodeLabel:'customer code', clientCodeCopy:'Copy the customer code', clientCodeCopied:'Customer code copied',
+    cartonAskOne:'Same carton? {name} has another order not shipped yet ({refs}). Give it this tracking and mark it Shipped?',
+    cartonAskMany:'Same carton? {name} has {n} other orders not shipped yet ({refs}). Give them this tracking and mark them Shipped?',
+    cartonYes:'Yes, same carton', cartonNo:'No', cartonDone:'Tracking added to {n} other order(s)',
     waLinkMessage:'*Welcome to DOLLAR$ SOURCING, {name}* \ud83d\udc4b\n\nYour personal space is ready: orders tracked live, requests sent in two taps, and Dollarz earned on every purchase.\n\n\ud83d\udd17 *Your personal link*\n{link}\n\n\ud83d\udd11 *Your access code* — {code}\n\n\ud83d\udcf2 *Put it on your home screen*\nOpen the link, tap _Share_, then _Add to Home Screen_. You will have it like a real app.\n\n_This link is personal: please do not share it._',
     clientCreatedTitle:'Profile created', clientCreatedText:'Send them their link and code: they can follow their orders and collect their Dollarz.',
     emptyRequests:"No order request yet.<br>Send a client their link so they can place one.",
@@ -3729,7 +3738,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-03b';
+const BUILD = '2026-10-03c';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -4002,6 +4011,40 @@ function freshRef(){
   return randomRef();
 }
 
+// ================= Code client =================
+// Quatre signes PAR CLIENT, à vie — décidé par Massif le 3 octobre. Deux
+// modèles commandés chez deux fournisseurs arrivent chez BW en deux colis
+// séparés ; le même code écrit sur les deux dit « même client », et BW les
+// conditionne dans le même carton. La référence de commande (#A7F3) reste à
+// côté : elle dit quel colis est quelle commande.
+// NEUTRE, jamais tiré du prénom : il part chez le fournisseur, qui ne doit
+// rien apprendre du client (la fiche fournisseur ne montre jamais son
+// identité). Même alphabet que les références, et jamais égal à l'une
+// d'elles : un même code pour deux choses, c'est un colis mal rangé.
+function derivedClientCode(id){ return derivedRef('client·' + (id || '')); }
+function clientCode(c){ return c ? (c.code || derivedClientCode(c.id)) : ''; }
+function freshClientCode(prefere){
+  const pris = new Set(clients.map(c => c.code).filter(Boolean));
+  orders.forEach(o => pris.add(orderRef(o)));
+  if(prefere && !pris.has(prefere)) return prefere;
+  for(let i = 0; i < 60; i++){ const r = randomRef(); if(!pris.has(r)) return r; }
+  return randomRef();
+}
+// Les clients d'avant n'ont pas de code stocké : on leur pose, une fois, celui
+// qu'ils affichaient déjà (dérivé de leur identifiant) s'il est libre. Écrit
+// plutôt que seulement dérivé, parce qu'un code écrit sur un carton doit être
+// garanti unique, pas seulement probablement unique.
+let codesSemes = false;
+function semeCodesClients(){
+  if(codesSemes || !currentUid) return;
+  const sans = clients.filter(c => !c.code && c.ownerId === currentUid);
+  codesSemes = true;
+  if(!sans.length) return;
+  const batch = db.batch();
+  sans.forEach(c => { c.code = freshClientCode(derivedClientCode(c.id)); batch.update(db.collection('clients').doc(c.id), { code: c.code }); });
+  batch.commit().catch(() => { codesSemes = false; });
+}
+
 // Les tarifs de Massif (voir userSettings plus bas). `var` et posés ICI, avant
 // le premier calcul de marge : un `let` déclaré plus loin dans le fichier
 // ferait planter tout rendu qui passerait avant lui.
@@ -4169,6 +4212,7 @@ function startListeners(){
     clients = all.filter(c=>!c.deletedAt);
     trashedClients = all.filter(c=>c.deletedAt);
     renderCurrentView();
+    if(!codesSemes) setTimeout(semeCodesClients, 1500);
   }, ()=>showToast(t('toastSaveError')));
   db.collection('pendingOrders').where('ownerId','==',currentUid).onSnapshot(snap=>{
     pendingRequests = snap.docs.map(d=>Object.assign({id:d.id}, d.data())).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
@@ -4302,7 +4346,7 @@ async function deleteOrderDoc(id){
 }
 async function createClientDoc(data){
   try{
-    const ref = await db.collection('clients').add(Object.assign({createdAt:Date.now(), token:genToken(), ownerId:currentUid}, data));
+    const ref = await db.collection('clients').add(Object.assign({createdAt:Date.now(), token:genToken(), ownerId:currentUid, code:freshClientCode()}, data));
     return ref.id;
   }catch(e){ showToast(t('toastSaveError')); return null; }
 }
@@ -4544,6 +4588,7 @@ function renderList(){
       clientName(o).toLowerCase().includes(s)
       || o.product.toLowerCase().includes(s)
       || orderRef(o).toLowerCase().includes(s)
+      || clientCode(clientById(o.clientId)).toLowerCase().includes(s)
       || String(o.tracking || o.trackingNumber || '').toLowerCase().includes(s));
   }
   if(filtered.length===0){
@@ -4658,6 +4703,7 @@ function listeRangee(filtered){
       + (foldsOuverts.has(cle) ? ' open' : '') + '>'
       + '<summary>' + FLECHE
       + '<span class="cf-name">' + escapeHtml(g.nom) + '</span>'
+      + (g.cle !== '_' ? '<span class="order-ref">' + escapeHtml(clientCode(clientById(g.cle))) + '</span>' : '')
       + (du > 0 ? '<span class="badge-due private">' + t('owesLabel') + ' ' + fmtMoney(du) + '</span>' : '')
       + '<span class="cf-count">' + (n === 1 ? t('cmdOne') : t('cmdMany').replace('{n}', n)) + '</span>'
       + '</summary><div class="cf-body">' + g.cmds.map(carteCommande).join('') + '</div></details>';
@@ -4866,7 +4912,7 @@ function renderClients(){
   const el = $('#clientList');
   let list = clients.slice().sort((a,b)=>a.name.localeCompare(b.name));
   const term = ($('#clientSearchInput').value||'').toLowerCase();
-  if(term) list = list.filter(c=>c.name.toLowerCase().includes(term));
+  if(term) list = list.filter(c=>c.name.toLowerCase().includes(term) || clientCode(c).toLowerCase().includes(term));
   if(!list.length){
     el.innerHTML = emptyHtml('clients', t('emptyClients'));
     return;
@@ -4883,7 +4929,7 @@ function renderClients(){
                <div class="badge only-discreet" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`
             : `<div class="badge" style="background:var(--accent-soft); color:var(--accent);">${s.count} cmd${s.count>1?'s':''}</div>`}
         </div>
-        <div class="card-mid">${escapeHtml(c.contact||t('noContact'))}</div>
+        <div class="card-mid"><span class="order-ref" title="${escapeHtml(t('clientCodeLabel'))}">${escapeHtml(clientCode(c))}</span>${escapeHtml(c.contact||t('noContact'))}</div>
         <div class="card-bottom">
           <div class="date">${c.address?escapeHtml(c.address):''}</div>
           <div class="margin private ${s.margin>=0?'pos':'neg'}">${s.margin>=0?'+':''}${fmtMoney(s.margin)}</div>
@@ -5846,7 +5892,7 @@ const FICHE_L = 1080, FICHE_PAD = 56, MAX_FICHE_PHOTOS = 9;
 // sombre — il serait illisible sur ce fond et ne voudrait rien dire chez le
 // destinataire.
 const FICHE_VERT = '#2eb35c', FICHE_VERT_DOUX = '#e7f6ed';
-const ETIQ_H = 56;   // la pastille de la référence
+const MARQUE_H = 160;   // le bandeau du carton : code client + référence
 // `roundRect` existe partout depuis Safari 16, mais un coin droit vaut mieux
 // qu'une exception : une fiche qui ne se dessine pas ne s'envoie pas.
 function coinsRonds(x, gx, gy, l, h, r){
@@ -5988,6 +6034,7 @@ function adresseClient(c){
 // l'écran, on envoie ce qu'on a décidé d'envoyer.
 async function fabriqueFiche(type, o, client, depuis){
   const ref = o.ref || derivedRef(o.id || '');
+  const code = clientCode(client);
   // UNE PHOTO PAR COLORIS DEMANDÉ, et le plafond ne doit pas passer sous le
   // nombre de lignes : un fournisseur qui chiffre un coloris qu'il n'a pas vu
   // se trompe, et rien ne le lui dirait. Le premier jet coupait à quatre, donc
@@ -6047,7 +6094,7 @@ async function fabriqueFiche(type, o, client, depuis){
   const rangs = grille ? Math.ceil(imgs.length / grille) : 0;
 
   let h = FICHE_PAD;
-  h += 28 + ETIQ_H + 20;                          // marque + pastille de la réf
+  h += 30 + MARQUE_H + 26;                        // marque + bandeau du carton
   h += 52 + 26;                                   // le grand titre
   h += lignesTitre.length * 44 + 16;              // marque · modèle
   h += nbArtLignes * 42 + nbTailles * 32 + 22;    // les lignes d'articles
@@ -6064,30 +6111,42 @@ async function fabriqueFiche(type, o, client, depuis){
   x.textBaseline = 'top';
 
   let y = FICHE_PAD;
-  // L'EN-TÊTE : la marque à gauche, la référence à droite — en VERT et dans
-  // une pastille, avec ce qu'elle veut dire écrit au-dessus. Un code à quatre
-  // signes posé en noir dans un coin ne dit pas ce qu'on doit en faire ;
-  // « ORDER No. · WRITE ON PARCEL » le dit, et la couleur le fait trouver
-  // d'un coup d'œil sur une photo de carton mal cadrée.
-  x.fillStyle = FICHE_VERT; x.font = '700 20px ' + BODY_F;
-  x.textAlign = 'right';
-  x.fillText('ORDER No. · WRITE ON PARCEL', FICHE_L - FICHE_PAD, y);
-  x.textAlign = 'left';
-
-  x.font = '700 34px ' + BODY_F;
-  const largRef = x.measureText('#' + ref).width;
-  const etiqL = Math.ceil(largRef) + 44;
-  const etiqX = FICHE_L - FICHE_PAD - etiqL, etiqY = y + 28;
-  x.fillStyle = FICHE_VERT_DOUX;
-  coinsRonds(x, etiqX, etiqY, etiqL, ETIQ_H, 14); x.fill();
-  x.fillStyle = FICHE_VERT;
-  x.fillText('#' + ref, etiqX + 22, etiqY + 12);
-
-  // La marque se centre sur la hauteur de la pastille, pas sur la première
-  // ligne : accrochée en haut, elle flottait au-dessus du vide.
+  // L'EN-TÊTE, PUIS LE BANDEAU DU CARTON. Deux codes à écrire sur chaque
+  // colis, et chacun dit ce qu'il est : le CODE CLIENT, en grand — c'est lui
+  // que BW lit pour réunir dans un même carton deux colis venus de deux
+  // fournisseurs —, et le numéro de commande, qui dit quel colis est lequel.
+  // En vert et dans un bandeau : un code posé en noir dans un coin ne dit pas
+  // qu'on doit l'écrire, la couleur le fait trouver sur une photo de carton.
+  // Le code client est neutre (quatre signes au hasard) : la fiche
+  // fournisseur ne montre toujours rien de l'identité du client.
   x.fillStyle = '#9aa0a6'; x.font = '700 22px ' + BODY_F;
-  x.fillText('DOLLAR$ SOURCING', FICHE_PAD, y + 28 + (ETIQ_H - 22) / 2 - 3);
-  y += 28 + ETIQ_H + 20;
+  x.fillText('DOLLAR$ SOURCING', FICHE_PAD, y);
+  y += 30;
+  x.fillStyle = FICHE_VERT_DOUX;
+  coinsRonds(x, FICHE_PAD, y, L, MARQUE_H, 18); x.fill();
+  x.fillStyle = FICHE_VERT; x.font = '700 20px ' + BODY_F;
+  x.fillText('WRITE ON EVERY PARCEL', FICHE_PAD + 26, y + 20);
+  const colY = y + 56, droite = FICHE_L - FICHE_PAD - 26;
+  if(code){
+    x.fillStyle = '#5f6b63'; x.font = '700 18px ' + BODY_F;
+    x.fillText('CUSTOMER CODE', FICHE_PAD + 26, colY);
+    x.fillStyle = FICHE_VERT; x.font = '800 60px ' + BODY_F;
+    x.fillText(code, FICHE_PAD + 26, colY + 26);
+    x.textAlign = 'right';
+    x.fillStyle = '#5f6b63'; x.font = '700 18px ' + BODY_F;
+    x.fillText('ORDER No.', droite, colY);
+    x.fillStyle = FICHE_VERT; x.font = '700 44px ' + BODY_F;
+    x.fillText('#' + ref, droite, colY + 38);
+    x.textAlign = 'left';
+  } else {
+    // Sans client connu, il ne reste que la commande : on ne fabrique pas un
+    // code client qui ne regrouperait rien.
+    x.fillStyle = '#5f6b63'; x.font = '700 18px ' + BODY_F;
+    x.fillText('ORDER No.', FICHE_PAD + 26, colY);
+    x.fillStyle = FICHE_VERT; x.font = '800 60px ' + BODY_F;
+    x.fillText('#' + ref, FICHE_PAD + 26, colY + 26);
+  }
+  y += MARQUE_H + 26;
 
   x.fillStyle = '#111111'; x.font = '700 46px ' + BODY_F;
   x.fillText(versFournisseur ? 'PRICE REQUEST' : 'SHIPPING', FICHE_PAD, y);
@@ -7680,8 +7739,12 @@ function openSheet(order, presetClientId, prefill){
   const refBox = $('#sheetRef');
   if(order){
     refBox.style.display = 'inline-flex';
-    refBox.innerHTML = '#' + escapeHtml(orderRef(order)) + ' <small>' + escapeHtml(t('refOnBox')) + '</small>';
-    refBox.dataset.ref = orderRef(order);
+    // Les deux codes du carton : le client (le même sur tous ses colis) et la
+    // commande. Un appui copie les deux, comme on les dicte au transitaire.
+    const cc = clientCode(clientById(order.clientId));
+    refBox.innerHTML = (cc ? escapeHtml(cc) + ' · ' : '') + '#' + escapeHtml(orderRef(order))
+                     + ' <small>' + escapeHtml(t('refOnBox')) + '</small>';
+    refBox.dataset.ref = (cc ? cc + ' · ' : '') + '#' + orderRef(order);
   } else {
     refBox.style.display = 'none';
     refBox.dataset.ref = '';
@@ -7753,6 +7816,35 @@ function closeSheet(){
   pendingSourceId = null;
   pendingPhotos = [];
   pendingItems = [];
+}
+
+// ===== Même client, même carton, même suivi =====
+// Le code client fait voyager dans UN carton les commandes d'un client venues
+// de fournisseurs différents. Elles partent donc ensemble, avec le même numéro
+// de suivi — et sans aide, il faudrait le retaper sur chacune et les avancer
+// une à une. Au moment où l'on pose un suivi sur une commande expédiée, l'app
+// propose de le poser aussi sur ses sœurs pas encore expédiées. Elle PROPOSE :
+// deux commandes du même client ne sont pas forcément dans le même carton
+// (l'une peut attendre son fournisseur), et c'est Massif qui le sait.
+async function proposeMemeCarton(id, clientId, statut, data, avant){
+  const suivi = String(data.tracking || '').trim();
+  if(statut !== 'expedie' || !suivi || !clientId) return;
+  if(avant && String(avant.tracking || avant.trackingNumber || '').trim() === suivi) return;
+  const soeurs = orders.filter(o => o.id !== id && o.clientId === clientId && !o.deletedAt
+    && (o.status === 'paye' || o.status === 'commande')
+    && !String(o.tracking || o.trackingNumber || '').trim());
+  if(!soeurs.length) return;
+  const nom = (clientById(clientId) || {}).name || '';
+  const ok = await showConfirm(
+    t(soeurs.length > 1 ? 'cartonAskMany' : 'cartonAskOne')
+      .replace('{name}', nom).replace('{n}', soeurs.length)
+      .replace('{refs}', soeurs.map(o => '#' + orderRef(o)).join(', ')),
+    { okLabel:t('cartonYes'), cancelLabel:t('cartonNo'), danger:false });
+  if(!ok) return;
+  for(const o of soeurs)
+    await updateOrderDoc(o.id, Object.assign(statusPatch('expedie'),
+      { carrier: data.carrier || '', tracking: suivi, eta: data.eta || '' }));
+  showToast(t('cartonDone').replace('{n}', soeurs.length));
 }
 
 // ===== « Il a payé ? » =====
@@ -7870,6 +7962,13 @@ $('#sheetRef').addEventListener('click', async ()=>{
   if(!r) return;
   try{ await navigator.clipboard.writeText(r); showToast(t('refCopied')); }
   catch(e){ showToast(t('refCopied')); }
+});
+
+$('#clientCodeChip').addEventListener('click', async ()=>{
+  const code = $('#clientCodeChip').dataset.code;
+  if(!code) return;
+  try{ await navigator.clipboard.writeText(code); }catch(e){}
+  showToast(t('clientCodeCopied'));
 });
 
 $('#f_clientSelect').addEventListener('change', ()=>{
@@ -8083,13 +8182,25 @@ form.addEventListener('submit', async (e)=>{
   if(pendingItems.length) data.items = pendingItems;
   retiensMargeModele(ficheCleModele, data.marge);
   if(editingId){
+    const avant = orders.find(o => o.id === editingId);
+    const idEdite = editingId;
     await updateOrderDoc(editingId, Object.assign(statusPatch(stepperStatus), data));
+    await proposeMemeCarton(idEdite, clientId, stepperStatus, data, avant);
   } else {
     const newStatus = $('#f_status').value;
     // Une commande créée directement à « Payé » ou plus loin pose la même
     // question que la flèche : sans ça elle naîtrait avec une dette fantôme.
     const paidNow = await askFullyPaid(newStatus, Math.max(0, upVal*qtyVal - selectedCouponValue()), data.paidAmount);
     if(paidNow !== null) data.paidAmount = paidNow;
+    // UNE COMMANDE GARDE LA RÉFÉRENCE DE SA DEMANDE. La fiche fournisseur part
+    // souvent depuis la demande, avec la référence qu'elle affiche ; en tirer
+    // une nouvelle à la validation laissait le fournisseur écrire sur le
+    // carton un code qui ne correspondait plus à aucune commande.
+    if(pendingSourceId){
+      const req = pendingRequests.find(r => r.id === pendingSourceId);
+      const refDemande = req ? (req.ref || derivedRef(req.id)) : '';
+      if(refDemande && !orders.some(o => orderRef(o) === refDemande)) data.ref = refDemande;
+    }
     await createOrder(Object.assign({ status:newStatus, statusAt:{ [newStatus]: Date.now() } }, data));
     if(pendingSourceId){
       await deletePendingOrderDoc(pendingSourceId);
@@ -8282,6 +8393,10 @@ function openClientSheet(id, justeCree){
   clearFormErrors($('#clientForm'));
   const c = id ? clientById(id) : null;
   $('#clientSheetTitle').textContent = c ? c.name : t('newClientTitle');
+  const chip = $('#clientCodeChip');
+  chip.style.display = c ? 'inline-flex' : 'none';
+  chip.dataset.code = c ? clientCode(c) : '';
+  if(c) chip.innerHTML = escapeHtml(clientCode(c)) + ' <small>' + escapeHtml(t('clientCodeLabel')) + '</small>';
   $('#c_firstname').value = c ? (c.firstname || '') : '';
   $('#c_lastname').value  = c ? (c.lastname  || (c.firstname ? '' : (c.name || ''))) : '';
   $('#c_social').value    = c ? (c.social   || c.contact || '') : '';

@@ -1485,6 +1485,56 @@ Astuce sans code, à rappeler : sur iPhone, un appui long dans un champ de texte
 propose « Scanner du texte » — le numéro de suivi se saisit à l'appareil photo
 depuis l'étiquette, sans faute de frappe.
 
+### Code client : un carton par client
+
+Décidé par Massif le 3 octobre. Un client qui commande deux modèles chez deux
+fournisseurs reçoit **deux colis séparés chez BW**. Chaque client porte donc
+un **code à vie de quatre signes** (`clients.code`, ex. `K7QF`) ; le même code
+écrit sur les deux colis dit « même client », et BW les met dans **le même
+carton**. Il faut le lui dire une fois : même code = même client = même carton.
+
+**Sur le colis, deux codes, et chacun dit ce qu'il est** : le code client, en
+grand, et la référence de commande (`#A7F3`), qui dit quel colis est quelle
+commande. La fiche fournisseur et la fiche transitaire ouvrent toutes deux sur
+le bandeau « WRITE ON EVERY PARCEL · CUSTOMER CODE · ORDER No. ».
+
+Quatre décisions :
+
+- **Neutre, jamais tiré du prénom** : il part chez le fournisseur, et la fiche
+  fournisseur ne montre jamais l'identité du client. Même alphabet que les
+  références (`REF_ALPHABET`), et **jamais égal à une référence de commande**
+  (`freshClientCode`) : un même code pour deux choses, c'est un colis mal rangé.
+- **Écrit, pas seulement dérivé.** Les références de commande d'avant se
+  dérivent de l'identifiant ; un code client, lui, doit être *garanti* unique.
+  Les clients d'avant reçoivent donc, une fois, à l'ouverture de l'app, le
+  code qu'ils affichaient déjà (`semeCodesClients`, en un lot) ; un nouveau
+  client naît avec le sien.
+- **Le minimum reste à 10 pièces PAR DEMANDE.** Le compter par carton aurait
+  obligé à savoir quelles demandes partent ensemble, donc à noter le
+  fournisseur de chaque article du catalogue — qui change avec le temps. Le
+  regroupement est un **bonus** (plus de kilos, meilleur prix au kilo chez BW),
+  jamais une condition.
+- **Même carton, même suivi — proposé, jamais imposé.** Poser un numéro de
+  suivi sur une commande expédiée propose de le poser aussi, et de passer en
+  « Expédié », les autres commandes du même client encore à « Payé » ou
+  « Commandé » sans suivi (`proposeMemeCarton`). Proposé, parce que deux
+  commandes du même client ne partent pas forcément ensemble : c'est Massif
+  qui le sait.
+
+Le code se voit sur la fiche client (un appui le copie), sur la carte de la
+liste des clients, dans le dossier « Ranger par client », et en tête de la
+fiche commande (« K7QF · #A7F3 à écrire sur le colis »). La recherche le
+trouve, des commandes comme des clients. **Il ne va pas dans le portail ni
+dans `publicOrders`** : le client n'a rien à en faire.
+
+**Bug trouvé en le construisant : une commande ne gardait pas la référence de
+sa demande.** La fiche fournisseur part souvent depuis la demande, avec la
+référence dérivée de la demande ; la validation en tirait une nouvelle
+(`freshRef`). Le fournisseur aurait écrit sur le carton un code qui ne
+correspondait plus à aucune commande. La validation reprend désormais
+`derivedRef(demande)`, sauf collision. Vérifié : TEQA sur la fiche, TEQA sur
+la commande.
+
 ### Le carnet de fournisseurs, et le scan de carte
 
 La fiche fournisseur est pensée pour le terrain chinois : identifiant WeChat,
@@ -3250,7 +3300,9 @@ par onglet dans le portail, galerie de photos qui grandit depuis la vignette
 (des deux côtés), « + » qui s'efface au défilement, prix
 conseillé dans la fiche commande avec saisie en yuans, marge par commande
 retenue par modèle du catalogue, frais d'envoi réels
-déduits de la marge, minimum de 10 pièces par demande dans le portail.
+déduits de la marge, minimum de 10 pièces par demande dans le portail,
+code client à vie pour regrouper ses colis dans un même carton chez le
+transitaire, suivi proposé aux commandes du même carton.
 
 ## À faire
 
