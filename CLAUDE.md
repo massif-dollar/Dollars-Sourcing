@@ -2076,6 +2076,26 @@ le premier rendu qui calcule une marge avant cette ligne aurait planté toute
 l'app. Même raison pour `var MIN_PIECES` dans le portail : `renderPicked()` peut
 être appelée par `applyTranslations()` avant que le script n'y arrive.
 
+**Revue de l'étape 3 (3 octobre), quatre retouches :**
+
+- **La carte du prix conseillé passe AVANT les deux prix** : c'est l'ordre du
+  geste au stand — les yuans, la marge, « Utiliser », et le prix client se
+  remplit juste en dessous. Avant, on tapait les yuans sous les champs qu'ils
+  remplissaient.
+- **Un achat à 0 € n'est pas un achat.** Une demande validée porte
+  `unitCost: 0` ; la carte conseillait alors « 47 € » (livraison + marge sur
+  du vide). Le conseil attend désormais un prix d'achat strictement positif.
+- **Pas de prix client, pas de marge** dans l'aperçu de la fiche : il
+  affichait « −473 € » en rouge sur une demande pas encore chiffrée — la même
+  fausse alarme que la carte (`orderChiffree`). Il dit à la place « Fixe le
+  prix client pour voir ta marge ». Une fois chiffrée, la marge se lit aussi
+  **par pièce**, parce que c'est comme ça que Massif raisonne.
+- **Les yuans sont gardés** (`orders.yuan`) : c'est le chiffre négocié, celui
+  qu'on redira au fournisseur, pas sa conversion. Rouvrir la fiche le
+  réaffiche. Retaper le prix d'achat en euros à la main efface les yuans, pour
+  ne pas garder deux chiffres qui se contredisent. Privé comme `marge` : hors
+  de la liste de `publicOrderData()`.
+
 #### La marge n'est pas la même sur tous les produits
 
 Massif, le 2 octobre : « sur certains produits je vais gagner plus, sur
