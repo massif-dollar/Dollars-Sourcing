@@ -2002,6 +2002,21 @@ déjà ouvert à son propriétaire, **rien à republier**) :
 | réserve de sécurité | **5 %** | sur achat + livraison : un poids mal estimé, le yuan qui bouge |
 | yuans pour 1 € | **7,6** | le taux de la grille BW |
 
+**L'adresse de BW est préremplie** (`BW_DEFAUT`, relevée sur la procédure
+BW, étape 2/6) : destinataire `BW-2655`, `+86 177 0860 0160`,
+`广东省佛山市南海区里水镇洲村一横路5号最里面白色招牌104库房 528200`. Elle ne
+s'écrit pas toute seule dans la base — c'est un réglage, et un invité peut
+avoir un autre transitaire — : elle **propose** le formulaire du transitaire
+tant qu'aucun n'est enregistré, au propriétaire seulement. Un appui sur
+« Enregistrer par défaut » et toutes les fiches la portent. Elle reste en
+chinois : c'est le fournisseur qui la lit, et c'est ce que BW donne à copier.
+
+**Bug trouvé avec elle** : `coupeTexte()` ne coupait qu'aux espaces, et une
+adresse chinoise n'en a aucun. Elle sortait du cadre « SHIP TO », **le code
+postal coupé au bord de l'image**. Un mot plus large que la ligne se coupe
+désormais caractère par caractère, et le bloc destinataire se plie dans son
+cadre. Vérifié à l'image.
+
 **Pourquoi 10 pièces minimum.** Une doudoune seule coûte ~30 € d'envoi ; à
 partir de 8 pièces (12 kg), BW passe à 70 ¥/kg et la pièce tombe à ~14 €. Le
 cas perdant — la pièce seule — n'existe donc plus.

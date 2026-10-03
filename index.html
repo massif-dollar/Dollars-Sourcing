@@ -3738,7 +3738,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-03c';
+const BUILD = '2026-10-03d';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -5916,7 +5916,19 @@ function chargeImg(src){
 
 // Le découpage des lignes : un canvas ne sait pas aller à la ligne tout seul.
 function coupeTexte(ctx, texte, large){
-  const mots = String(texte || '').split(/\s+/).filter(Boolean);
+  // Un « mot » plus large que la ligne se coupe caractère par caractère :
+  // une adresse chinoise n'a pas d'espace, et sans ça elle sortait du cadre
+  // de la fiche — le code postal coupé au bord, chez le fournisseur.
+  const mots = [];
+  String(texte || '').split(/\s+/).filter(Boolean).forEach(m=>{
+    if(ctx.measureText(m).width <= large){ mots.push(m); return; }
+    let bout = '';
+    Array.from(m).forEach(ch=>{
+      if(bout && ctx.measureText(bout + ch).width > large){ mots.push(bout); bout = ch; }
+      else bout += ch;
+    });
+    if(bout) mots.push(bout);
+  });
   const out = []; let ligne = '';
   mots.forEach(m=>{
     const essai = ligne ? ligne + ' ' + m : m;
@@ -6067,6 +6079,9 @@ async function fabriqueFiche(type, o, client, depuis){
   const lignesTitre = coupeTexte(mes, titre, L);
   mes.font = '400 28px ' + BODY_F;
   const lignesNote = note ? coupeTexte(mes, '“' + note + '”', L) : [];
+  // Le bloc destinataire se plie dans son cadre (26 px de marge de chaque côté).
+  mes.font = '500 30px ' + BODY_F;
+  const lignesDest = (dest.length ? dest : ['—']).reduce((acc, l)=>acc.concat(coupeTexte(mes, l, L - 52)), []);
   // La quantité est alignée à droite : on mesure sa largeur AVANT de couper le
   // nom, sinon un nom long passe dessous. C'est exactement ce qui se voyait sur
   // la fiche d'une demande sans `items[]` — « × 25 » imprimé sur « Bleu Mar… ».
@@ -6100,7 +6115,7 @@ async function fabriqueFiche(type, o, client, depuis){
   h += nbArtLignes * 42 + nbTailles * 32 + 22;    // les lignes d'articles
   h += 44;                                        // le total
   if(rangs) h += 26 + rangs * cote + (rangs - 1) * 16 + (coupees > 0 ? 34 : 0);
-  h += 30 + 26 + dest.length * 38 + 30;           // le bloc destinataire
+  h += 30 + 26 + lignesDest.length * 38 + 30;     // le bloc destinataire
   if(lignesNote.length) h += 22 + lignesNote.length * 38;
   h += 12 + FICHE_PAD;                            // le bas, sans pied
 
@@ -6211,7 +6226,7 @@ async function fabriqueFiche(type, o, client, depuis){
   }
 
   y += 30;
-  const hBloc = 26 + dest.length * 38 + 30;
+  const hBloc = 26 + lignesDest.length * 38 + 30;
   x.fillStyle = '#f4f5f6';
   x.fillRect(FICHE_PAD, y, L, hBloc);
   x.fillStyle = '#2eb35c';
@@ -6220,7 +6235,7 @@ async function fabriqueFiche(type, o, client, depuis){
   x.fillText('SHIP TO', FICHE_PAD + 26, y + 18);
   x.fillStyle = '#111111'; x.font = '500 30px ' + BODY_F;
   let yy = y + 18 + 30;
-  (dest.length ? dest : ['—']).forEach(l=>{ x.fillText(l, FICHE_PAD + 26, yy); yy += 38; });
+  lignesDest.forEach(l=>{ x.fillText(l, FICHE_PAD + 26, yy); yy += 38; });
   y += hBloc;
 
   if(lignesNote.length){
@@ -6272,10 +6287,24 @@ function fermeFiche(){
 $('#closeFiche').addEventListener('click', fermeFiche);
 $('#ficheOverlay').addEventListener('click', (e)=>{ if(e.target === $('#ficheOverlay')) fermeFiche(); });
 
+// LE TRANSITAIRE DE MASSIF, TEL QUE BW LE DONNE (procédure BW, étape 2/6,
+// relevée sur sa capture le 30 septembre). Il ne s'écrit pas tout seul dans la
+// base — c'est un réglage, et un invité peut avoir un autre transitaire —, il
+// PRÉREMPLIT le formulaire tant qu'aucun transitaire n'est enregistré : un
+// appui sur « Enregistrer » et c'est fait. Le destinataire est BW-2655 et rien
+// d'autre : « toute autre adresse ou absence de nom entraîne la non-prise en
+// charge de la marchandise ». L'adresse reste en chinois : c'est le
+// fournisseur qui la lit, et c'est ce que BW donne à copier.
+const BW_DEFAUT = {
+  name: 'BW-2655',
+  address: '广东省佛山市南海区里水镇洲村一横路5号最里面白色招牌104库房 528200',
+  phone: '+86 177 0860 0160'
+};
 function modeAdresse(){
   // On préremplit avec le transitaire EFFECTIF : corriger une exception doit
-  // partir de l'exception, pas la jeter pour repartir du défaut.
-  const f = transitaireEffectif() || {};
+  // partir de l'exception, pas la jeter pour repartir du défaut. Sans aucun
+  // transitaire, c'est BW qui se propose.
+  const f = transitaireEffectif() || (isOwner ? BW_DEFAUT : {});
   $('#f_name').value = f.name || '';
   $('#f_address').value = f.address || '';
   $('#f_phone').value = f.phone || '';
