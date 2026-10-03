@@ -1358,6 +1358,17 @@ Sur la fiche image, la répartition est sur **sa propre ligne** sous le nom du
 coloris, pas au bout du nom : c'est le dernier chiffre que le fournisseur lit
 avant de compter ses pièces.
 
+**Sur les cartes de commande, une ligne à tailles ne répète pas sa quantité**
+(`libelleCarte`, `libellePro`) : « Gris ardoise ×4 (S×4) » comptait deux fois.
+Les tailles disent déjà combien ; le « ×N » ne reste que sans tailles.
+
+Revue du parcours client du 3 octobre, deux autres retouches : une fois des
+coloris choisis, le bouton disait « Ajouter un autre modèle » — l'inverse de la
+règle, il invitait à ce que le verrou refuse juste après ; il dit maintenant
+« Ajouter ou retirer des coloris ». Et le badge « En attente de validation »
+était **ambre**, la couleur des soldes impayés : un client qui vient d'envoyer
+sa demande pouvait croire qu'il devait de l'argent. Il passe à l'accent.
+
 L'import JSON accepte `sizes` **au niveau du modèle** (`models[].sizes`), et
 s'en passe : un fichier préparé avant les tailles s'importe sans rien changer,
 la devinette s'applique.
