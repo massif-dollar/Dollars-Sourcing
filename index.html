@@ -2590,23 +2590,14 @@
           <select id="f_status"></select>
         </div>
       </div>
-      <div class="row2">
-        <div class="field private">
-          <label data-i18n="fieldUnitCost">Prix usine / unité (€)</label>
-          <input type="number" id="f_unitCost" min="0" step="0.01">
-          <div class="field-error"></div>
-        </div>
-        <div class="field">
-          <label data-i18n="fieldUnitPrice">Prix client / unité (€)</label>
-          <input type="number" id="f_unitPrice" min="0" step="0.01">
-          <div class="field-error"></div>
-        </div>
-      </div>
+      <!-- Le prix conseillé AVANT les deux prix : c'est l'ordre du geste au
+           stand. On tape les yuans, on règle la marge, « Utiliser » remplit le
+           prix client juste en dessous. -->
       <div class="field private" id="pcField">
         <label data-i18n="pcTitle">Prix conseillé</label>
         <div class="pc-box">
           <div class="pc-yuan">
-            <input type="number" id="f_yuan" min="0" step="0.1" inputmode="decimal" data-i18n-placeholder="pcYuanPh" placeholder="Prix fournisseur en ¥">
+            <input type="number" id="f_yuan" min="0" step="0.1" inputmode="decimal" data-i18n-placeholder="pcYuanPh" placeholder="Prix fournisseur en ¥, par pièce">
             <span id="pcYuanEq"></span>
           </div>
           <div class="pc-marge">
@@ -2620,6 +2611,18 @@
             <button type="button" class="btn-secondary" id="pcApply" data-i18n="pcApply">Utiliser</button>
           </div>
           <div class="pc-detail" id="pcDetail"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field private">
+          <label data-i18n="fieldUnitCost">Prix usine / unité (€)</label>
+          <input type="number" id="f_unitCost" min="0" step="0.01">
+          <div class="field-error"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="fieldUnitPrice">Prix client / unité (€)</label>
+          <input type="number" id="f_unitPrice" min="0" step="0.01">
+          <div class="field-error"></div>
         </div>
       </div>
       <div class="field private">
@@ -3281,7 +3284,7 @@ const I18N = {
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Numéro donné par le transitaire',
     setTarifs:'Tarifs', tarifLivraison:'Livraison par pièce', tarifMarge:'Ta marge par défaut (par pièce)', tarifReserve:'Réserve de sécurité', tarifTaux:'Yuans pour 1 €',
     tarifNote:'Le prix conseillé de chaque commande = achat + livraison + ta marge + la réserve sur l\'achat et la livraison. La marge se change commande par commande, et l\'app retient celle de chaque modèle du catalogue.',
-    pcTitle:'Prix conseillé', pcYuanPh:'Prix fournisseur en ¥', pcPerPiece:'/ pièce', pcApply:'Utiliser',
+    pcTitle:'Prix conseillé', pcYuanPh:'Prix fournisseur en ¥, par pièce', marginNeedPrice:'Fixe le prix client pour voir ta marge.', pcPerPiece:'/ pièce', pcApply:'Utiliser',
     pcMarge:'Ta marge par pièce', pcMargeOrder:'La marge choisie pour cette commande.',
     pcMargeModel:'Ta marge habituelle sur ce modèle.', pcMargeNewModel:'Marge par défaut — change-la, elle sera retenue pour ce modèle.',
     pcMargeDefault:'Marge par défaut des Réglages.', pcMargeWillRemember:'Elle sera retenue pour ce modèle à l\'enregistrement.',
@@ -3549,7 +3552,7 @@ const I18N = {
     placeholderCarrier:'YunExpress, 4PX, Cainiao...', placeholderTracking:'Number given by the carrier',
     setTarifs:'Pricing', tarifLivraison:'Shipping per piece', tarifMarge:'Your default margin (per piece)', tarifReserve:'Safety buffer', tarifTaux:'Yuan per €1',
     tarifNote:'Each order\'s suggested price = purchase + shipping + your margin + the buffer on purchase and shipping. The margin can be changed order by order, and the app remembers it for each catalogue model.',
-    pcTitle:'Suggested price', pcYuanPh:'Supplier price in ¥', pcPerPiece:'/ piece', pcApply:'Use',
+    pcTitle:'Suggested price', pcYuanPh:'Supplier price in ¥, per piece', marginNeedPrice:'Set the client price to see your margin.', pcPerPiece:'/ piece', pcApply:'Use',
     pcMarge:'Your margin per piece', pcMargeOrder:'The margin chosen for this order.',
     pcMargeModel:'Your usual margin on this model.', pcMargeNewModel:'Default margin — change it and it will be remembered for this model.',
     pcMargeDefault:'Default margin from Settings.', pcMargeWillRemember:'It will be remembered for this model when you save.',
@@ -3738,7 +3741,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-03e';
+const BUILD = '2026-10-03f';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -7724,8 +7727,10 @@ function majPrixConseil(){
   const achat = parseFloat($('#f_unitCost').value);
   const qty = parseInt($('#f_qty').value) || 1;
   const y = parseFloat($('#f_yuan').value);
-  $('#pcYuanEq').textContent = y > 0 ? '≈ ' + fmtMoney(y / (Number(mesTarifs.taux) || 7.6)) : '';
-  const ok = !isNaN(achat) && achat >= 0 && $('#f_unitCost').value !== '';
+  $('#pcYuanEq').textContent = y > 0 ? '¥ ≈ ' + fmtMoney(y / (Number(mesTarifs.taux) || 7.6)) : '';
+  // 0 € d'achat, c'est une demande pas encore chiffrée, pas une pièce
+  // gratuite : conseiller « 47 € » sur un achat à zéro ferait un faux prix.
+  const ok = !isNaN(achat) && achat > 0;
   const marge = margeFiche();
   const p = ok ? prixConseille(achat, marge) : null;
   if(document.activeElement !== $('#f_marge') && $('#f_marge').value === '') $('#f_marge').placeholder = mesTarifs.marge;
@@ -7764,8 +7769,15 @@ function updateMarginPreview(){
     (shipReel && ship > forfaitTotal + 0.009
       ? `<span style="color:var(--text);font-weight:600">${t('shipOver').replace('{v}', fmtMoney(ship - forfaitTotal))}</span><br>` : '') +
     (discount > 0 ? `${t('couponApplied').replace('{value}', fmtMoney(discount))}<br>` : '') +
-    `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
-    `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
+    // Pas de prix client, pas de marge : « −473 € » en rouge sur une demande
+    // qu'on n'a pas encore chiffrée, c'est une alarme pour rien (même règle
+    // que la carte, `orderChiffree`).
+    (up > 0
+      ? `${t('marginLabel')} : <b style="color:${margin>=0?'var(--gold)':'var(--danger)'}">${margin>=0?'+':''}${fmtMoney(margin)}</b>` +
+        `${totalCost>0?` (×${mult.toFixed(1)})`:''}` +
+        // Massif pense par pièce (« 15 à 30 € par article ») : on le lui dit.
+        (qty > 1 ? ` · ${fmtMoney(margin / qty)} ${t('pcPerPiece')}` : '')
+      : `<span style="color:var(--text-faint)">${t('marginNeedPrice')}</span>`) +
     (paid > 0
       ? `<br><span style="color:${remaining>0?'var(--warn)':'var(--accent)'}">${remaining>0 ? t('remainingLabel')+' : '+fmtMoney(remaining) : t('fullyPaid')}</span>`
       : '');
@@ -7805,7 +7817,9 @@ function openSheet(order, presetClientId, prefill){
   $('#f_product').value = order ? order.product : (prefill ? (prefill.product||'') : '');
   $('#f_qty').value = order ? order.qty : (prefill ? (prefill.qty||1) : 1);
   $('#f_unitCost').value = order ? order.unitCost : '';
-  $('#f_yuan').value = '';
+  // Les yuans tapés au stand sont gardés : c'est le chiffre qu'on a négocié,
+  // celui qu'on redira au fournisseur, pas sa conversion.
+  $('#f_yuan').value = order && Number(order.yuan) > 0 ? order.yuan : '';
   // La marge : celle déjà décidée pour cette commande, sinon celle retenue
   // pour ce modèle, sinon le défaut des Réglages.
   ficheCleModele = cleModele(order ? order.items : pendingItems);
@@ -8088,7 +8102,9 @@ overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeSheet(); })
 $('#exportBtn').addEventListener('click', exportData);
 
 $('#f_qty').addEventListener('input', updateMarginPreview);
-$('#f_unitCost').addEventListener('input', updateMarginPreview);
+// Un prix d'achat retapé en euros à la main ne correspond plus aux yuans :
+// on les efface plutôt que de garder deux chiffres qui se contredisent.
+$('#f_unitCost').addEventListener('input', ()=>{ $('#f_yuan').value = ''; updateMarginPreview(); });
 $('#f_unitPrice').addEventListener('input', updateMarginPreview);
 $('#f_paid').addEventListener('input', updateMarginPreview);
 $('#f_shipCost').addEventListener('input', updateMarginPreview);
@@ -8105,7 +8121,7 @@ $('#f_marge').addEventListener('input', ()=>{
 });
 $('#pcApply').addEventListener('click', ()=>{
   const achat = parseFloat($('#f_unitCost').value);
-  if(isNaN(achat)) return;
+  if(isNaN(achat) || achat <= 0) return;
   $('#f_unitPrice').value = prixConseille(achat, margeFiche());
   $('#f_unitPrice').dispatchEvent(new Event('input'));
 });
@@ -8219,6 +8235,9 @@ form.addEventListener('submit', async (e)=>{
                  // La marge visée pour CETTE commande. Privée : `publicOrderData`
                  // a une liste explicite, elle n'y entre pas.
                  marge: margeFiche(),
+                 // Le prix fournisseur tel qu'il a été dit, en yuans. Privé
+                 // comme `marge` : hors de la liste de `publicOrderData`.
+                 yuan: parseFloat($('#f_yuan').value) > 0 ? parseFloat($('#f_yuan').value) : null,
                  note:$('#f_note').value.trim(),
                  carrier:$('#f_carrier').value.trim(),
                  tracking:$('#f_tracking').value.trim(),
