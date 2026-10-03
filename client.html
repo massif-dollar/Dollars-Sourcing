@@ -339,7 +339,14 @@
   .tab-ic{ width:23px; height:23px; transition:transform .5s var(--spring); }
   .tab-l{ white-space:nowrap; }
   .tab.active{ color:var(--accent); }
-  .tab.active .tab-ic{ transform:translateY(-1px) scale(1.1); }
+  .tab.active .tab-ic{ transform:translateY(-1px) scale(1.1); animation:ongletPop .55s var(--spring); }
+  /* L'icône de l'onglet touché rebondit une fois : le doigt sait que ça a
+     pris avant même que la page ait changé. Une fois, jamais en boucle. */
+  @keyframes ongletPop{
+    0%{ transform:translateY(2px) scale(.72); }
+    60%{ transform:translateY(-2px) scale(1.18); }
+    100%{ transform:translateY(-1px) scale(1.1); }
+  }
   .tab.is-pressed{ transform:scale(.9); }
   .tab .ripple{
     position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
@@ -432,54 +439,6 @@
     font-variant-numeric:tabular-nums;
   }
 
-  /* Les photos d'une commande : même grille, parce qu'une demande peut porter
-     plusieurs modèles et qu'on doit les voir d'un coup d'œil. */
-  .card-photos{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
-    gap:7px; margin-top:9px;
-  }
-  .card-photos .card-photo{ aspect-ratio:1; width:100%; height:100%; object-fit:cover; margin:0; }
-  .card-photo{
-    max-width:100%; max-height:320px; width:auto; height:auto;
-    border-radius:11px; margin:9px auto 0; display:block; cursor:zoom-in;
-    border:0.5px solid var(--hairline);
-    transition:transform .34s var(--spring);
-  }
-  .card-photo:active{ transform:scale(.985); }
-
-  /* ===== Les photos se replient =====
-     Cinq photos par commande et trois commandes, et le portail devient un
-     couloir. Elles vivent donc derrière un repli, comme les éléments d'un
-     dossier. Replié par défaut : on garde la hauteur pour ce qui se lit —
-     le produit, le statut, les montants.
-     `<details>` natif plutôt qu'un bouton : l'ouverture est gérée par le
-     navigateur, elle marche au clavier et elle reste lisible sans JS. */
-  .photos-fold{ margin-top:9px; }
-  .photos-fold > summary{
-    list-style:none; cursor:pointer; user-select:none; -webkit-user-select:none;
-    display:flex; align-items:center; gap:7px; padding:9px 12px; border-radius:11px;
-    background:var(--fill); border:0.5px solid var(--hairline);
-    font-size:12.5px; font-weight:600; color:var(--text-muted);
-    letter-spacing:-0.01em; transition:color .2s ease, border-color .2s ease;
-  }
-  /* Safari dessine son propre triangle : on le retire dans les deux syntaxes. */
-  .photos-fold > summary::-webkit-details-marker{ display:none; }
-  .photos-fold > summary::marker{ content:''; }
-  .photos-fold > summary:active{ color:var(--text); }
-  .photos-fold > summary .fold-arrow{
-    width:13px; height:13px; flex:none;
-    transition:transform .28s var(--ease-out);
-  }
-  .photos-fold[open] > summary .fold-arrow{ transform:rotate(90deg); }
-  .photos-fold[open] > summary{ color:var(--text); }
-  .photos-fold .card-photos, .photos-fold > .card-photo{
-    animation:foldIn .3s var(--ease-out) both;
-  }
-  @keyframes foldIn{
-    from{ opacity:0; transform:translateY(-5px); }
-    to{ opacity:1; transform:none; }
-  }
-
   /* ===== Le recadreur carré =====
      Le client cadre lui-même le modèle qu'il veut. Ce n'est pas pour le poids
      — la compression fait déjà tomber une photo d'iPhone de 4,7 Mo à 66 Ko —
@@ -567,6 +526,33 @@
     transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), background .45s var(--ease-io);
   }
   .lightbox-close:active{ transform:scale(.93); box-shadow:var(--press); }
+  /* LA GALERIE. Toucher une vignette ouvre toutes les photos de la commande ;
+     on passe de l'une à l'autre au doigt ou aux flèches. `pan-y pinch-zoom` :
+     le glissement horizontal est à nous, le pincement reste au navigateur —
+     on veut pouvoir zoomer sur une étiquette. */
+  .lightbox{ touch-action:pan-y pinch-zoom; }
+  /* Sans ça, à la souris, le navigateur part en glisser-déposer de l'image
+     et annule le geste avant qu'on ait pu changer de photo. */
+  .lightbox img{ -webkit-user-drag:none; -webkit-user-select:none; user-select:none; }
+  .lb-nav{
+    position:absolute; top:50%; z-index:2; width:42px; height:42px; margin-top:-21px;
+    border-radius:50%; display:none; place-items:center; cursor:pointer; color:var(--text);
+    background:var(--mat-thick); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(18px) saturate(150%); -webkit-backdrop-filter:blur(18px) saturate(150%);
+    -webkit-user-select:none; user-select:none; transition:transform .4s var(--spring);
+  }
+  .lb-nav svg{ width:18px; height:18px; display:block; }
+  .lb-nav:active{ transform:scale(.9); }
+  .lb-prev{ left:12px; }
+  .lb-next{ right:12px; }
+  .lb-count{
+    position:absolute; top:calc(env(safe-area-inset-top) + 22px); left:50%; transform:translateX(-50%);
+    display:none; padding:5px 11px; border-radius:100px; font-size:12px; font-weight:600;
+    font-variant-numeric:tabular-nums; color:var(--text-muted);
+    background:var(--mat-thick); border:0.5px solid var(--hairline);
+  }
+  .lightbox.multi .lb-nav{ display:grid; }
+  .lightbox.multi .lb-count{ display:block; }
 
   .list{ display:flex; flex-direction:column; gap:9px; }
   .empty{ text-align:center; padding:44px 20px; color:var(--text-ghost); font-size:14px; line-height:1.6; letter-spacing:-0.01em; }
@@ -744,6 +730,12 @@
   /* Une nouvelle nouvelle — un colis qui part pendant qu'il regarde — arrive
      en montant, avec un reflet : c'est ce qui la fait remarquer sans clignoter. */
   .hello-sub.swap{ animation:uneIn .5s var(--ease-out) both; }
+  .hello .hello-sub.onglet-in{ animation:helloIn .55s var(--ease-out) .18s both; }
+  /* Les compteurs parlent des commandes : ils restent sur leur page. Les
+     cartes d'accueil restent sur l'ACCUEIL — les commandes dès qu'il y en a,
+     la demande pour un nouveau client —, jamais en tête d'une autre pièce. */
+  body[data-tab]:not([data-tab="history"]) #summary{ display:none !important; }
+  body.hors-accueil .welcome{ display:none !important; }
   .hello-sub.swap .une::after{
     content:''; position:absolute; top:-60%; left:-140%; width:55%; height:220%;
     background:linear-gradient(100deg, transparent, var(--sheen), transparent);
@@ -1355,6 +1347,11 @@
     transition:transform .44s var(--spring), color .3s var(--ease-io);
   }
   .cw-dismiss:active{ transform:scale(.98); color:var(--text); }
+  /* Seul bouton de la carte, « J'ai compris » ressemblait à une légende grise
+     qu'on ne pense pas à toucher. Il devient un vrai bouton, à l'accent. */
+  .welcome-actions:not(:has(> .btn-primary:not([style*="display: none"]):not([style*="display:none"]))) .cw-dismiss{
+    background:var(--accent-soft); color:var(--accent); margin-top:4px;
+  }
 
   .state-error .state-title{ color:var(--danger); font-weight:600; margin-bottom:5px; }
 
@@ -2455,7 +2452,14 @@
   <button type="button" class="lightbox-close" id="lightboxClose" data-i18n-title="photoCloseTitle" title="Fermer la photo" aria-label="Fermer la photo">
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
-  <img id="lightboxImg" alt="">
+  <img id="lightboxImg" alt="" draggable="false">
+  <button type="button" class="lb-nav lb-prev" id="lbPrev" data-i18n-title="photoPrev" title="Photo précédente" aria-label="Photo précédente">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <button type="button" class="lb-nav lb-next" id="lbNext" data-i18n-title="photoNext" title="Photo suivante" aria-label="Photo suivante">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <span class="lb-count" id="lbCount" aria-live="polite"></span>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2504,6 +2508,10 @@ const I18N = {
     langTitle:'Langue', themeTitle:'Thème', loading:'Chargement...',
     helloMorning:'Bonjour', helloEvening:'Bonsoir',
     helloSub:'Ton espace personnel', helloSubOrders:'Suis tes commandes en direct',
+    pageHistory:'Tes commandes', pageHistorySub:'Toutes tes commandes, et où elles en sont.',
+    pageOrder:'Nouvelle demande', pageOrderSub:'Choisis dans le catalogue, ou décris ce que tu cherches.',
+    pageCatalog:'Le catalogue', pageCatalogSub:'La vitrine, enrichie à chaque arrivage.',
+    pageDollars:'Tes Dollarz', pageDollarsSub:'1 € dépensé = 1 Dollarz, à échanger contre des remises.',
     uneDevis:'Ton devis {ref} est prêt', uneDevisD:'{amount} à régler',
     uneRoute:'Ton colis {ref} est en route', uneRouteEta:'Arrivée estimée : {date}',
     uneRouteSuivi:'Suivi disponible',
@@ -2590,11 +2598,10 @@ const I18N = {
     phProduct:'Ou écris-le toi-même : sacoche, montre...', phOptional:'Optionnel',
     photoAdd:'Ajouter des photos', photoAddMore:'Ajouter une autre photo',
     photoRemove:'Retirer cette photo',
-    photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Cadre le modèle', cropHint:'Fais glisser pour placer, pince pour zoomer',
     cropStep:'Photo {i} sur {n}', cropCancel:'Annuler', cropOk:'Valider',
     cropRotLeft:'Pivoter à gauche', cropRotRight:'Pivoter à droite',
-    photoCloseTitle:'Fermer la photo', photoOpenTitle:'Voir la photo en plein écran',
+    photoCloseTitle:'Fermer la photo', photoPrev:'Photo précédente', photoNext:'Photo suivante', photoOpenTitle:'Voir la photo en plein écran',
     submitOrder:'Envoyer ma demande', sending:'Envoi...',
     errProduct:'Indique un produit', errQty:'Quantité invalide',
     toastSent:'Demande envoyée ! Ton vendeur va la valider.',
@@ -2636,6 +2643,10 @@ const I18N = {
     langTitle:'Language', themeTitle:'Theme', loading:'Loading...',
     helloMorning:'Good morning', helloEvening:'Good evening',
     helloSub:'Your personal space', helloSubOrders:'Track your orders live',
+    pageHistory:'Your orders', pageHistorySub:'All your orders, and where they stand.',
+    pageOrder:'New request', pageOrderSub:'Pick from the catalogue, or describe what you\'re after.',
+    pageCatalog:'The catalogue', pageCatalogSub:'The showroom, restocked with every arrival.',
+    pageDollars:'Your Dollarz', pageDollarsSub:'€1 spent = 1 Dollarz, to trade for discounts.',
     uneDevis:'Your quote {ref} is ready', uneDevisD:'{amount} to pay',
     uneRoute:'Your parcel {ref} is on its way', uneRouteEta:'Estimated arrival: {date}',
     uneRouteSuivi:'Tracking available',
@@ -2721,11 +2732,10 @@ const I18N = {
     phProduct:'Or type it yourself: bag, watch...', phOptional:'Optional',
     photoAdd:'Add photos', photoAddMore:'Add another photo',
     photoRemove:'Remove this photo',
-    photoCountOne:'1 photo', photoCountMany:'{n} photos',
     cropTitle:'Frame the item', cropHint:'Drag to position, pinch to zoom',
     cropStep:'Photo {i} of {n}', cropCancel:'Cancel', cropOk:'Done',
     cropRotLeft:'Rotate left', cropRotRight:'Rotate right',
-    photoCloseTitle:'Close photo', photoOpenTitle:'View photo fullscreen',
+    photoCloseTitle:'Close photo', photoPrev:'Previous photo', photoNext:'Next photo', photoOpenTitle:'View photo fullscreen',
     submitOrder:'Send my request', sending:'Sending...',
     errProduct:'Tell us the product', errQty:'Invalid quantity',
     toastSent:'Request sent! Your seller will confirm it.',
@@ -2832,25 +2842,126 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 // ================= Photo en plein écran =================
 const lightbox = $('#lightbox');
 const lightboxImg = $('#lightboxImg');
-function openLightbox(src){
+// LA GALERIE. Toucher une vignette ouvre TOUTES les photos de la commande, et
+// la photo GRANDIT DEPUIS LA VIGNETTE jusqu'au plein écran : c'est le même
+// objet qui s'agrandit, pas une seconde image qui surgit ailleurs — c'est ce
+// qui donne l'impression d'une vraie app. On passe de l'une à l'autre au doigt
+// (seuil de 40 px, comme la photo du catalogue) ou aux flèches, et on referme
+// d'un toucher : la photo retourne d'où elle vient.
+// Ce bloc existe À L'IDENTIQUE dans index.html et client.html.
+let lbListe = [], lbIdx = 0, lbDepuis = null, lbFerme = false;
+const lbCalme = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function openLightbox(src, liste, depuis){
   if(!src) return;
-  lightboxImg.src = src;
+  lbListe = (liste && liste.length) ? liste : [src];
+  lbIdx = Math.max(0, lbListe.indexOf(src));
+  lbDepuis = depuis || null;
+  lbFerme = false;
+  lightbox.classList.toggle('multi', lbListe.length > 1);
+  $('#lightboxClose').setAttribute('aria-label', t('photoCloseTitle'));
+  $('#lbPrev').setAttribute('aria-label', t('photoPrev'));
+  $('#lbNext').setAttribute('aria-label', t('photoNext'));
+  lbAffiche(0);
   lightbox.classList.add('open');
+  if(lbDepuis && !lbCalme() && lightboxImg.animate) lbGrandit(lbDepuis);
+}
+function lbAffiche(sens){
+  lightboxImg.src = lbListe[lbIdx];
+  $('#lbCount').textContent = (lbIdx + 1) + ' / ' + lbListe.length;
+  if(sens && !lbCalme() && lightboxImg.animate)
+    lightboxImg.animate([{ transform:'translateX(' + (sens * 46) + 'px)', opacity:.2 }, { transform:'none', opacity:1 }],
+                        { duration:300, easing:'cubic-bezier(.2,.8,.2,1)' });
+}
+// L'écart entre la vignette et la place finale devient le point de départ.
+// La photo reste invisible le temps d'être décodée : sinon on la verrait une
+// image à sa place finale avant qu'elle ne parte de la vignette.
+function lbEcart(el){
+  const a = el.getBoundingClientRect(), b = lightboxImg.getBoundingClientRect();
+  if(!a.width || !b.width) return null;
+  const s = Math.max(a.width / b.width, a.height / b.height);
+  return 'translate(' + ((a.left + a.width/2) - (b.left + b.width/2)).toFixed(1) + 'px,'
+       + ((a.top + a.height/2) - (b.top + b.height/2)).toFixed(1) + 'px) scale(' + s.toFixed(3) + ')';
+}
+function lbGrandit(el){
+  lightboxImg.style.animation = 'none';
+  lightboxImg.style.opacity = '0';
+  const part = () => {
+    lightboxImg.style.opacity = '';
+    if(!lightbox.classList.contains('open')) return;
+    const ecart = lbEcart(el);
+    if(!ecart) return;
+    lightboxImg.animate([{ transform:ecart, opacity:.5, borderRadius:'22px' }, { transform:'none', opacity:1 }],
+                        { duration:430, easing:'cubic-bezier(.2,.9,.25,1)' });
+  };
+  (lightboxImg.decode ? lightboxImg.decode() : Promise.resolve()).then(part, part);
 }
 function closeLightbox(){
-  if(!lightbox.classList.contains('open')) return;
-  lightbox.classList.remove('open');
-  lightboxImg.removeAttribute('src');
+  if(!lightbox.classList.contains('open') || lbFerme) return;
+  const fin = () => {
+    lightbox.classList.remove('open');
+    lightboxImg.removeAttribute('src');
+    lightboxImg.style.animation = '';
+    lightboxImg.style.opacity = '';
+    lbDepuis = null; lbFerme = false;
+  };
+  if(lbCalme() || !lightbox.animate){ fin(); return; }
+  lbFerme = true;
+  // Retour à la vignette seulement si c'est encore SA photo et qu'elle est
+  // toujours là : sinon la photo filerait vers un endroit qui ne la montre pas.
+  const el = lbDepuis && lbDepuis.isConnected && lbListe[lbIdx] === lbDepuis.src ? lbDepuis : null;
+  const ecart = el ? lbEcart(el) : null;
+  const anims = [lightbox.animate([{ opacity:1 }, { opacity:0 }], { duration:ecart ? 300 : 200, easing:'ease', fill:'forwards' })];
+  if(ecart) anims.push(lightboxImg.animate([{ transform:'none', opacity:1 }, { transform:ecart, opacity:.4, borderRadius:'22px' }],
+                                           { duration:300, easing:'cubic-bezier(.4,0,.2,1)', fill:'forwards' }));
+  Promise.all(anims.map(a => a.finished)).then(() => { fin(); anims.forEach(a => a.cancel()); }, fin);
 }
+function lbVa(d){
+  if(lbListe.length < 2) return;
+  lbIdx = (lbIdx + d + lbListe.length) % lbListe.length;
+  lbAffiche(d);
+}
+$('#lbPrev').addEventListener('click', e => { e.stopPropagation(); lbVa(-1); });
+$('#lbNext').addEventListener('click', e => { e.stopPropagation(); lbVa(1); });
+let lbX = null, lbGlisse = false;
+lightbox.addEventListener('pointerdown', e => { lbX = e.clientX; lbGlisse = false; });
+lightbox.addEventListener('pointercancel', () => { lbX = null; });
+lightbox.addEventListener('pointerup', e => {
+  if(lbX === null) return;
+  const dx = e.clientX - lbX;
+  lbX = null;
+  if(Math.abs(dx) > 40 && lbListe.length > 1){ lbGlisse = true; lbVa(dx < 0 ? 1 : -1); }
+});
+// Un glissement n'est pas un toucher : il change de photo, il ne referme pas.
+lightbox.addEventListener('click', e => {
+  if(lbGlisse){ lbGlisse = false; return; }
+  if(e.target.closest('.lb-nav')) return;
+  closeLightbox();
+});
+document.addEventListener('keydown', e => {
+  if(!lightbox.classList.contains('open')) return;
+  if(e.key === 'Escape') closeLightbox();
+  else if(e.key === 'ArrowRight') lbVa(1);
+  else if(e.key === 'ArrowLeft') lbVa(-1);
+});
+
+function srcPhoto(p){ return 'data:' + p.type + ';base64,' + p.data; }
 document.addEventListener('click', (e)=>{
-  const img = e.target.closest && e.target.closest('.card-photo, .photo-item img, .card-thumb-img');
+  const img = e.target.closest && e.target.closest('.photo-item img, .card-thumb-img');
   if(!img) return;
   e.preventDefault();
   e.stopPropagation();
-  openLightbox(img.src);
+  // La vignette d'une carte ouvre toutes les photos de sa commande : c'est
+  // elle, la galerie. Il n'y a plus de repli « 3 photos » sous la carte — il
+  // redisait ce que la vignette et son « +2 » montrent déjà, sur une ligne
+  // de plus par commande.
+  let liste = null;
+  if(img.matches('.card-thumb-img')){
+    const carte = img.closest('[data-id]');
+    const o = carte && myOrders.concat(myPending).find(x => x.id === carte.dataset.id);
+    if(o) liste = photosDe(o).map(srcPhoto);
+  }
+  openLightbox(img.src, liste, img);
 }, true);
-lightbox.addEventListener('click', closeLightbox);
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
 const TAP_SELECTOR = '.tab, .code-key, .btn-primary, .client-bio-btn, .theme-toggle, .lang-toggle, .ship-btn, .cw-dismiss, .card-action, .archive-head, .shop-btn, .cat-brand, .cat-browse, .cat-back';
@@ -3132,19 +3243,38 @@ function clientFirstName(){
 // le prénom à la couleur de la marque, parce que c'est le mot qui compte.
 // On ne réécrit le titre que s'il a changé : il est rappelé à chaque
 // snapshot, et le redessiner relancerait l'animation sous ses yeux.
+// UN TITRE PAR ONGLET. La salutation, la une et les compteurs se répétaient
+// en tête des quatre onglets : 220 px à passer avant le catalogue ou les
+// Dollarz, et des onglets qui se ressemblaient tous. L'accueil garde
+// « Bonsoir Yanis » ; les autres pièces disent où on est — « Le catalogue »,
+// « Tes Dollarz » — avec la même entrée mot par mot, et le dernier mot à la
+// couleur de la marque, comme le prénom. C'est ce qui fait de chaque onglet
+// une page qu'on reconnaît, et de l'ensemble une app plutôt qu'un long
+// formulaire.
+// L'accueil, c'est l'onglet des commandes dès qu'il y en a une ; avant, c'est
+// la demande — celui où un nouveau client arrive.
+function ongletAccueil(){ return (myOrders.length || myPending.length) ? 'history' : 'order'; }
+const TITRE_ONGLET = { history:'pageHistory', order:'pageOrder', catalog:'pageCatalog', dollars:'pageDollars' };
 function updateGreeting(){
-  const h = new Date().getHours();
-  const hello = (h >= 18 || h < 5) ? t('helloEvening') : t('helloMorning');
-  const name = clientFirstName();
+  const accueil = currentTab === ongletAccueil();
+  document.body.classList.toggle('hors-accueil', !accueil);
+  let mots, dernierMarque;
+  if(accueil){
+    const h = new Date().getHours();
+    const hello = (h >= 18 || h < 5) ? t('helloEvening') : t('helloMorning');
+    const name = clientFirstName();
+    mots = hello.split(/\s+/).concat(name ? [name] : []);
+    dernierMarque = !!name;
+  } else {
+    mots = t(TITRE_ONGLET[currentTab] || 'pageOrder').split(/\s+/);
+    dernierMarque = true;
+  }
   const h1 = $('#greeting');
-  const cle = hello + '|' + name;
+  const cle = mots.join(' ');
   if(h1.dataset.cle !== cle){
     h1.dataset.cle = cle;
-    let i = 0;
-    const mot = (w, nom) => '<span class="w' + (nom ? ' nom' : '') + '"><span style="--w:' + (i++) + '">'
-                          + escapeHtml(w) + '</span></span>';
-    h1.innerHTML = hello.split(/\s+/).map(w => mot(w, false)).join(' ')
-                 + (name ? ' ' + mot(name, true) : '');
+    h1.innerHTML = mots.map((w, i) => '<span class="w' + (dernierMarque && i === mots.length - 1 ? ' nom' : '')
+                 + '"><span style="--w:' + i + '">' + escapeHtml(w) + '</span></span>').join(' ');
   }
   renderUne();
 }
@@ -3199,6 +3329,15 @@ const ICON_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 function renderUne(){
   const el = $('#helloSub');
   if(!el) return;
+  // Hors de l'accueil, une ligne qui dit à quoi sert la pièce.
+  if(currentTab !== ongletAccueil()){
+    const txt = t((TITRE_ONGLET[currentTab] || 'pageOrder') + 'Sub');
+    if(el.dataset.cle === 'onglet|' + txt) return;
+    el.dataset.cle = 'onglet|' + txt;
+    el.textContent = txt;
+    el.classList.remove('swap', 'onglet-in'); void el.offsetWidth; el.classList.add('onglet-in');
+    return;
+  }
   const une = aLaUne();
   let html, cle;
   if(une){
@@ -3410,41 +3549,7 @@ function photosDe(o){
   return out;
 }
 
-// Quels replis sont ouverts, par identifiant de commande. En mémoire, pas en
-// localStorage : c'est l'état d'un geste en cours, pas une préférence.
-// Sans ce Set, le repli se refermerait sous les doigts du client au premier
-// snapshot Firestore — la liste est redessinée en entier à chaque mise à jour.
-const foldsOuverts = new Set();
-document.addEventListener('toggle', (e)=>{
-  const d = e.target;
-  if(!d || !d.classList || !d.classList.contains('photos-fold')) return;
-  const cle = d.dataset.fold;
-  if(!cle) return;
-  if(d.open) foldsOuverts.add(cle); else foldsOuverts.delete(cle);
-}, true);   // en capture : `toggle` ne remonte pas jusqu'au document
 
-const FLECHE = '<svg class="fold-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
-             + ' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-             + '<path d="M9 6l6 6-6 6"/></svg>';
-
-function blocPhotos(o){
-  const ps = photosDe(o);
-  if(!ps.length) return '';
-  const titre = escapeHtml(t('photoOpenTitle'));
-  const img = p => '<img class="card-photo" src="data:' + p.type + ';base64,' + p.data
-                 + '" alt="" title="' + titre + '" aria-label="' + titre + '">';
-  // Une seule photo garde son grand format ; plusieurs passent en grille, sinon
-  // on ne verrait pas d'un coup d'œil qu'il y a trois modèles à chiffrer.
-  const dedans = ps.length === 1 ? img(ps[0])
-               : '<div class="card-photos">' + ps.map(img).join('') + '</div>';
-  const cle = String(o.id || '');
-  const libelle = ps.length === 1 ? t('photoCountOne')
-                                  : t('photoCountMany').replace('{n}', ps.length);
-  return '<details class="photos-fold" data-fold="' + escapeHtml(cle) + '"'
-       + (foldsOuverts.has(cle) ? ' open' : '') + '>'
-       + '<summary>' + FLECHE + '<span>' + escapeHtml(libelle) + '</span></summary>'
-       + dedans + '</details>';
-}
 
 function renderInstallCard(){
   const box = $('#installCard');
@@ -3487,7 +3592,7 @@ $('#cwBioBtn').addEventListener('click', async ()=>{
 // corrige quelque chose de visible ici — c'est la seule façon de savoir, à
 // distance et par téléphone, si le client regarde la nouvelle page ou celle
 // que Safari garde en cache.
-const BUILD_CLIENT = '2026-10-02c';
+const BUILD_CLIENT = '2026-10-03';
 
 // L'arrivée est RETENUE tant que le rideau est là (`#app.hold`) : sans ça,
 // tout se jouait dessous et le client découvrait une page déjà immobile.
@@ -3546,6 +3651,7 @@ function enterApp(){
 
   $('#app').style.display = 'block';
   document.body.classList.add('in-app');
+  document.body.dataset.tab = currentTab;
   const tampon = $('#clientBuild');
   if(tampon) tampon.textContent = 'DOLLAR$ SOURCING · v' + BUILD_CLIENT;
   renderWelcome();
@@ -4225,7 +4331,6 @@ function orderCardHtml(o, archived){
   return `
     <div class="order-card${archived ? '' : ' reveal'}" data-id="${escapeHtml(o.id)}">
       ${teteCarte(o, `<div class="badge" style="background:color-mix(in srgb, ${meta.color} 18%, white); color:${meta.color};">${escapeHtml(t(meta.key))}</div>`)}
-      ${blocPhotos(o)}
       ${trackHtml(o.status, o)}
       ${amountsHtml(o)}
       ${shippingHtml(o)}
@@ -4246,7 +4351,6 @@ function renderHistory(){
   const pendingCards = myPending.map(p=>`
     <div class="order-card reveal" data-id="${escapeHtml(p.id)}">
       ${teteCarte(p, `<div class="badge" style="background:var(--warn-soft); color:var(--warn);">${escapeHtml(t('stWaiting'))}</div>`)}
-      ${blocPhotos(p)}
       ${trackHtml('nouveau', p)}
       ${p.note ? `<div class="card-note"><span class="k">${escapeHtml(t('yourDetails'))}</span>${escapeHtml(p.note)}</div>` : ''}
       <div class="card-bottom">${fmtDate(p.createdAt)}</div>
@@ -4769,6 +4873,8 @@ function switchTab(tab){
   const change = tab !== currentTab;
   if(change) defilement[currentTab] = window.scrollY;
   currentTab = tab;
+  document.body.dataset.tab = tab;
+  if(clientData) updateGreeting();
   const panels = { history:'#historyPanel', order:'#orderPanel', catalog:'#catalogPanel', dollars:'#dollarsPanel' };
   const boutons = { history:'#tabHistory', order:'#tabOrder', catalog:'#tabCatalog', dollars:'#tabDollars' };
   TABS.forEach(k=>{

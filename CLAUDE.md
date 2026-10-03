@@ -346,10 +346,12 @@ bout de la consigne il la faisait déborder, et `applyTranslations()` écraserai
 un élément traduit — le même piège que le libellé du bouton WeChat.
 
 **Les photos se replient**, comme les éléments d'un dossier : un `<details>`
-natif, fermé par défaut, dont l'en-tête annonce « 3 photos ». Cinq photos par
-commande et trois commandes, et le portail devenait un couloir ; la hauteur
-revient à ce qui se lit — produit, statut, montants. Le même repli existe côté
-vendeur, dans la liste des demandes et dans la fiche commande.
+natif, fermé par défaut, dont l'en-tête annonce « 3 photos ». Il ne vit plus
+que côté vendeur, **dans la liste des demandes et dans la fiche commande** —
+là où l'on chiffre et où l'on achète. **Les cartes de commande, elles, n'en ont
+plus, des deux côtés** (3 octobre) : le repli redisait ce que la vignette et
+son « +2 » montrent déjà, sur une ligne de plus par commande. C'est la vignette
+qui ouvre la galerie — voir « La galerie ».
 
 `<details>` plutôt qu'un bouton : l'ouverture est gérée par le navigateur, elle
 marche au clavier, et elle ne dépend d'aucun état à nous. **Mais l'état ouvert,
@@ -649,7 +651,56 @@ dépasse derrière, légèrement tournée, avec « +N »), puis **la marque, le
 modèle, et les coloris avec leurs quantités et leurs tailles** lus dans
 `items[]` (`libelleCarte`). Sans `items[]` — une demande tapée à la main — la
 chaîne telle quelle, et la quantité à part : **jamais « × 1 »**. La vignette
-s'ouvre en grand au toucher ; le repli des photos reste, c'est la galerie.
+ouvre la galerie de toutes les photos de la commande (voir « La galerie »).
+
+#### Un titre par onglet
+
+La salutation, la une et les compteurs se répétaient en tête des **quatre**
+onglets : 220 px à passer avant le catalogue ou les Dollarz, et quatre pages
+qui se ressemblaient. Désormais `updateGreeting()` choisit selon l'onglet :
+
+- **l'accueil** garde « Bonsoir Yanis » et la une. L'accueil, c'est l'onglet
+  des commandes dès qu'il y en a une, et la demande avant (`ongletAccueil()`) :
+  un nouveau client est salué là où il arrive ;
+- **les autres** disent où l'on est — « Nouvelle demande », « Le catalogue »,
+  « Tes Dollarz » — avec une ligne qui dit à quoi sert la pièce, la même entrée
+  mot par mot, et **le dernier mot à la couleur de la marque**, comme le prénom.
+
+Changer d'onglet rejoue donc l'entrée du titre : c'est le mouvement qui dit
+« tu as changé de pièce ». Les compteurs ne vivent que sur les commandes
+(`body[data-tab]`, posé par `switchTab()`), et **les cartes d'accueil
+(bienvenue, Dollarz, écran d'accueil) seulement sur l'accueil**
+(`body.hors-accueil`) : l'annonce des Dollarz s'affichait en tête de la
+demande, au-dessus du formulaire qu'on venait remplir.
+
+Mesuré : le contenu de chaque onglet monte d'environ 90 px.
+
+#### La galerie
+
+Toucher une vignette ouvre **toutes** les photos de la commande, et **la photo
+grandit depuis la vignette** jusqu'au plein écran — le même objet qui
+s'agrandit, pas une seconde image qui surgit ailleurs. On passe de l'une à
+l'autre au doigt (40 px, le seuil de la photo du catalogue) ou aux flèches, et
+un toucher referme : la photo **retourne dans sa vignette** si c'est encore la
+sienne, sinon elle s'efface sur place — elle ne file jamais vers un endroit qui
+ne la montre pas.
+
+Le bloc existe **à l'identique dans les deux fichiers** (`openLightbox(src,
+liste, depuis)`). Quatre points qui ne s'inventent pas :
+
+- **La photo reste invisible le temps d'être décodée** (`decode()`), sinon on
+  la voit une image à sa place finale avant qu'elle ne parte de la vignette.
+- **Un glissement n'est pas un toucher** : il change de photo et ne referme
+  pas (`lbGlisse`).
+- **`touch-action:pan-y pinch-zoom`** : le glissement horizontal est à nous, le
+  pincement reste au navigateur — on veut pouvoir zoomer sur une étiquette.
+- **`draggable="false"` sur l'image** : à la souris, le navigateur partait en
+  glisser-déposer et annulait le geste (`pointercancel`). Le test l'a montré ;
+  au doigt, le problème n'existait pas.
+
+Mesuré image par image : la photo part de 58 px (la vignette) et arrive à
+354 px en 0,4 s ; à la fermeture elle redescend à 67 px sur la vignette en
+s'effaçant.
 
 **La carte de fidélité.** Le solde Dollarz était un nombre dans un cadre. C'est
 maintenant **une carte** — la marque, « Carte de fidélité », le solde, la
@@ -2260,6 +2311,25 @@ affichait « undefined » sur une commande venue d'une demande : corrigé.
 listes ni sur « À faire » — ce sont des zones de travail, elles sont
 instantanées (voir « Le mouvement »).
 
+**Le 3 octobre, trois choses de plus pour ne pas être débordé :**
+
+- **Le « + » s'efface quand on descend** et revient dès qu'on remonte, comme
+  dans Mail. Posé en bas à droite, il couvrait en permanence la marge de la
+  carte qui passait dessous. Seuil de 6 px (un tremblement ne le fait pas
+  clignoter), toujours visible tout en haut, et **une vue neuve le remontre** :
+  le saut de défilement de `switchView()` n'est pas un geste vers le bas
+  (`fabY`, en `var`).
+- **Une commande sans prix client n'a pas de marge.** Le forfait de livraison
+  était compté sur une simple demande : « −300 € » **en rouge** sur sa carte,
+  et la même somme retirée de la marge totale, de la fiche du client et des
+  stats (une barre rouge dans le graphique). `orderShipping()` n'estime plus
+  l'envoi tant que `orderChiffree()` est faux, et la carte n'affiche pas de
+  marge du tout — « À chiffrer » dit déjà ce qu'il y a à faire.
+- **Les cartes de commande perdent leur repli de photos** : la vignette ouvre
+  la galerie. Une ligne de moins par carte, soit une carte de plus à l'écran.
+
+L'icône de la vue touchée rebondit une fois (`navPop`), comme dans le portail.
+
 ## Design — règles à respecter
 
 - **Thème clair** : fond blanc, vert (`#2eb35c`), gris nardo. **Jamais de noir pur.**
@@ -3164,7 +3234,9 @@ qui s'incline sous le doigt ; côté pro, vues en bas sous le pouce avec
 position gardée par vue, grand titre et ligne d'état, Réglages regroupés,
 « À faire » calculé avec relances WhatsApp prêtes, cartes avec photo ou
 initiales et prochaine étape, statut en tête de fiche avec frise à toucher,
-tarifs réglables (livraison par pièce, marge, réserve, taux du yuan), prix
+tarifs réglables (livraison par pièce, marge, réserve, taux du yuan), un titre
+par onglet dans le portail, galerie de photos qui grandit depuis la vignette
+(des deux côtés), « + » qui s'efface au défilement, prix
 conseillé dans la fiche commande avec saisie en yuans, marge par commande
 retenue par modèle du catalogue, frais d'envoi réels
 déduits de la marge, minimum de 10 pièces par demande dans le portail.
