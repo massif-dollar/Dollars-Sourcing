@@ -313,6 +313,7 @@
      finiraient posés sur le champ qu'on remplit. */
   body.clavier .tabbar{ transform:translate(-50%, calc(100% + 30px)); }
   body.clavier .fab{ transform:translateY(calc(100% + 120px)); }
+  body.fab-cache .fab{ transform:translateY(18px) scale(.5); opacity:0; pointer-events:none; }
   .tabbar button{
     flex:1 1 0; min-width:0; position:relative; overflow:hidden;
     display:flex; align-items:center; justify-content:center; gap:0;
@@ -336,6 +337,9 @@
     transition:max-width .45s var(--spring), opacity .25s var(--ease-io);
   }
   .tabbar button.active .nav-l{ max-width:110px; opacity:1; }
+  /* L'icône de la vue touchée rebondit une fois, comme dans le portail. */
+  .tabbar button.active .nav-icon{ animation:navPop .55s var(--spring); }
+  @keyframes navPop{ 0%{ transform:scale(.7); } 60%{ transform:scale(1.15); } 100%{ transform:none; } }
   .tabbar button .ripple{
     position:absolute; border-radius:50%; pointer-events:none; display:block; z-index:0;
     background:radial-gradient(circle, var(--ripple) 0%, transparent 66%);
@@ -725,7 +729,7 @@
     flex:none; width:46px; height:46px; border-radius:13px; overflow:hidden; position:relative;
     background:var(--fill-2); border:0.5px solid var(--hairline);
   }
-  .cv img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cv img{ width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
   .cv i{
     position:absolute; right:3px; bottom:3px; font-style:normal; font-size:9.5px; font-weight:700;
     padding:1px 4px; border-radius:6px; background:rgba(0,0,0,.62); color:#fff; font-variant-numeric:tabular-nums;
@@ -1289,6 +1293,33 @@
     transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), background .45s var(--ease-io);
   }
   .lightbox-close:active{ transform:scale(.93); box-shadow:var(--press); }
+  /* LA GALERIE. Toucher une vignette ouvre toutes les photos de la commande ;
+     on passe de l'une à l'autre au doigt ou aux flèches. `pan-y pinch-zoom` :
+     le glissement horizontal est à nous, le pincement reste au navigateur —
+     on veut pouvoir zoomer sur une étiquette. */
+  .lightbox{ touch-action:pan-y pinch-zoom; }
+  /* Sans ça, à la souris, le navigateur part en glisser-déposer de l'image
+     et annule le geste avant qu'on ait pu changer de photo. */
+  .lightbox img{ -webkit-user-drag:none; -webkit-user-select:none; user-select:none; }
+  .lb-nav{
+    position:absolute; top:50%; z-index:2; width:42px; height:42px; margin-top:-21px;
+    border-radius:50%; display:none; place-items:center; cursor:pointer; color:var(--text);
+    background:var(--mat-thick); border:0.5px solid var(--hairline); box-shadow:var(--raise);
+    backdrop-filter:blur(18px) saturate(150%); -webkit-backdrop-filter:blur(18px) saturate(150%);
+    -webkit-user-select:none; user-select:none; transition:transform .4s var(--spring);
+  }
+  .lb-nav svg{ width:18px; height:18px; display:block; }
+  .lb-nav:active{ transform:scale(.9); }
+  .lb-prev{ left:12px; }
+  .lb-next{ right:12px; }
+  .lb-count{
+    position:absolute; top:calc(env(safe-area-inset-top) + 22px); left:50%; transform:translateX(-50%);
+    display:none; padding:5px 11px; border-radius:100px; font-size:12px; font-weight:600;
+    font-variant-numeric:tabular-nums; color:var(--text-muted);
+    background:var(--mat-thick); border:0.5px solid var(--hairline);
+  }
+  .lightbox.multi .lb-nav{ display:grid; }
+  .lightbox.multi .lb-count{ display:block; }
   .request-actions{ display:flex; gap:9px; margin-top:12px; }
   .req-reject, .req-validate{
     flex:1; padding:10px; border-radius:12px; font-family:var(--font-body); font-weight:600; font-size:13.5px;
@@ -1412,7 +1443,7 @@
     box-shadow:var(--raise-lg), 0 10px 28px var(--accent-soft);
     display:flex; align-items:center; justify-content:center;
     position:fixed; overflow:hidden; -webkit-user-select:none; user-select:none;
-    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io);
+    transition:transform .44s var(--spring), box-shadow .3s var(--ease-io), opacity .25s var(--ease-io);
   }
   .fab::after{
     content:''; position:absolute; inset:0; pointer-events:none;
@@ -3081,7 +3112,14 @@
   <button type="button" class="lightbox-close" id="lightboxClose" data-i18n-title="photoCloseTitle" title="Fermer la photo">
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
-  <img id="lightboxImg" alt="">
+  <img id="lightboxImg" alt="" draggable="false">
+  <button type="button" class="lb-nav lb-prev" id="lbPrev" data-i18n-title="photoPrev" title="Photo précédente" aria-label="Photo précédente">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <button type="button" class="lb-nav lb-next" id="lbNext" data-i18n-title="photoNext" title="Photo suivante" aria-label="Photo suivante">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <span class="lb-count" id="lbCount" aria-live="polite"></span>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -3391,7 +3429,7 @@ const I18N = {
     placeholderName:'Nom', placeholderContact:'@pseudo TikTok, Snap, tél...', placeholderContactShort:'@pseudo, tél...',
     placeholderProduct:'Ex: paire de chaussures', placeholderWeChat:'WeChat ID, tél...', optional:'Optionnel',
     today:"aujourd'hui", yesterday:'hier', daysAgo:'il y a {n}j',
-    assistantTitle:'Assistant', assistantFabTitle:'Assistant IA', assistantPlaceholder:'Écris ou parle...', photoTitle:'Envoyer une photo', photoAttached:'Photo jointe', photoOpenTitle:'Voir la photo en plein écran', photoCloseTitle:'Fermer la photo', imageTooLarge:'Image trop lourde, réessaie avec une photo plus légère.',
+    assistantTitle:'Assistant', assistantFabTitle:'Assistant IA', assistantPlaceholder:'Écris ou parle...', photoTitle:'Envoyer une photo', photoAttached:'Photo jointe', photoOpenTitle:'Voir la photo en plein écran', photoCloseTitle:'Fermer la photo', photoPrev:'Photo précédente', photoNext:'Photo suivante', imageTooLarge:'Image trop lourde, réessaie avec une photo plus légère.',
     voiceModeTitle:'Mode vocal', voiceIdle:'Prêt', voiceListening:'Je t\u2019écoute...', voiceThinking:'Je réfléchis...', voiceSpeaking:'Je réponds...',
     voiceStart:'Parler', voiceStop:'Arrêter', voiceToChat:'Voir le chat', voiceHandsFree:'Mains libres',
     voiceHint:'Mains libres actif. Je réponds à voix haute et je continue de t\u2019écouter.',
@@ -3655,7 +3693,7 @@ const I18N = {
     placeholderName:'Name', placeholderContact:'@handle TikTok, Snap, phone...', placeholderContactShort:'@handle, phone...',
     placeholderProduct:'E.g. pair of shoes', placeholderWeChat:'WeChat ID, phone...', optional:'Optional',
     today:'today', yesterday:'yesterday', daysAgo:'{n}d ago',
-    assistantTitle:'Assistant', assistantFabTitle:'AI Assistant', assistantPlaceholder:'Type or speak...', photoTitle:'Send a photo', photoAttached:'Photo attached', photoOpenTitle:'View photo fullscreen', photoCloseTitle:'Close photo', imageTooLarge:'Image too large, try a lighter photo.',
+    assistantTitle:'Assistant', assistantFabTitle:'AI Assistant', assistantPlaceholder:'Type or speak...', photoTitle:'Send a photo', photoAttached:'Photo attached', photoOpenTitle:'View photo fullscreen', photoCloseTitle:'Close photo', photoPrev:'Previous photo', photoNext:'Next photo', imageTooLarge:'Image too large, try a lighter photo.',
     voiceModeTitle:'Voice mode', voiceIdle:'Ready', voiceListening:'Listening...', voiceThinking:'Thinking...', voiceSpeaking:'Answering...',
     voiceStart:'Speak', voiceStop:'Stop', voiceToChat:'Open chat', voiceHandsFree:'Hands-free',
     voiceHint:'Hands-free on. I answer out loud and keep listening.',
@@ -3691,7 +3729,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-02c';
+const BUILD = '2026-10-03';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -3979,9 +4017,15 @@ var mesMargesModele = {};
 // sans cette ligne, la marge affichée était plus haute que la vraie du montant
 // du transport. Le réel (ce que BW facture) gagne ; à défaut, on estime avec le
 // forfait par pièce des Réglages — 20 € par défaut, la règle de Massif.
+// Une commande sans prix client n'est pas encore vendue : on n'estime donc pas
+// son envoi. Le forfait compté sur une simple demande affichait « −300 € » en
+// rouge sur sa carte — le rouge du danger pour une commande qui n'a rien de
+// grave —, la tirait dans la marge totale, la fiche du client et les stats.
+function orderChiffree(o){ return (Number(o && o.unitPrice) || 0) > 0; }
 function orderShipping(o){
   const s = o ? o.shipCost : null;
   if(s !== null && s !== undefined && s !== '' && isFinite(Number(s))) return Number(s);
+  if(!orderChiffree(o)) return 0;
   return (Number(o && o.qty) || 1) * (Number(mesTarifs.livraison) || 0);
 }
 function orderPurchaseCost(o){ return (Number(o.unitCost)||0) * (Number(o.qty)||1); }
@@ -4580,12 +4624,11 @@ function carteCommande(o){
             ${lib.sous ? `<div class="card-sub">${escapeHtml(lib.sous)}</div>` : ''}
           </div>
         </div>
-        ${blocReqPhotos(o)}
         ${orderRemaining(o) > 0 && orderPaid(o) > 0
           ? `<div class="due-line private">${t('remainingLabel')} : ${fmtMoney(orderRemaining(o))}</div>` : ''}
         <div class="card-bottom">
           <div class="date"><span class="order-ref">#${escapeHtml(orderRef(o))}</span>${fmtDate(o.createdAt)}${indiceCarte(o)}</div>
-          <div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>
+          ${orderChiffree(o) ? `<div class="margin private ${margin>=0?'pos':'neg'}">${margin>=0?'+':''}${fmtMoney(margin)}${mult!==null?` <span class="mult">(×${mult.toFixed(1)})</span>`:''}</div>` : ''}
         </div>
       </div>`;
 }
@@ -7213,6 +7256,10 @@ function switchView(view){
   if(view==='requests') renderRequests();
   majTitre();
   if(change) window.scrollTo(0, defilementVue[view] || 0);
+  // Une vue neuve montre toujours son « + » : le saut de défilement qu'on
+  // vient de faire n'est pas un geste vers le bas.
+  document.body.classList.remove('fab-cache');
+  fabY = window.scrollY;
 }
 
 // ---- Le grand titre, et la ligne qui dit où on en est ----
@@ -7590,7 +7637,8 @@ function updateMarginPreview(){
   const shipVal = $('#f_shipCost').value;
   const shipReel = shipVal !== '' && !isNaN(parseFloat(shipVal));
   const forfaitTotal = qty * (Number(mesTarifs.livraison)||0);
-  const ship = shipReel ? parseFloat(shipVal) : forfaitTotal;
+  // Même règle que orderShipping() : pas de prix client, pas d'envoi estimé.
+  const ship = shipReel ? parseFloat(shipVal) : (up > 0 ? forfaitTotal : 0);
   const totalCost = uc*qty + ship, gross = up*qty;
   const totalPrice = Math.max(0, gross - discount);
   const margin = totalPrice-totalCost;
@@ -7858,6 +7906,27 @@ $('#viewBtnCatalogue').addEventListener('click', ()=>switchView('catalogue'));
 $('#viewBtnStats').addEventListener('click', ()=>switchView('stats'));
 $('#viewBtnRequests').addEventListener('click', ()=>switchView('requests'));
 
+// LE « + » S'EFFACE QUAND ON DESCEND, et revient dès qu'on remonte — le geste
+// de Mail ou de Photos. Posé en bas à droite, il couvrait en permanence la
+// marge de la carte qui passait dessous ; on ne lit une liste qu'en
+// descendant, et on remonte d'instinct quand on veut ajouter. Un seuil de
+// quelques pixels : un tremblement du doigt ne doit pas le faire clignoter.
+// Tout en haut, il est toujours là.
+var fabY = window.scrollY;   // `var` : switchView() peut le toucher avant cette ligne
+{
+  let attente = false;
+  window.addEventListener('scroll', ()=>{
+    if(attente) return;
+    attente = true;
+    requestAnimationFrame(()=>{
+      attente = false;
+      const y = window.scrollY, d = y - fabY;
+      if(Math.abs(d) < 6) return;
+      document.body.classList.toggle('fab-cache', d > 0 && y > 140);
+      fabY = y;
+    });
+  }, { passive:true });
+}
 $('#fabAdd').addEventListener('click', ()=>{
   if(viewState==='commandes') openSheet(null);
   else if(viewState==='clients') openClientSheet(null);
@@ -10178,24 +10247,127 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 // ================= Photo en plein écran =================
 const lightbox = $('#lightbox');
 const lightboxImg = $('#lightboxImg');
-function openLightbox(src){
+// LA GALERIE. Toucher une vignette ouvre TOUTES les photos de la commande, et
+// la photo GRANDIT DEPUIS LA VIGNETTE jusqu'au plein écran : c'est le même
+// objet qui s'agrandit, pas une seconde image qui surgit ailleurs — c'est ce
+// qui donne l'impression d'une vraie app. On passe de l'une à l'autre au doigt
+// (seuil de 40 px, comme la photo du catalogue) ou aux flèches, et on referme
+// d'un toucher : la photo retourne d'où elle vient.
+// Ce bloc existe À L'IDENTIQUE dans index.html et client.html.
+let lbListe = [], lbIdx = 0, lbDepuis = null, lbFerme = false;
+const lbCalme = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function openLightbox(src, liste, depuis){
   if(!src) return;
-  lightboxImg.src = src;
+  lbListe = (liste && liste.length) ? liste : [src];
+  lbIdx = Math.max(0, lbListe.indexOf(src));
+  lbDepuis = depuis || null;
+  lbFerme = false;
+  lightbox.classList.toggle('multi', lbListe.length > 1);
   $('#lightboxClose').setAttribute('aria-label', t('photoCloseTitle'));
+  $('#lbPrev').setAttribute('aria-label', t('photoPrev'));
+  $('#lbNext').setAttribute('aria-label', t('photoNext'));
+  lbAffiche(0);
   lightbox.classList.add('open');
+  if(lbDepuis && !lbCalme() && lightboxImg.animate) lbGrandit(lbDepuis);
+}
+function lbAffiche(sens){
+  lightboxImg.src = lbListe[lbIdx];
+  $('#lbCount').textContent = (lbIdx + 1) + ' / ' + lbListe.length;
+  if(sens && !lbCalme() && lightboxImg.animate)
+    lightboxImg.animate([{ transform:'translateX(' + (sens * 46) + 'px)', opacity:.2 }, { transform:'none', opacity:1 }],
+                        { duration:300, easing:'cubic-bezier(.2,.8,.2,1)' });
+}
+// L'écart entre la vignette et la place finale devient le point de départ.
+// La photo reste invisible le temps d'être décodée : sinon on la verrait une
+// image à sa place finale avant qu'elle ne parte de la vignette.
+function lbEcart(el){
+  const a = el.getBoundingClientRect(), b = lightboxImg.getBoundingClientRect();
+  if(!a.width || !b.width) return null;
+  const s = Math.max(a.width / b.width, a.height / b.height);
+  return 'translate(' + ((a.left + a.width/2) - (b.left + b.width/2)).toFixed(1) + 'px,'
+       + ((a.top + a.height/2) - (b.top + b.height/2)).toFixed(1) + 'px) scale(' + s.toFixed(3) + ')';
+}
+function lbGrandit(el){
+  lightboxImg.style.animation = 'none';
+  lightboxImg.style.opacity = '0';
+  const part = () => {
+    lightboxImg.style.opacity = '';
+    if(!lightbox.classList.contains('open')) return;
+    const ecart = lbEcart(el);
+    if(!ecart) return;
+    lightboxImg.animate([{ transform:ecart, opacity:.5, borderRadius:'22px' }, { transform:'none', opacity:1 }],
+                        { duration:430, easing:'cubic-bezier(.2,.9,.25,1)' });
+  };
+  (lightboxImg.decode ? lightboxImg.decode() : Promise.resolve()).then(part, part);
 }
 function closeLightbox(){
-  if(!lightbox.classList.contains('open')) return;
-  lightbox.classList.remove('open');
-  lightboxImg.removeAttribute('src');
+  if(!lightbox.classList.contains('open') || lbFerme) return;
+  const fin = () => {
+    lightbox.classList.remove('open');
+    lightboxImg.removeAttribute('src');
+    lightboxImg.style.animation = '';
+    lightboxImg.style.opacity = '';
+    lbDepuis = null; lbFerme = false;
+  };
+  if(lbCalme() || !lightbox.animate){ fin(); return; }
+  lbFerme = true;
+  // Retour à la vignette seulement si c'est encore SA photo et qu'elle est
+  // toujours là : sinon la photo filerait vers un endroit qui ne la montre pas.
+  const el = lbDepuis && lbDepuis.isConnected && lbListe[lbIdx] === lbDepuis.src ? lbDepuis : null;
+  const ecart = el ? lbEcart(el) : null;
+  const anims = [lightbox.animate([{ opacity:1 }, { opacity:0 }], { duration:ecart ? 300 : 200, easing:'ease', fill:'forwards' })];
+  if(ecart) anims.push(lightboxImg.animate([{ transform:'none', opacity:1 }, { transform:ecart, opacity:.4, borderRadius:'22px' }],
+                                           { duration:300, easing:'cubic-bezier(.4,0,.2,1)', fill:'forwards' }));
+  Promise.all(anims.map(a => a.finished)).then(() => { fin(); anims.forEach(a => a.cancel()); }, fin);
 }
+function lbVa(d){
+  if(lbListe.length < 2) return;
+  lbIdx = (lbIdx + d + lbListe.length) % lbListe.length;
+  lbAffiche(d);
+}
+$('#lbPrev').addEventListener('click', e => { e.stopPropagation(); lbVa(-1); });
+$('#lbNext').addEventListener('click', e => { e.stopPropagation(); lbVa(1); });
+let lbX = null, lbGlisse = false;
+lightbox.addEventListener('pointerdown', e => { lbX = e.clientX; lbGlisse = false; });
+lightbox.addEventListener('pointercancel', () => { lbX = null; });
+lightbox.addEventListener('pointerup', e => {
+  if(lbX === null) return;
+  const dx = e.clientX - lbX;
+  lbX = null;
+  if(Math.abs(dx) > 40 && lbListe.length > 1){ lbGlisse = true; lbVa(dx < 0 ? 1 : -1); }
+});
+// Un glissement n'est pas un toucher : il change de photo, il ne referme pas.
+lightbox.addEventListener('click', e => {
+  if(lbGlisse){ lbGlisse = false; return; }
+  if(e.target.closest('.lb-nav')) return;
+  closeLightbox();
+});
+document.addEventListener('keydown', e => {
+  if(!lightbox.classList.contains('open')) return;
+  if(e.key === 'Escape') closeLightbox();
+  else if(e.key === 'ArrowRight') lbVa(1);
+  else if(e.key === 'ArrowLeft') lbVa(-1);
+});
+
 // En phase de capture : la photo s'ouvre sans déclencher le clic de la carte.
+// La vignette d'une carte ouvre TOUTES les photos de sa commande ; une photo
+// dans une grille ouvre ses voisines.
+function srcPhoto(p){ return 'data:' + p.type + ';base64,' + p.data; }
 document.addEventListener('click', (e)=>{
-  const img = e.target.closest && e.target.closest('.req-photo');
+  const img = e.target.closest && e.target.closest('.req-photo, .order-card .cv img');
   if(!img) return;
   e.preventDefault();
   e.stopPropagation();
-  openLightbox(img.src);
+  let liste = null;
+  if(img.matches('.cv img')){
+    const carte = img.closest('[data-id]');
+    const o = carte && orders.find(x => x.id === carte.dataset.id);
+    if(o) liste = photosDe(o).map(srcPhoto);
+  } else {
+    const grille = img.closest('.req-photos');
+    if(grille) liste = Array.from(grille.querySelectorAll('.req-photo')).map(x => x.src);
+  }
+  openLightbox(img.src, liste, img);
 }, true);
 
 // Même famille, même correctif : le repli des photos vit DANS la carte de
@@ -10208,8 +10380,6 @@ document.addEventListener('click', (e)=>{
 document.addEventListener('click', (e)=>{
   if(e.target.closest && e.target.closest('.photos-fold > summary')) e.stopPropagation();
 }, true);
-lightbox.addEventListener('click', closeLightbox);
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeLightbox(); });
 
 // ================= Effet tactile (liquid glass) =================
 const TAP_SELECTOR = '.tap, .icon-btn, .order-card, .request-card, .tab, .pin-key, .btn-primary, .btn-secondary, .google-btn, .bio-btn, .fab, .voice-btn, .tabbar button, .sheet-ref, .preview-btn';
@@ -10234,7 +10404,7 @@ function tapReleaseAll(){
 document.addEventListener('pointerdown', (e)=>{
   // La photo et le repli ont leur propre retour ; sans ça c'est la carte
   // entière qui s'enfonce, et le geste ment sur ce qu'on touche.
-  if(e.target.closest && e.target.closest('.req-photo, .photos-fold > summary')) return;
+  if(e.target.closest && e.target.closest('.req-photo, .order-card .cv img, .photos-fold > summary')) return;
   const el = e.target.closest(TAP_SELECTOR);
   if(!el || el.disabled) return;
   tapDown(el, e.clientX, e.clientY);
