@@ -3738,7 +3738,7 @@ const I18N = {
 // scanner. C'est la première question à trancher devant « ça ne marche pas » :
 // est-ce que le téléphone a seulement reçu le correctif ? À changer à chaque
 // mise en ligne qui corrige quelque chose de visible.
-const BUILD = '2026-10-03d';
+const BUILD = '2026-10-03e';
 let currentLang = 'fr';
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
@@ -6034,8 +6034,29 @@ function decoupeProduit(o){
 // donné une ligne vide sur toutes les fiches, sans que rien ne le signale.
 function adresseClient(c){
   if(!c) return [];
-  return [c.name, c.address, c.phone]
+  return [c.name, c.address, telColis(c.phone, c.address)]
     .map(x=>String(x||'').trim()).filter(Boolean);
+}
+
+// Le colis part de Chine : le livreur et BW ne composent pas un « 06 ».
+// Un numéro français s'écrit donc +33 6 12 34 56 78 sur la fiche. Un 0 suivi
+// de neuf chiffres n'est français que si l'adresse l'est (ou n'en dit rien) :
+// un 04 belge a la même forme, et le convertir donnerait un numéro faux.
+// Tout le reste sort tel qu'il a été tapé — mieux vaut brut que inventé.
+function telColis(tel, adresse){
+  const brut = String(tel || '').trim();
+  if(!brut) return '';
+  const n = brut.replace(/\D/g, '');
+  const ad = String(adresse || '');
+  // Sans le mot « France », un code postal à cinq chiffres suffit : la Belgique,
+  // la Suisse et le Luxembourg en ont quatre.
+  const enFrance = !ad || /\bfrance\b/i.test(ad) || /\b\d{5}\b/.test(ad);
+  let neuf = '';
+  if(/^\+33/.test(brut.replace(/\s/g, '')) && n.length === 11) neuf = n.slice(2);
+  else if(/^0033/.test(n) && n.length === 13) neuf = n.slice(4);
+  else if(!/^\+/.test(brut) && enFrance && n.length === 10 && n.charAt(0) === '0') neuf = n.slice(1);
+  if(!neuf) return brut;
+  return '+33 ' + neuf.charAt(0) + ' ' + neuf.slice(1).match(/../g).join(' ');
 }
 
 // `depuis` vaut 'demande' ou 'commande', et ce n'est pas cosmétique : sur une
